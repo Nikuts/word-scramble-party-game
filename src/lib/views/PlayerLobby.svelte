@@ -1,8 +1,11 @@
 <script>
+    import { createEventDispatcher } from 'svelte';
     import { t, language, sendMessage, gameState, changeView, error, currentPlayerDetails } from '../../stores.js';
     import { MIN_PLAYERS, MAX_PLAYERS } from '../config.js';
     import ModeToggle from './shared/ModeToggle.svelte';
     import PixelAvatar from '../shared/PixelAvatar.svelte';
+
+    const dispatch = createEventDispatcher();
 
     $: game = $gameState;
     $: player = $currentPlayerDetails;
@@ -11,6 +14,23 @@
 
     let customTheme = '';
     let isInputFocused = false;
+    let isEditingName = false;
+    let editNameValue = '';
+
+    function startNameEdit() {
+        editNameValue = player?.name || '';
+        isEditingName = true;
+    }
+
+    function saveNameEdit() {
+        if (!game || !editNameValue.trim()) return;
+        sendMessage('change-name', { gameId: game.id, newName: editNameValue.trim() });
+        isEditingName = false;
+    }
+
+    function cancelNameEdit() {
+        isEditingName = false;
+    }
     
     // Sync local customTheme with game state
     $: {
@@ -63,19 +83,61 @@
 </script>
 <div class="p-4 sm:p-6 text-center">
     <div class="container mx-auto max-w-2xl">
-        <div class="text-right mb-4">
+        <div class="flex justify-between items-center mb-4">
+            <button 
+                on:click={() => dispatch('reselectAvatar')} 
+                class="px-3 py-1.5 bg-transparent border border-secondary text-secondary hover:bg-secondary hover:text-black transition-all font-display text-xs rounded-md shadow-sm"
+            >
+                {$t.changeCharacter}
+            </button>
             <button on:click={() => changeView('instructions')} class="px-4 py-2 bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-black transition-colors font-display text-sm rounded-md">
                 {$t.howToPlay}
             </button>
         </div>
+
+        {#if $error.message && !$error.fatal}
+            <div class="my-4 p-3 bg-red-900/50 border-2 border-danger text-red-300 font-bold text-center rounded-md font-display text-sm">
+                <p>{$error.message}</p>
+            </div>
+        {/if}
+
+        <!-- My Profile Card with Inline Name Edit -->
+        <div class="panel-arcade p-3 sm:p-4 mb-6 flex items-center justify-between gap-4" style="--neon-color: var(--color-secondary); --neon-color-rgb: var(--color-secondary-rgb);">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-neutral-900 border-2 border-secondary flex items-center justify-center shadow-md flex-shrink-0" style="box-shadow: 0 0 8px var(--color-secondary);">
+                    {#if player?.avatar}
+                        <PixelAvatar avatar={player.avatar} />
+                    {/if}
+                </div>
+                <div class="text-left">
+                    {#if isEditingName}
+                        <div class="flex items-center gap-2">
+                            <input 
+                                type="text" 
+                                bind:value={editNameValue} 
+                                class="bg-black border border-secondary p-1 text-sm rounded text-secondary focus:outline-none w-32 sm:w-44"
+                                maxlength="25"
+                                on:keydown={(e) => { if (e.key === 'Enter') saveNameEdit(); if (e.key === 'Escape') cancelNameEdit(); }}
+                            />
+                            <button on:click={saveNameEdit} class="px-2 py-1 bg-accent text-black font-display text-xs rounded hover:opacity-90">{$t.save}</button>
+                            <button on:click={cancelNameEdit} class="px-2 py-1 bg-neutral-800 text-neutral-300 font-display text-xs rounded hover:bg-neutral-700">{$t.cancel}</button>
+                        </div>
+                    {:else}
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg font-bold font-display text-secondary">{player?.name}</span>
+                            <button on:click={startNameEdit} class="text-neutral-400 hover:text-white text-sm" title={$t.editName} aria-label={$t.editName}>
+                                ✏️
+                            </button>
+                        </div>
+                    {/if}
+                </div>
+            </div>
+            {#if player?.isHost}
+                <span class="px-2 py-1 bg-warning text-black text-xs font-display rounded-sm flex-shrink-0">{$t.host}</span>
+            {/if}
+        </div>
         {#if isHost}
             <h1 class="text-3xl mb-4 text-primary" style="text-shadow: 0 0 5px var(--color-primary);">{$t.youAreTheHost}</h1>
-            
-            {#if $error.message && !$error.fatal}
-                <div class="my-4 p-3 bg-red-900/50 border-2 border-danger text-red-300 font-bold text-center rounded-md">
-                    <p>{$error.message}</p>
-                </div>
-            {/if}
 
             <div class="w-full text-left panel-arcade p-4 mb-6" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
                 <!-- Color Theme Selection -->

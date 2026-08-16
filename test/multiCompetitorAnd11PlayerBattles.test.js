@@ -129,6 +129,84 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
             expect(quadBattle.pointsAwarded['p3']).toBe(300);
             expect(quadBattle.pointsAwarded['p4']).toBe(300);
         });
+
+        it('awards clean sweep to a dominant single winner in a 4-way brawl when getting 100% of votes', () => {
+            const game = createLobby(12, 1);
+            const quadBattle = {
+                id: 'quad_sweep',
+                competitors: ['p1', 'p2', 'p3', 'p4'],
+                answers: { p1: 'Super Ans', p2: 'Ans B', p3: 'Ans C', p4: 'Ans D' },
+                votes: {
+                    p5: 'p1', p6: 'p1', p7: 'p1', p8: 'p1',
+                    p9: 'p1', p10: 'p1', p11: 'p1', p12: 'p1'
+                },
+                wordBanks: { p1: [], p2: [], p3: [], p4: [] }
+            };
+
+            calculateBattlePoints(game, quadBattle);
+
+            // 8 votes * 300 + 200 (win) + 150 (clean sweep) = 2750
+            expect(quadBattle.winnerId).toBe('p1');
+            expect(quadBattle.pointsAwarded['p1']).toBe(2750);
+            expect(quadBattle.pointsAwarded['p2']).toBe(0);
+            expect(quadBattle.pointsAwarded['p3']).toBe(0);
+            expect(quadBattle.pointsAwarded['p4']).toBe(0);
+        });
+
+        it('handles a 4-way tie in a 4-way brawl by splitting the victory bonus evenly 4 ways', () => {
+            const game = createLobby(12, 1);
+            const quadBattle = {
+                id: 'quad_4way_tie',
+                competitors: ['p1', 'p2', 'p3', 'p4'],
+                answers: { p1: 'Ans A', p2: 'Ans B', p3: 'Ans C', p4: 'Ans D' },
+                votes: {
+                    p5: 'p1', p6: 'p1',
+                    p7: 'p2', p8: 'p2',
+                    p9: 'p3', p10: 'p3',
+                    p11: 'p4', p12: 'p4'
+                },
+                wordBanks: { p1: [], p2: [], p3: [], p4: [] }
+            };
+
+            calculateBattlePoints(game, quadBattle);
+
+            // In Round 1 (winBonus 200 split 4 ways: Math.round(200 / 4) = 50):
+            // Each gets 2 votes * 300 + 50 = 650
+            expect(quadBattle.winnerId).toBeNull();
+            expect(quadBattle.pointsAwarded['p1']).toBe(650);
+            expect(quadBattle.pointsAwarded['p2']).toBe(650);
+            expect(quadBattle.pointsAwarded['p3']).toBe(650);
+            expect(quadBattle.pointsAwarded['p4']).toBe(650);
+        });
+
+        it('handles a 2-way tie for 1st in a 4-way brawl by splitting victory bonus 2 ways', () => {
+            const game = createLobby(12, 1);
+            const quadBattle = {
+                id: 'quad_2way_tie',
+                competitors: ['p1', 'p2', 'p3', 'p4'],
+                answers: { p1: 'Ans A', p2: 'Ans B', p3: 'Ans C', p4: 'Ans D' },
+                votes: {
+                    p5: 'p1', p6: 'p1', p7: 'p1',
+                    p8: 'p2', p9: 'p2', p10: 'p2',
+                    p11: 'p3',
+                    p12: 'p4'
+                },
+                wordBanks: { p1: [], p2: [], p3: [], p4: [] }
+            };
+
+            calculateBattlePoints(game, quadBattle);
+
+            // In Round 1 (winBonus 200 split between top 2 = 100 each):
+            // p1: 3 * 300 + 100 = 1000
+            // p2: 3 * 300 + 100 = 1000
+            // p3: 1 * 300 = 300
+            // p4: 1 * 300 = 300
+            expect(quadBattle.winnerId).toBeNull();
+            expect(quadBattle.pointsAwarded['p1']).toBe(1000);
+            expect(quadBattle.pointsAwarded['p2']).toBe(1000);
+            expect(quadBattle.pointsAwarded['p3']).toBe(300);
+            expect(quadBattle.pointsAwarded['p4']).toBe(300);
+        });
     });
 
     describe('Scenario 2: 11-Player Hybrid Allocation & Fairness Matrix', () => {

@@ -7,7 +7,8 @@ import { FALLBACK_CONTENT } from '../fallbackContent.js';
 import {
     MIN_PLAYERS,
     MAX_PLAYERS,
-    SOUNDS_ON_HOST_ONLY
+    SOUNDS_ON_HOST_ONLY,
+    AVATARS
 } from '../../src/lib/config.js';
 
 export async function generateInitialThemes(io, game) {
@@ -108,15 +109,18 @@ export function handleJoinGame(io, socket, { gameId, playerName, language, avata
     if (takenNames.includes(playerName.toLowerCase())) {
         return socket.emit('error-message', { key: 'nameTaken', defaultText: "This name is already taken.", context: errorContext, fatal: false });
     }
-    if (takenAvatars.includes(avatar)) {
-        return socket.emit('error-message', { key: 'avatarTaken', defaultText: "This avatar is already taken.", context: errorContext, fatal: false });
+
+    let assignedAvatar = avatar;
+    if (!assignedAvatar || !AVATARS.includes(assignedAvatar) || takenAvatars.includes(assignedAvatar)) {
+        // Auto-assign the first unselected avatar from AVATARS
+        assignedAvatar = AVATARS.find(a => !takenAvatars.includes(a)) || AVATARS[0];
     }
 
     const player = {
         id: helpers.generatePlayerId(),
         token: helpers.generatePlayerToken(),
         name: playerName,
-        avatar: avatar,
+        avatar: assignedAvatar,
         socketId: socket.id,
         score: 0,
         isHost: game.players.length === 0,
@@ -134,6 +138,41 @@ export function handleJoinGame(io, socket, { gameId, playerName, language, avata
     });
     
     helpers.broadcastGameState(io, gameId);
+}
+
+export function handleChangeAvatar(io, socket, { gameId, avatar }) {
+    const game = manager.getGame(gameId);
+    if (!game || game.phase !== 'lobby') return;
+    const player = game.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+
+    const takenAvatars = game.players.filter(p => p.id !== player.id).map(p => p.avatar);
+    if (takenAvatars.includes(avatar)) {
+        return socket.emit('error-message', { key: 'avatarTaken', defaultText: "This avatar is already taken.", context: { takenAvatars }, fatal: false });
+    }
+
+    player.avatar = avatar;
+    helpers.broadcastGameState(io, gameId);
+    socket.emit('avatar-changed', { avatar: player.avatar });
+}
+
+export function handleChangeName(io, socket, { gameId, newName }) {
+    const game = manager.getGame(gameId);
+    if (!game || game.phase !== 'lobby') return;
+    const player = game.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+
+    const trimmedName = (newName || '').trim();
+    if (!trimmedName) return;
+
+    const takenNames = game.players.filter(p => p.id !== player.id).map(p => p.name.toLowerCase());
+    if (takenNames.includes(trimmedName.toLowerCase())) {
+        return socket.emit('error-message', { key: 'nameTaken', defaultText: "This name is already taken.", fatal: false });
+    }
+
+    player.name = trimmedName;
+    helpers.broadcastGameState(io, gameId);
+    socket.emit('name-changed', { name: player.name });
 }
 
 export function handleSetTheme(io, socket, { gameId, theme }) {

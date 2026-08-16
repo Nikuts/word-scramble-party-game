@@ -22,7 +22,17 @@ export const joinGameSchema = z.object({
     gameId: gameIdSchemaBase,
     playerName: z.string().trim().min(1, { message: "Name required." }).max(25),
     language: z.enum(['en', 'uk']),
+    avatar: z.enum(AVATARS).optional()
+});
+
+export const changeAvatarSchema = z.object({
+    gameId: gameIdSchemaBase,
     avatar: z.string().refine(val => AVATARS.includes(val), { message: "Invalid avatar." })
+});
+
+export const changeNameSchema = z.object({
+    gameId: gameIdSchemaBase,
+    newName: z.string().trim().min(1, { message: "Name required." }).max(25)
 });
 
 export const reconnectPlayerSchema = z.object({

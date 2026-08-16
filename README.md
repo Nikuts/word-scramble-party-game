@@ -78,8 +78,11 @@ The game is played over three rounds of increasing stakes, with a final winner c
 
 ### 1. Setup & The Lobby
 - A "Host Display" is created on a primary screen (like a laptop or TV), which generates a unique **4-digit Game ID** and displays a **QR code**. Scanning this code with a mobile device will take the player directly to the game's page with the Game ID automatically filled in, making it even faster to join.
-- Players use their mobile devices to navigate to the game's URL, enter the Game ID, a name, and choose an **image avatar** to join the lobby.
-- The first player to join becomes the **Host**. From their device, the Host configures the game options (Color Theme, Game Theme, Silly Mode, etc.) and starts the game when ready.
+- **Streamlined Join & In-Room Character Customization:**
+  - **Quick Join**: Players only enter the **Game ID** and their **Name** to connect. The server automatically assigns the first available, unused avatar in real-time.
+  - **Character Selection Screen**: Upon joining the room, players see their auto-assigned character preview alongside the full 20-avatar grid. Any avatars already chosen by other players currently in the room are clearly **greyed out and disabled**, preventing collisions. Players can choose another available avatar or click **"Confirm Character"** to enter the lobby.
+  - **In-Lobby Profile & Name Redaction**: Inside the lobby, players can click the ✏️ icon next to their name to redact or edit their display name in real-time (with automatic duplicate-name validation), or click **"Change Character"** to reselect any open avatar before the host starts the match.
+- The first player to join becomes the **Host**. From their device, the Host configures the game options (Color Theme, Game Theme, Silly Mode, 18+ Mode, Slowpoke Mode) and starts the game when ready.
 
 ### 2. The Three Rounds of Play
 

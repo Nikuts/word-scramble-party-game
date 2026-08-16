@@ -70,25 +70,27 @@ export async function joinPlayerSession(page, { gameId, playerName, avatar }) {
     await joinBtn.waitFor({ state: 'visible' });
     await joinBtn.click();
 
-    // Fill in Game ID and Name
+    // Wait for Join Prompt to be fully visible
+    await page.locator('#gameIdInput').waitFor({ state: 'visible', timeout: 10000 });
     await page.fill('#gameIdInput', gameId);
     await page.fill('#playerNameInput', playerName);
 
-    // Select avatar if specified, or pick first available
+    // Submit Join Form
+    await page.locator('#joinGameBtn').click();
+
+    // On Avatar Selection Screen, optionally select avatar and click Confirm Character
+    const confirmAvatarBtn = page.locator('#confirmAvatarBtn, [data-testid="confirm-avatar-btn"]');
+    await confirmAvatarBtn.waitFor({ state: 'visible', timeout: 10000 });
     if (avatar) {
         const avatarOption = page.locator(`.avatar-option[aria-label="Avatar ${avatar}"]`);
-        if (await avatarOption.isVisible()) {
+        if (await avatarOption.isVisible().catch(() => false)) {
             await avatarOption.click();
         }
     }
-
-    // Submit Join Form
-    const submitBtn = page.locator('button.btn-arcade:has-text("Join"), button.btn-arcade:has-text("Приєднатися")');
-    await submitBtn.waitFor({ state: 'visible' });
-    await submitBtn.click();
+    await confirmAvatarBtn.click();
 
     // Wait for Player Lobby to load
-    await page.locator('h1, h2').filter({ hasText: /Host|Lobby|Чекаємо|гравців|Players/i }).first().waitFor({ state: 'visible', timeout: 15000 });
+    await page.locator('h1, h2, span').filter({ hasText: /Host|Lobby|Чекаємо|гравців|Players/i }).first().waitFor({ state: 'visible', timeout: 15000 });
 }
 
 /**

@@ -4,6 +4,8 @@ import { withValidation } from './handlers/validation.js';
 import {
     handleCreateGame,
     handleJoinGame,
+    handleChangeAvatar,
+    handleChangeName,
     handleSetTheme,
     handleSetColorTheme,
     handleSetSillyMode,
@@ -43,6 +45,8 @@ export function registerEventHandlers(io, socket) {
     socket.on('join-as-host-display', withValidation(schemas.gameIdSchema, handleJoinAsHostDisplay.bind(socket)));
     
     // Lobby and game setup
+    socket.on('change-avatar', withValidation(schemas.changeAvatarSchema, handleChangeAvatar.bind(socket)));
+    socket.on('change-name', withValidation(schemas.changeNameSchema, handleChangeName.bind(socket)));
     socket.on('set-theme', withValidation(schemas.setThemeSchema, handleSetTheme.bind(socket)));
     socket.on('set-color-theme', withValidation(schemas.setColorThemeSchema, handleSetColorTheme.bind(socket)));
     socket.on('set-silly-mode', withValidation(schemas.setBooleanOptionSchema('sillyMode'), handleSetSillyMode.bind(socket)));

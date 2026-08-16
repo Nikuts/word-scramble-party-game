@@ -13,27 +13,40 @@
   // Import shared components
   import LoadingSpinner from './lib/shared/LoadingSpinner.svelte';
   import ErrorDisplay from './lib/shared/ErrorDisplay.svelte';
+  import { get } from 'svelte/store';
 
   let currentView = $view;
   let mainContentElement;
   let isTransitioning = false;
 
-  $: if (mainContentElement && $view !== currentView && !isTransitioning) {
+  function transitionToView(targetView) {
+      if (!mainContentElement) {
+          currentView = targetView;
+          return;
+      }
+      if (isTransitioning) return;
       isTransitioning = true;
       mainContentElement.classList.add('view-out');
 
       const onFadeOutEnd = () => {
-          currentView = $view;
+          currentView = targetView;
           mainContentElement.classList.remove('view-out');
           mainContentElement.classList.add('view-in');
 
           mainContentElement.addEventListener('animationend', () => {
               mainContentElement.classList.remove('view-in');
               isTransitioning = false;
+              if (get(view) !== currentView) {
+                  transitionToView(get(view));
+              }
           }, { once: true });
       };
 
       mainContentElement.addEventListener('animationend', onFadeOutEnd, { once: true });
+  }
+
+  $: if ($view !== currentView && !isTransitioning) {
+      transitionToView($view);
   }
 
   // Set the color theme on the body

@@ -119,7 +119,7 @@ test.describe('Full Multi-Round Lifecycle, Voting & Final Round Showdown', () =>
 
         // Verify players have accumulated multi-round points (scores well above 2000 after 3 rounds)
         await hostPage.waitForTimeout(2500); // Allow podium score animation ticker to finish
-        const playerFinalScores = p1Page.locator('text=Final Scores, text=Підсумковий рахунок');
+        const playerFinalScores = p1Page.locator('text=/Final Scores|Підсумковий рахунок|Game Over/i');
         await expect(playerFinalScores.first()).toBeVisible();
 
         // Verify "Play Again" or "Battle History" controls exist on Host / Player screens
