@@ -21,6 +21,21 @@ export default defineConfig({
       }
     }
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('socket.io-client')) return 'vendor-socket';
+            if (id.includes('sortablejs')) return 'vendor-sortable';
+            if (id.includes('canvas-confetti')) return 'vendor-confetti';
+            if (id.includes('qrcode-generator')) return 'vendor-qrcode';
+          }
+        }
+      }
+    }
+  },
   test: {
     include: ['test/**/*.{test,spec}.{js,ts}'],
     exclude: ['e2e/**', 'node_modules/**']

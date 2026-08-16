@@ -120,6 +120,15 @@ export function broadcastGameState(io, gameId) {
     }
 }
 
+export function broadcastTimerTick(io, gameId) {
+    const game = getGame(gameId);
+    if (!game) return;
+    const remainingTime = game.phaseEndTime && !game.isPaused
+        ? Math.max(0, Math.round((game.phaseEndTime - Date.now()) / 1000))
+        : 0;
+    io.to(gameId).emit('timer-tick', { phaseTimer: remainingTime, phase: game.phase });
+}
+
 /**
  * Emits a 'play-sound' event to the appropriate clients based on game config.
  * @param {import('socket.io').Server} io The Socket.IO server instance.

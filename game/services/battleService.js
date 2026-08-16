@@ -7,6 +7,7 @@ import { generateFinalRoundData } from '../../geminiService.js';
 import * as helpers from '../helpers.js';
 import * as timerService from './timerService.js';
 import * as roundService from './roundService.js';
+import { generateWordBanksDirectly } from './wordBankEngine.js';
 
 import {
     QUESTIONS_PER_ROUND,
@@ -42,11 +43,35 @@ const workerPath = path.resolve(__dirname, '../workers/wordBankWorker.js');
 const TIMEOUT_ANSWER_PLACEHOLDER = '::TIMEOUT::';
 
 /**
+ * Generates word banks for battles with sub-millisecond execution and worker fallback.
+ * @param {object} game The game object.
+ * @returns {Promise<object>} A promise that resolves with the battle schedule and updated seen chunks.
+ */
+export async function generateWordBanks(game) {
+    try {
+        const result = generateWordBanksDirectly({
+            language: game.language,
+            players: game.players.map(p => ({ id: p.id, name: p.name })),
+            playerAnswers: game.playerAnswers,
+            answerHistory: game.answerHistory,
+            battleSchedule: game.battleSchedule,
+            playerSeenChunks: game.playerSeenChunks,
+            preGeneratedFallbackWords: game.preGeneratedFallbackWords,
+            currentRound: game.currentRound,
+        });
+        return result;
+    } catch (directError) {
+        console.warn(`[Game ${game.id}] Direct word bank generation encountered error, falling back to worker:`, directError);
+        return generateWordBanksWithWorker(game);
+    }
+}
+
+/**
  * Offloads the word bank generation to a worker thread.
  * @param {object} game The game object.
  * @returns {Promise<object>} A promise that resolves with the battle schedule and updated seen chunks.
  */
-function generateWordBanksWithWorker(game) {
+export function generateWordBanksWithWorker(game) {
     return new Promise((resolve, reject) => {
         const worker = new Worker(workerPath, {
             workerData: {
@@ -278,18 +303,18 @@ export async function prepareBattlePhase(io, game) {
     
     if (game.battleSchedule.length > 0) {
         try {
-            console.log(`[Game ${game.id}] Offloading word bank generation to worker...`);
-            const { battleScheduleWithBanks, updatedPlayerSeenChunks } = await generateWordBanksWithWorker(game);
+            console.log(`[Game ${game.id}] ⚡ Generating word banks for battle schedule...`);
+            const { battleScheduleWithBanks, updatedPlayerSeenChunks } = await generateWordBanks(game);
             game.battleSchedule = battleScheduleWithBanks;
             game.playerSeenChunks = updatedPlayerSeenChunks;
-            console.log(`[Game ${game.id}] Word banks generated successfully by worker.`);
+            console.log(`[Game ${game.id}] Word banks generated successfully.`);
             
             helpers.playSoundOnClients(io, game, `vo_battle_incoming_${game.language}`);
             const duration = timerService.getTimerValue(game, BATTLE_GET_READY_SECONDS, SLOWPOKE_BATTLE_GET_READY_SECONDS);
             timerService.startPhaseTimer(io, game, 'battle_get_ready', duration, startBattleAnsweringPhase);
 
         } catch (error) {
-            console.error(`[Game ${game.id}] Word bank generation worker failed:`, error);
+            console.error(`[Game ${game.id}] Word bank generation failed:`, error);
             // Handle error, maybe use a simpler fallback or end the game
             io.to(game.id).emit('error-message', { key: 'wordBankGenerationFailed', defaultText: "A critical error occurred preparing the battles." });
         }

@@ -1,5 +1,5 @@
 <script>
-    import { onMount, beforeUpdate } from 'svelte';
+    import { onMount } from 'svelte';
     import Sortable from 'sortablejs';
     import { t, sendMessage, getPartialAnswers, clearConsumedPartialAnswers } from '../../../stores.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
@@ -13,9 +13,9 @@
     
     $: currentBattleToAnswer = battlesToAnswer[0]; // Always show the first unanswered battle
     
-    beforeUpdate(() => {
-        initializeAllBattleForms();
-    });
+    $: if (battlesToAnswer && battlesToAnswer.length > 0 && playerId) {
+        ensureBattleFormsInitialized(battlesToAnswer, playerId);
+    }
 
     function tokenizeSimple(text) {
         if (!text) return [];
@@ -23,59 +23,61 @@
         return text.match(regex) || [];
     }
     
-    function initializeAllBattleForms() {
+    function ensureBattleFormsInitialized(battles, pId) {
+        if (!battles || !battles.length || !pId) return;
+        const uninitialized = battles.filter(b => !battleForms[b.id]);
+        if (uninitialized.length === 0) return;
+
         const partials = getPartialAnswers();
         let consumedPartials = false;
 
-        battlesToAnswer.forEach(battle => {
-            if (!battleForms[battle.id]) {
-                const partialKey = `b-${battle.id}-${playerId}`;
-                const partialAnswer = partials[partialKey];
-                
-                const promptWords = (battle.promptTokens || []).map((item, i) => {
-                    const text = typeof item === 'object' && item !== null ? item.text : item;
-                    return { id: `pt-${battle.id}-${i}`, text, authorId: null, isPrompt: true };
-                });
+        uninitialized.forEach(battle => {
+            const partialKey = `b-${battle.id}-${pId}`;
+            const partialAnswer = partials[partialKey];
+            
+            const promptWords = (battle.promptTokens || []).map((item, i) => {
+                const text = typeof item === 'object' && item !== null ? item.text : item;
+                return { id: `pt-${battle.id}-${i}`, text, authorId: null, isPrompt: true };
+            });
 
-                const rawBank = battle.wordBanks?.[playerId] || [];
-                const bankWords = rawBank.map((item, i) => {
-                    const text = typeof item === 'object' && item !== null ? item.text : item;
-                    const authorId = typeof item === 'object' && item !== null ? item.authorId : null;
-                    return { id: `wb-${battle.id}-${i}`, text, authorId, isPrompt: false };
-                });
+            const rawBank = battle.wordBanks?.[pId] || [];
+            const bankWords = rawBank.map((item, i) => {
+                const text = typeof item === 'object' && item !== null ? item.text : item;
+                const authorId = typeof item === 'object' && item !== null ? item.authorId : null;
+                return { id: `wb-${battle.id}-${i}`, text, authorId, isPrompt: false };
+            });
 
-                const baseForm = {
-                    promptWords,
-                    wordBankWords: bankWords,
+            const baseForm = {
+                promptWords,
+                wordBankWords: bankWords,
+            };
+
+            const createWordsArray = (text) => text.split(' ').filter(Boolean).map((wordText, i) => ({ id: `ans-${Math.random()}-${i}`, text: wordText }));
+
+            if (battle.genre) { // Final battle format
+                const finalPromptTokens = tokenizeSimple(`${battle.genre} ${battle.premise || ''}`).map((tok, i) => ({
+                    id: `fpt-${battle.id}-${i}`,
+                    text: tok,
+                    authorId: null,
+                    isPrompt: true
+                }));
+
+                battleForms[battle.id] = {
+                    ...baseForm,
+                    promptWords: finalPromptTokens,
+                    isFinal: true,
+                    titleWords: partialAnswer?.title ? createWordsArray(partialAnswer.title) : [],
+                    taglineWords: partialAnswer?.tagline ? createWordsArray(partialAnswer.tagline) : [],
+                    activeLine: 'title',
                 };
-
-                const createWordsArray = (text) => text.split(' ').filter(Boolean).map((wordText, i) => ({ id: `ans-${Math.random()}-${i}`, text: wordText }));
-
-                if (battle.genre) { // Final battle format
-                    const finalPromptTokens = tokenizeSimple(`${battle.genre} ${battle.premise || ''}`).map((tok, i) => ({
-                        id: `fpt-${battle.id}-${i}`,
-                        text: tok,
-                        authorId: null,
-                        isPrompt: true
-                    }));
-
-                    battleForms[battle.id] = {
-                        ...baseForm,
-                        promptWords: finalPromptTokens,
-                        isFinal: true,
-                        titleWords: partialAnswer?.title ? createWordsArray(partialAnswer.title) : [],
-                        taglineWords: partialAnswer?.tagline ? createWordsArray(partialAnswer.tagline) : [],
-                        activeLine: 'title',
-                    };
-                } else {
-                    battleForms[battle.id] = {
-                        ...baseForm,
-                        isFinal: false,
-                        answerWords: partialAnswer ? createWordsArray(partialAnswer) : [],
-                    };
-                }
-                if (partialAnswer) consumedPartials = true;
+            } else {
+                battleForms[battle.id] = {
+                    ...baseForm,
+                    isFinal: false,
+                    answerWords: partialAnswer ? createWordsArray(partialAnswer) : [],
+                };
             }
+            if (partialAnswer) consumedPartials = true;
         });
         
         battleForms = {...battleForms};

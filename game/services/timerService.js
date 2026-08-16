@@ -77,7 +77,7 @@ export function startPhaseTimer(io, game, phase, duration, nextStateFn) {
             clearPhaseTimer(currentGame);
             return;
         }
-        helpers.broadcastGameState(io, game.id);
+        helpers.broadcastTimerTick(io, game.id);
     }, 1000);
 
     // Broadcast the initial state immediately so the timer appears instantly.

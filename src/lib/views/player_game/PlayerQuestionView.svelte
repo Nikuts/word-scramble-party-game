@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { t, sendMessage, getPartialAnswers, clearConsumedPartialAnswers, gameState, currentPlayer } from '../../../stores.js';
     import { MIN_ANSWER_WORDS } from '../../config.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
@@ -8,6 +8,7 @@
     export let questions = [];
     
     let answers = {}; // { questionId: 'text' }
+    let debounceTimer = null;
     
     $: unansweredQuestions = questions.filter(q => !answers[q.id]?.submitted);
     $: currentQuestion = unansweredQuestions[0];
@@ -17,6 +18,10 @@
     $: currentWordCount = currentAnswerText.trim().split(/\s+/).filter(Boolean).length;
     $: isAnswerValid = currentWordCount >= MIN_ANSWER_WORDS;
     $: allQuestionsAnswered = questions.length > 0 && questions.every(q => answers[q.id]?.submitted);
+
+    onDestroy(() => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+    });
 
     onMount(() => {
         const partials = getPartialAnswers();
@@ -49,17 +54,25 @@
     function handleAnswerInput(questionId, text) {
         if (!answers[questionId]) answers[questionId] = { text: '', submitted: false };
         answers[questionId].text = text;
-        answers = {...answers}; // Trigger reactivity
+        answers = {...answers}; // Trigger instant local reactivity
         
-        sendMessage('update-partial-answer', {
-            gameId: $gameState.id,
-            playerId: $currentPlayer.id,
-            payload: { type: 'question', questionId: questionId, text: text }
-        });
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            sendMessage('update-partial-answer', {
+                gameId: $gameState.id,
+                playerId: $currentPlayer.id,
+                payload: { type: 'question', questionId: questionId, text: text }
+            });
+        }, 200);
     }
 
     function submitCurrentAnswer() {
         if (!currentQuestion || !isAnswerValid) return;
+
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+            debounceTimer = null;
+        }
 
         const answerText = answers[currentQuestion.id].text;
         answers[currentQuestion.id].submitted = true;

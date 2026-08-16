@@ -103,6 +103,12 @@
         border-color: var(--neon-color, var(--color-primary));
         box-shadow: 0 0 15px rgba(var(--neon-color-rgb, var(--color-primary-rgb)), 0.4), 
                     inset 0 0 15px rgba(var(--neon-color-rgb, var(--color-primary-rgb)), 0.2);
+        contain: layout style;
+    }
+
+    .word-bank-container,
+    .answer-dropzone {
+        contain: layout style;
     }
 }
 

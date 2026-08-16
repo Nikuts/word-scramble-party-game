@@ -188,6 +188,28 @@ export function initializeSocket() {
             lastTickSecond = -1;
         }
     });
+
+    socket.on('timer-tick', ({ phaseTimer: remaining, phase }) => {
+        gameState.update(g => {
+            if (!g || g.phase !== phase) return g;
+            return { ...g, phaseTimer: remaining };
+        });
+
+        const currentGameState = get(gameState);
+        const _isHostDisplay = get(isHostDisplay);
+        const timerPhasesForTick = ['question', 'battle_answering', 'battle_voting'];
+
+        if (timerPhasesForTick.includes(phase) && remaining <= 10 && remaining > 0) {
+            if (remaining !== lastTickSecond) {
+                if (!currentGameState?.soundsOnHostOnly || _isHostDisplay) {
+                    playSound('sfx_timer_tick');
+                }
+                lastTickSecond = remaining;
+            }
+        } else {
+            lastTickSecond = -1;
+        }
+    });
     
     socket.on('game-created', ({ gameId }) => {
         const hostSession = { gameId };

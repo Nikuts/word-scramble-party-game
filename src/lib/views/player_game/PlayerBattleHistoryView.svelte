@@ -1,6 +1,5 @@
 <script>
     import { t, showBattleHistory } from '../../../stores.js';
-    import html2canvas from 'html2canvas';
     import PixelAvatar from '../../shared/PixelAvatar.svelte';
 
     export let game;
@@ -63,6 +62,9 @@
 
             // Wait a moment for the font to apply
             await new Promise(resolve => setTimeout(resolve, 100));
+
+            const html2canvasModule = await import('html2canvas');
+            const html2canvas = html2canvasModule.default || html2canvasModule;
 
             const canvas = await html2canvas(element, {
                 backgroundColor: '#0d0221', // The root background color
