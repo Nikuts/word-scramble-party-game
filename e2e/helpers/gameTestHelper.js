@@ -213,7 +213,7 @@ export async function submitAllPlayerBattles(page, isFinalRound = false) {
 
 /**
  * Handles sequential voting for all battles in a round:
- * Locates the non-competing voter for each active battle, casts a vote,
+ * Locates ALL non-competing voters for each active battle, casts their votes,
  * and waits for the 7-second reveal before handling the next battle.
  * 
  * @param {Array<{page: import('@playwright/test').Page, name: string}>} players
@@ -222,24 +222,24 @@ export async function submitAllPlayerBattles(page, isFinalRound = false) {
  */
 export async function completeAllBattlesVoting(players, hostPage, battleCount = 3) {
     for (let i = 0; i < battleCount; i++) {
-        let voted = false;
+        let anyVoted = false;
         const startTime = Date.now();
         
-        while (!voted && Date.now() - startTime < 30000) {
+        while (!anyVoted && Date.now() - startTime < 30000) {
             for (const p of players) {
-                const voteBtn = p.page.locator('button.btn-arcade:has-text("Vote For This Answer")').first();
-                if (await voteBtn.isVisible()) {
-                    await voteBtn.click();
-                    voted = true;
-                    break;
+                const voteBtns = p.page.locator('button.btn-arcade:has-text("Vote For This Answer")');
+                if (await voteBtns.first().isVisible().catch(() => false)) {
+                    await voteBtns.first().click();
+                    anyVoted = true;
+                    await p.page.waitForTimeout(150);
                 }
             }
-            if (!voted) {
+            if (!anyVoted) {
                 await hostPage.waitForTimeout(300);
             }
         }
         
-        // Wait for reveal duration + next battle transition
+        // Wait for the reveal duration + next battle transition
         await hostPage.waitForTimeout(7500);
     }
 }

@@ -388,7 +388,7 @@ export function advanceToNextBattleOrRound(io, game) {
     }
 }
 
-function calculateBattlePoints(game, battle) {
+export function calculateBattlePoints(game, battle) {
     if (!battle || battle.pointsAwarded) return;
 
     const competitors = battle.competitors || [];

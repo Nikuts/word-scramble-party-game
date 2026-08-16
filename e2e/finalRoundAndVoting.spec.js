@@ -117,6 +117,11 @@ test.describe('Full Multi-Round Lifecycle, Voting & Final Round Showdown', () =>
             hostPage.locator('h1, h2, h3').filter({ hasText: /Winner|Game Over|Podium|Scores|Congratulations|Переможець/i }).first()
         ).toBeVisible({ timeout: 30000 });
 
+        // Verify players have accumulated multi-round points (scores well above 2000 after 3 rounds)
+        await hostPage.waitForTimeout(2500); // Allow podium score animation ticker to finish
+        const playerFinalScores = p1Page.locator('text=Final Scores, text=Підсумковий рахунок');
+        await expect(playerFinalScores.first()).toBeVisible();
+
         // Verify "Play Again" or "Battle History" controls exist on Host / Player screens
         await expect(
             hostPage.locator('button:has-text("Play Again"), button:has-text("Грати знову"), button:has-text("Battle History"), button:has-text("Історія")').first()

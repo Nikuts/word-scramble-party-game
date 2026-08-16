@@ -278,11 +278,15 @@ Fast backend tests verifying game algorithms, scheduling, validation schemas, an
 4. **Round Pre-fetching (`test/roundPrefetch.test.js`):** Asynchronous background data pre-fetching during active rounds to eliminate transition lag.
 5. **Fallback Content (`test/fallbackContent.test.js`):** Bilingual fallback packs, theme non-repetition, and prompt structure verification.
 6. **Game State Manager (`test/manager.test.js`):** Room lifecycle, game instance registration, retrieval, and deletion.
+7. **Scoring Algorithms & Bonuses (`test/scoringBonuses.test.js`):** Flat Word Royalties awarded to contributing authors, Rainbow Bonus (3+ distinct author word combinations), 4-player 2-0 clean sweeps, 1-1 split ties with victory bonus splitting, and auto-win 2-vote equivalent scoring.
+8. **Disconnection & Reconnection Resiliency (`test/reconnection.test.js`):** Player token reconnection, partial answer recovery cache, host display socket reattachment, host reassignment timers upon host disconnect, and automatic game timer pausing when all players disconnect.
+9. **Multi-Round Cumulative Scoring & Preservation (`test/cumulativeScoreTracking.test.js`):** Multi-round point accumulation, cross-round score persistence from Round 1 through Round 3, word royalty attribution to non-competing authors, and final podium sorted rankings without data loss.
+10. **Multi-Competitor Brawls & 11-Player Hybrid Fairness Matrix (`test/multiCompetitorAnd11PlayerBattles.test.js`):** 3-way brawls (1 vs 1 vs 1) and 4-competitor matchups (Answer A vs B vs C vs D), multi-competitor clean sweeps, 2-way and 3-way victory bonus splits, and the 11-player hybrid matrix (6 trios + 2 duos) with strict 2-battle participation, opponent uniqueness, and round-by-round duo rotation.
 
 ---
 
 ### 2. Multi-Client End-to-End (E2E) UI Tests (Playwright)
-End-to-End browser tests simulating a real game session with **1 Desktop Host Display + 3 Mobile Phone Controllers** running concurrently:
+End-to-End browser tests simulating real multiplayer game sessions with **1 Desktop Host Display + 3-4 Mobile Phone Controllers** running concurrently:
 
 - **Run all E2E tests (headless):**
   ```bash
@@ -305,12 +309,23 @@ End-to-End browser tests simulating a real game session with **1 Desktop Host Di
    - Avatar collision prevention (taken avatars rejected and dynamically disabled).
    - Real-time theme selection and floating reaction emoji broadcasts.
 2. **Full Multi-Player Game Flow (`e2e/gameFlow.spec.js`):**
-   - Complete lifecycle from Lobby → Phase 1 Question Answering → Phase 2 Word Scramble Battle → Phase 3 Voting & Scoring.
+   - Complete lifecycle from Lobby → Phase 1 Question Answering → Phase 2 Word Scramble Battle → Phase 3 Sequential Voting & Scoring.
    - Question textarea input, word count validation, and multi-question submission across all 3 players.
    - Dynamic clause bundle parsing and word bank tile generation.
    - Word bank tile clicking and scramble answer submission.
-   - Real-time voting resolution, host reveal, and scoreboard progression.
-3. **Full 3-Round Lifecycle, Movie Dialogue Finale & Winner Podium (`e2e/finalRoundAndVoting.spec.js`):**
+   - Real-time sequential voting across all matchups, host reveal, and scoreboard progression.
+3. **3-Way Brawl (1 vs 1 vs 1) Game Flow (`e2e/threeWayBrawlsGameFlow.spec.js`):**
+   - 9-player pure 3-way brawl session (1 Host + 9 Mobile devices: Alice, Bob, Charlie, Dave, Eve, Frank, Grace, Heidi, Ivan).
+   - 6 trios (1 vs 1 vs 1) scheduled per round with 3 answer cards (Answer A, B, C) and 6 non-competing voters per matchup.
+   - 3-way multi-voter tallying, victory bonus distributions, clean sweeps, and real-time scoreboard progression.
+4. **11-Player Hybrid (1 vs 1 and 1 vs 1 vs 1) Game Flow (`e2e/elevenPlayerGameFlow.spec.js`):**
+   - 11-player full game flow (1 Host + 11 Mobile devices: Alice, Bob, Charlie, Dave, Eve, Frank, Grace, Heidi, Ivan, Judy, Kevin).
+   - 8 battles scheduled per round: exactly 6 Trios (1 vs 1 vs 1) and 2 Duos (1 vs 1), validating 22 player slots (2 battles per player).
+   - Multi-voter tallying across both trio brawls and duo showdowns with round-by-round duo rotation.
+5. **Browser Reload & Reconnection Resiliency (`e2e/reconnection.spec.js`):**
+   - Mid-game mobile player browser reload / refresh: verifies instant auto-reconnection via localStorage session tokens without losing the active question phase or answers.
+   - Host Display browser reload / refresh: verifies instant auto-reconnection as Host Display, re-rendering active timers and all player lists without disrupting connected clients.
+6. **Full 3-Round Lifecycle, Movie Dialogue Finale & Winner Podium (`e2e/finalRoundAndVoting.spec.js`):**
    - Full progression across all 3 rounds of the game.
    - Sequential battle voting across every matchup in each round.
    - Round 3 Finale format: Movie Genre & Premise, Movie Title builder, and Movie Tagline builder with workspace switching.
