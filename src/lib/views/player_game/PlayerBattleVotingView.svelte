@@ -36,6 +36,15 @@
         }
         return `(${$t.noAnswerSubmitted})`;
     }
+    const reactionEmojis = ['🔥', '😂', '💀', '👏', '🤯', '🌈'];
+
+    function sendReaction(emoji) {
+        if (!gameId || !player) return;
+        sendMessage('send-lobby-emoji', {
+            gameId: gameId,
+            emoji: emoji
+        });
+    }
 </script>
 
 <div class="w-full max-w-4xl mx-auto text-center">
@@ -91,13 +100,27 @@
         </div>
     {:else if battle && amIWatching}
         <h1 class="text-3xl mb-4">{$t.votingPhase}</h1>
-        <p class="mt-12 text-2xl text-warning animate-pulse">
+        <p class="mt-8 text-2xl text-warning animate-pulse">
             {#if battle.competitors.includes(player.id)}
                 {$t.waitingForVotes}
             {:else}
                 {$t.waitingForOtherVotes}
             {/if}
         </p>
+        
+        <div class="mt-10 p-4 bg-neutral-900/60 border border-neutral-700 rounded-lg max-w-md mx-auto">
+            <p class="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-3">{$t.sendReaction}</p>
+            <div class="flex justify-center gap-2.5 sm:gap-4">
+                {#each reactionEmojis as emoji}
+                    <button 
+                        class="text-2xl sm:text-3xl p-2 bg-neutral-800 hover:bg-neutral-700 active:scale-125 border border-neutral-600 rounded-full transition-transform shadow-md"
+                        on:click={() => sendReaction(emoji)}
+                    >
+                        {emoji}
+                    </button>
+                {/each}
+            </div>
+        </div>
     {:else}
         <h1 class="text-3xl mb-4">{$t.votingPhase}</h1>
         <p class="mt-12 text-2xl text-warning animate-pulse">{$t.waitingForVotes}</p>

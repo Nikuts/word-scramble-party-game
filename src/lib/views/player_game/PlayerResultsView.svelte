@@ -13,7 +13,24 @@
     {#if myRank > 0}
         <p class="text-2xl sm:text-3xl mb-2">{$t.yourRank}: <span class="text-warning">{['🥇','🥈','🥉'][myRank - 1] || `${myRank}`}</span></p>
     {/if}
-    <p class="text-2xl sm:text-3xl mb-8">{$t.finalScores}: <span class="text-primary">{player?.score || 0}</span></p>
+    <p class="text-2xl sm:text-3xl mb-4">{$t.finalScores}: <span class="text-primary">{player?.score || 0}</span></p>
+
+    {#if game?.superlatives}
+        {@const sups = game.superlatives}
+        {@const myBadges = Object.entries(sups).filter(([k, v]) => v?.playerId === player?.id)}
+        {#if myBadges.length > 0}
+            <div class="mt-2 mb-6 p-3 bg-neutral-900 border border-yellow-500/50 rounded-lg max-w-sm w-full text-center">
+                <p class="text-xs font-bold uppercase tracking-wider text-yellow-400 mb-2">🎖️ {$t.superlativesTitle}</p>
+                <div class="flex flex-wrap justify-center gap-2">
+                    {#each myBadges as [badgeKey, badgeData]}
+                        <span class="px-2.5 py-1 bg-yellow-950/80 border border-yellow-400 text-yellow-200 text-xs font-extrabold rounded-full shadow">
+                            {$t[`${badgeKey}Title`]}
+                        </span>
+                    {/each}
+                </div>
+            </div>
+        {/if}
+    {/if}
 
     <div class="mt-4 flex flex-col sm:flex-row gap-4">
         <button on:click={resetToMenu} class="btn-arcade btn-neutral">{$t.mainMenu}</button>

@@ -271,6 +271,33 @@
                             </div>
                         {/each}
                     </div>
+
+                    <!-- Live Voter Gauge -->
+                    {@const eligibleVoters = $gamePlayers.filter(p => !battle.competitors.includes(p.id))}
+                    {@const votedVoterIds = Object.keys(battle.votes || {})}
+                    <div class="mt-8 pt-4 border-t border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-neutral-950/70 p-3 rounded-lg border border-neutral-700">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base font-bold text-accent">🗳️ {$t.votesLockedIn}:</span>
+                            <span class="text-lg font-extrabold text-white">{votedVoterIds.length} / {eligibleVoters.length}</span>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-center gap-2">
+                            {#each eligibleVoters as voter (voter.id)}
+                                {@const hasVoted = votedVoterIds.includes(voter.id)}
+                                <div 
+                                    class="flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-semibold transition-all duration-300 {hasVoted ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.4)] scale-105' : 'bg-neutral-900 border-neutral-700 text-neutral-400 opacity-60'}"
+                                    title={voter.name}
+                                >
+                                    <div class="w-5 h-5 flex-shrink-0">
+                                        <PixelAvatar avatar={voter.avatar} />
+                                    </div>
+                                    <span class="truncate max-w-[80px]">{voter.name}</span>
+                                    {#if hasVoted}
+                                        <span class="text-emerald-400 font-bold text-xs">✓</span>
+                                    {/if}
+                                </div>
+                            {/each}
+                        </div>
+                    </div>
                 {/if}
             </div>
         {:else if $gamePhase === 'battle_result_reveal'}
@@ -394,6 +421,83 @@
                         </div>
                     {/each}
                 </div>
+
+                {#if $gameState.superlatives && Object.keys($gameState.superlatives).length > 0}
+                    {@const sups = $gameState.superlatives}
+                    <div class="max-w-3xl mx-auto mt-10 p-4 sm:p-6 bg-neutral-950/80 border border-secondary/50 rounded-xl shadow-lg">
+                        <h2 class="text-2xl font-bold text-secondary mb-4 flex items-center justify-center gap-2">
+                            <span>🏆</span> {$t.superlativesTitle}
+                        </h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-left">
+                            {#if sups.ammoFactory}
+                                {@const p = $gamePlayers.find(pl => pl.id === sups.ammoFactory.playerId)}
+                                <div class="bg-neutral-900 border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="w-7 h-7"><PixelAvatar avatar={p?.avatar || '🎯'} /></div>
+                                            <span class="font-bold text-primary truncate">{p?.name}</span>
+                                        </div>
+                                        <p class="font-bold text-sm text-yellow-300">{$t.ammoFactoryTitle}</p>
+                                        <p class="text-xs text-neutral-400 mt-1">{$t.ammoFactoryDesc} (+{sups.ammoFactory.value} pts)</p>
+                                    </div>
+                                </div>
+                            {/if}
+                            {#if sups.rainbowAlchemist}
+                                {@const p = $gamePlayers.find(pl => pl.id === sups.rainbowAlchemist.playerId)}
+                                <div class="bg-neutral-900 border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="w-7 h-7"><PixelAvatar avatar={p?.avatar || '🌈'} /></div>
+                                            <span class="font-bold text-pink-300 truncate">{p?.name}</span>
+                                        </div>
+                                        <p class="font-bold text-sm text-pink-400">{$t.rainbowAlchemistTitle}</p>
+                                        <p class="text-xs text-neutral-400 mt-1">{$t.rainbowAlchemistDesc} ({sups.rainbowAlchemist.value}x)</p>
+                                    </div>
+                                </div>
+                            {/if}
+                            {#if sups.cleanSweeper}
+                                {@const p = $gamePlayers.find(pl => pl.id === sups.cleanSweeper.playerId)}
+                                <div class="bg-neutral-900 border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="w-7 h-7"><PixelAvatar avatar={p?.avatar || '🧹'} /></div>
+                                            <span class="font-bold text-purple-300 truncate">{p?.name}</span>
+                                        </div>
+                                        <p class="font-bold text-sm text-purple-400">{$t.cleanSweeperTitle}</p>
+                                        <p class="text-xs text-neutral-400 mt-1">{$t.cleanSweeperDesc} ({sups.cleanSweeper.value}x)</p>
+                                    </div>
+                                </div>
+                            {/if}
+                            {#if sups.minimalist}
+                                {@const p = $gamePlayers.find(pl => pl.id === sups.minimalist.playerId)}
+                                <div class="bg-neutral-900 border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="w-7 h-7"><PixelAvatar avatar={p?.avatar || '🪶'} /></div>
+                                            <span class="font-bold text-emerald-300 truncate">{p?.name}</span>
+                                        </div>
+                                        <p class="font-bold text-sm text-emerald-400">{$t.minimalistTitle}</p>
+                                        <p class="text-xs text-neutral-400 mt-1">{$t.minimalistDesc} ({sups.minimalist.count} words)</p>
+                                    </div>
+                                </div>
+                            {/if}
+                            {#if sups.shakespeare}
+                                {@const p = $gamePlayers.find(pl => pl.id === sups.shakespeare.playerId)}
+                                <div class="bg-neutral-900 border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="w-7 h-7"><PixelAvatar avatar={p?.avatar || '💬'} /></div>
+                                            <span class="font-bold text-cyan-300 truncate">{p?.name}</span>
+                                        </div>
+                                        <p class="font-bold text-sm text-cyan-400">{$t.shakespeareTitle}</p>
+                                        <p class="text-xs text-neutral-400 mt-1">{$t.shakespeareDesc} ({sups.shakespeare.count} words)</p>
+                                    </div>
+                                </div>
+                            {/if}
+                        </div>
+                    </div>
+                {/if}
+
                 <div class="mt-12">
                     <button class="btn-arcade" style="--btn-color: var(--color-accent);" on:click={() => sendMessage('play-again', { gameId: $gameState.id, loading: true })}>{$t.playAgain}</button>
                 </div>

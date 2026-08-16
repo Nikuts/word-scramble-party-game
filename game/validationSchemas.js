@@ -105,3 +105,9 @@ export const updatePartialAnswerSchema = z.object({
         })
     ])
 });
+
+export const rerollQuestionSchema = z.object({
+    gameId: gameIdSchemaBase,
+    playerId: playerIdSchemaBase,
+    questionId: z.string().min(1)
+});

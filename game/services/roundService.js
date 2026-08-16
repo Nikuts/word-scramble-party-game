@@ -191,15 +191,33 @@ export async function startNextRound(io, game) {
     game.preGeneratedBattlePrompts = roundData.battlePrompts;
     game.preGeneratedFallbackWords = roundData.fallbackWords || [];
     const shuffledQuestionSets = helpers.shuffleArray(roundData.playerQuestions);
+    game.reserveQuestions = {};
+    const extraQuestions = shuffledQuestionSets.slice(game.players.length).flat();
 
     game.players.forEach((player, playerIndex) => {
         const playerQuestionSet = shuffledQuestionSets[playerIndex % shuffledQuestionSets.length] || [];
+        const mainQuestions = playerQuestionSet.slice(0, numQuestionsPerPlayer);
+        
+        // Spare questions for this player
+        const playerReserves = [
+            ...playerQuestionSet.slice(numQuestionsPerPlayer),
+            ...(extraQuestions.length > 0 ? [extraQuestions.pop()] : [])
+        ];
+        
+        if (playerReserves.length === 0) {
+            const fallbackPack = getFallbackRoundData(game.language, []);
+            playerReserves.push(fallbackPack.playerQuestions[0]?.[0] || 'What is your secret superpower?');
+        }
+        
+        game.reserveQuestions[player.id] = playerReserves;
+
         game.playerAnswers[player.id] = {
-            questions: playerQuestionSet.map((qText, i) => ({
+            questions: mainQuestions.map((qText, i) => ({
                 id: `q-${game.currentRound}-${i}-${player.id}`,
                 text: qText || `Fallback Question ${i+1}`,
                 answer: ''
             })),
+            rerollsLeft: 1,
             submittedAll: false
         };
     });

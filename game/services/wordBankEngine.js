@@ -3,6 +3,13 @@ import { FALLBACK_WORDS } from '../fallbackContent.js';
 import { WORD_BANK_SIZES, USE_PRIORITIZED_WORD_BANK_ALGO } from '../../src/lib/config.js';
 import { shuffleArray, tokenizeText, getChunksFromText } from '../helpers.js';
 
+export const ESSENTIAL_CONNECTORS = {
+    en: ['and', 'but', 'because', 'with', 'never', 'always', 'secretly', 'very', 'without', 'our', 'their', 'is', 'was', 'only', 'or', 'so'],
+    uk: ['і', 'але', 'бо', 'щоб', 'з', 'або', 'ніколи', 'завжди', 'дуже', 'таємно', 'без', 'наш', 'їхній', 'це', 'був', 'тільки']
+};
+
+export const MIN_CONNECTOR_COUNT = 4;
+
 export function collectAnswerChunks(playerAnswers = {}, answerHistory = []) {
     const allAnswerChunks = [];
     Object.entries(playerAnswers).forEach(([playerId, pa]) => {
@@ -203,6 +210,25 @@ export function generateWordBanksDirectly({
                     });
                 });
             });
+
+            // 🛡️ Smart Word Bank Balance Guard: Guarantee minimum essential connectors
+            const langKey = language === 'uk' ? 'uk' : 'en';
+            const connectorSet = new Set((ESSENTIAL_CONNECTORS[langKey] || ESSENTIAL_CONNECTORS.en).map(w => w.toLowerCase()));
+            const currentConnectors = finalWordBank.filter(tok => connectorSet.has(tok.text.toLowerCase()));
+            
+            if (currentConnectors.length < MIN_CONNECTOR_COUNT) {
+                const missingCount = MIN_CONNECTOR_COUNT - currentConnectors.length;
+                const availableConnectors = shuffleArray([...(ESSENTIAL_CONNECTORS[langKey] || ESSENTIAL_CONNECTORS.en)])
+                    .filter(conn => !finalWordBank.some(tok => tok.text.toLowerCase() === conn.toLowerCase()));
+                
+                for (let i = 0; i < missingCount && i < availableConnectors.length; i++) {
+                    finalWordBank.push({
+                        text: availableConnectors[i],
+                        authorId: null,
+                        source: 'connector'
+                    });
+                }
+            }
 
             if (finalWordBank.length < minBankSize) {
                 let fallbackPhrases = [];

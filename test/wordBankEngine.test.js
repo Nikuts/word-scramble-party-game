@@ -103,11 +103,39 @@ describe('Word Bank Engine Optimization & Distribution', () => {
                 bank.forEach(token => {
                     expect(token.text).toBeDefined();
                     expect(typeof token.text).toBe('string');
-                    expect(['answer', 'fallback']).toContain(token.source);
+                    expect(['answer', 'fallback', 'connector']).toContain(token.source);
                     if (token.source === 'answer') {
                         expect(token.authorId).not.toBe(cId); // 0% self words
                     }
                 });
+            });
+        });
+    });
+
+    it('guarantees minimum essential connectors via Smart Word Bank Balance Guard', () => {
+        const result = generateWordBanksDirectly({
+            language: 'en',
+            players: mockPlayers,
+            playerAnswers: {
+                p1: { questions: [{ answer: 'Cat dog fox bear tiger lion wolf eagle.' }] }, // Zero connectors
+                p2: { questions: [{ answer: 'Apple orange banana grape cherry lemon.' }] },
+                p3: { questions: [{ answer: 'Table chair desk bed couch lamp door.' }] },
+                p4: { questions: [{ answer: 'Red green blue yellow purple orange.' }] }
+            },
+            answerHistory: [],
+            battleSchedule: JSON.parse(JSON.stringify(mockBattleSchedule)),
+            preGeneratedFallbackWords: [],
+            currentRound: 1,
+            playerSeenChunks: {}
+        });
+
+        result.battleScheduleWithBanks.forEach(battle => {
+            battle.competitors.forEach(cId => {
+                const bank = battle.wordBanks[cId];
+                const connectors = bank.filter(tok => 
+                    ['and', 'but', 'because', 'with', 'never', 'always', 'secretly', 'very', 'without', 'our', 'their', 'is', 'was', 'only', 'or', 'so'].includes(tok.text.toLowerCase())
+                );
+                expect(connectors.length).toBeGreaterThanOrEqual(4);
             });
         });
     });
@@ -146,5 +174,11 @@ describe('Word Bank Engine Optimization & Distribution', () => {
 
         expect(result.battleScheduleWithBanks[0].wordBanks.p1.length).toBeGreaterThanOrEqual(30);
         expect(result.battleScheduleWithBanks[0].wordBanks.p2.length).toBeGreaterThanOrEqual(30);
+
+        // Check Ukrainian connectors
+        const ukConnectors = result.battleScheduleWithBanks[0].wordBanks.p1.filter(tok =>
+            ['і', 'але', 'бо', 'щоб', 'з', 'або', 'ніколи', 'завжди', 'дуже', 'таємно', 'без', 'наш', 'їхній', 'це', 'був', 'тільки'].includes(tok.text.toLowerCase())
+        );
+        expect(ukConnectors.length).toBeGreaterThanOrEqual(4);
     });
 });

@@ -67,6 +67,18 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
     - **Automatic Host Migration:** If the designated Host player disconnects, control is automatically passed to the next available connected player after a short grace period (~90 seconds), ensuring the game never gets stuck.
     - **Clean Lobby on Restart:** When "Play Again" is selected, any players who were disconnected are automatically removed from the lobby, ensuring the new game starts with only active participants.
     - **Fair Tie-Handling:** If a battle vote results in a tie, points are split evenly. This now also correctly applies if one or both competitors fail to submit an answer in time; the result is a tie, the voting screen is correctly skipped, and points are split fairly. The game reliably advances to the next stage in all auto-win and tie scenarios, preventing any game stalls. The final results screen also correctly awards winner status to all players who tie for first place.
+- **Smart Word Bank Balance Guard:** Automatically inspects assigned word banks in 1-on-1, 3-way, and 4-way battles and guarantees a minimum baseline of essential grammatical connectors (`and`, `but`, `because`, `with` / `і`, `але`, `бо`, `щоб`) and linkage words, preventing unbalanced banks in multi-competitor brawls.
+- **Instant Question Re-Roll:** Players can swap out one difficult question per round with a single tap. Spare questions are pre-generated up-front in the background, enabling $<10\text{ms}$ instantaneous swaps without network spinners.
+- **Smart "Undo" & Word Bank Shuffle:** Mobile answer workspaces feature an **"↩ Undo"** button with a dedicated action history stack that accurately pops the last placed word (even after drag-and-drop reordering) and a **"🔀 Shuffle"** button to shake up bank order and spark creativity.
+- **In-Voting Live Emoji Reactions:** While waiting for others to vote or when spectating, players can tap an arcade reaction toolbar (`🔥`, `😂`, `💀`, `👏`, `🤯`, `🌈`) to broadcast floating animated reactions to the main Host TV display in real-time.
+- **"Votes Locked In" Live Ticker:** During battle voting, the Host display shows an active voter gauge (`🗳️ X/Y Votes Locked In`) with glowing avatar chips checking in as eligible voters cast ballots, creating room suspense while strictly preserving secret voting.
+- **Post-Game Awards Ceremony (Superlatives & Accolades):** The final results screen crowns fun data-driven awards alongside 1st, 2nd, and 3rd place:
+    - 🎯 **The Ammo Factory:** Player whose authored words were used in the most winning answers.
+    - 🌈 **The Rainbow Alchemist:** Player who combined words from 3+ distinct players the most.
+    - 🧹 **The Clean Sweeper:** Player with the most unanimous 100% battle victories.
+    - 🪶 **The Minimalist:** Shortest answer that still won a battle.
+    - 💬 **The Shakespeare:** Longest winning sentence masterpiece.
+- **Data-Driven Round & Battle Format Architecture (`formatConfig`):** Decouples round formats (single-line prompt completion, multi-line titles & taglines, role-based matchups) into a structured schema, opening the door for new round types.
 - **Responsive Live Lobby:** Players can rapidly send their avatar from their phone, which animates and flies across the main Host Display. Game settings configured by the host, such as the Color Theme, Silly Mode, and 18+ Mode, are also clearly visible to all players on the main display.
 - **Reliable Dependencies:** All external libraries (like `canvas-confetti` and `html2canvas`) are bundled with the application, removing reliance on external CDNs and improving load times and offline availability.
 
@@ -329,6 +341,8 @@ Fast backend tests verifying game algorithms, scheduling, validation schemas, an
 8. **Disconnection & Reconnection Resiliency (`test/reconnection.test.js`):** Player token reconnection, partial answer recovery cache, host display socket reattachment, host reassignment timers upon host disconnect, and automatic game timer pausing when all players disconnect.
 9. **Multi-Round Cumulative Scoring & Preservation (`test/cumulativeScoreTracking.test.js`):** Multi-round point accumulation, cross-round score persistence from Round 1 through Round 3, word royalty attribution to non-competing authors, and final podium sorted rankings without data loss.
 10. **Multi-Competitor Brawls & 11-Player Hybrid Fairness Matrix (`test/multiCompetitorAnd11PlayerBattles.test.js`):** 3-way brawls (1 vs 1 vs 1) and 4-competitor matchups (Answer A vs B vs C vs D), multi-competitor clean sweeps, 2-way and 3-way victory bonus splits, and the 11-player hybrid matrix (6 trios + 2 duos) with strict 2-battle participation, opponent uniqueness, and round-by-round duo rotation.
+11. **Word Bank Engine & Smart Balance Guard (`test/wordBankEngine.test.js`):** Sub-millisecond word bank assembly, 0% self-authored words guarantee, and connector guard ensuring $\ge 4$ essential connectors in English and Ukrainian.
+12. **Superlatives, FormatConfig & Question Re-Roll (`test/superlativesAndRoundMechanics.test.js`):** End-game accolades (Ammo Factory, Rainbow Alchemist, Clean Sweeper, Minimalist, Shakespeare), data-driven `formatConfig` schema, and reserve question re-roll mechanics.
 
 ---
 
@@ -383,7 +397,15 @@ End-to-End browser tests simulating real multiplayer game sessions with **1 Desk
 
 ## 🏷️ Version History & Checkpoints
 
-- **`v1.4.0` (Latest Release - Performance & Optimization)**:
+- **`v1.5.0` (Latest Release - UI/UX Polish, Accolades & Smart Mechanics)**:
+  - **Smart Word Bank Balance Guard (`wordBankEngine.js`):** Automatically injects guaranteed linguistic connectors (`and`, `but`, `because`, `with` / `і`, `але`, `бо`, `щоб`) into 1-on-1, 3-way, and 4-way word banks if harvested player chunks lack linkage words, preventing all-noun deadlock in large brawls.
+  - **Instant Question Re-Roll System:** Pre-generates spare question pools during round generation, allowing players to swap out 1 question per round with $<10\text{ms}$ latency and instant local state reset.
+  - **Smart "Undo" & Word Bank Shuffle:** Adds a dedicated action history stack to the mobile workspace for accurate word pops regardless of drag-and-drop movements, alongside an instant word bank shuffle button.
+  - **In-Voting Live Emoji Reactions:** Allows voters and spectators to send live floating reactions (`🔥`, `😂`, `💀`, `👏`, `🤯`, `🌈`) directly to the Host TV screen while waiting for other votes to complete.
+  - **"Votes Locked In" Live Ticker:** Host display renders an active voter progress bar (`🗳️ X/Y Votes Locked In`) with individual voter avatar checkmarks during voting without compromising secret voting.
+  - **Post-Game Awards Ceremony (Superlatives & Accolades):** Algorithmic awards for **The Ammo Factory**, **The Rainbow Alchemist**, **The Clean Sweeper**, **The Minimalist**, and **The Shakespeare** displayed on both TV podium and mobile controller results.
+  - **Data-Driven Battle Format Architecture (`formatConfig`):** Encapsulates single-line, multi-line, and future role-based round types into a unified schema across backend and frontend.
+- **`v1.4.0` (Performance & Optimization)**:
   - **Dynamic Code-Splitting & Lazy Loading:** Lazy-loads `html2canvas` on demand and splits vendor dependencies (`socket.io-client`, `sortablejs`, `canvas-confetti`, `qrcode-generator`), reducing the initial application bundle from 508 kB down to 195 kB (~60% decrease).
   - **Instant Word Bank Engine (`wordBankEngine.js`):** Sub-millisecond in-process word bank synthesis (<2ms) with resilient worker thread fallback, eliminating round transition stutter.
   - **Debounced Phase 1 Typing Synchronization:** 200ms debounce on draft syncing cuts network packet volume by 90% during simultaneous 14-player typing while keeping local input 100% responsive.

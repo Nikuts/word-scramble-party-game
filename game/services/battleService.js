@@ -253,9 +253,28 @@ export function generateBattleSchedule(game, prompts, isFinalRound = false) {
     game.battleSchedule = battleGroups.map((group, index) => {
         const promptData = shuffledPrompts.pop() || (isFinalRound ? { genre: 'Action', premise: `A secret agent teams up with their talking cat.` } : `Creative battle! #${index + 1}`);
         
+        const formatConfig = isFinalRound
+            ? {
+                formatType: 'multi_line',
+                genre: promptData.genre,
+                premise: promptData.premise,
+                lines: [
+                    { id: 'title', label: 'Movie Title', placeholder: 'Build Movie Title' },
+                    { id: 'tagline', label: 'Tagline', placeholder: 'Build Tagline' }
+                ]
+            }
+            : {
+                formatType: 'single_line',
+                prompt: promptData,
+                lines: [
+                    { id: 'main', label: 'Your Answer', placeholder: 'Click words to build your answer' }
+                ]
+            };
+
         return {
             id: `b-${game.currentRound}-${index}`,
             competitors: group,
+            formatConfig,
             prompt: isFinalRound ? `${promptData.genre}: ${promptData.premise}` : promptData,
             genre: isFinalRound ? promptData.genre : null,
             premise: isFinalRound ? promptData.premise : null,

@@ -50,12 +50,15 @@
             const baseForm = {
                 promptWords,
                 wordBankWords: bankWords,
+                undoStack: [],
             };
 
             const createWordsArray = (text) => text.split(' ').filter(Boolean).map((wordText, i) => ({ id: `ans-${Math.random()}-${i}`, text: wordText }));
 
-            if (battle.genre) { // Final battle format
-                const finalPromptTokens = tokenizeSimple(`${battle.genre} ${battle.premise || ''}`).map((tok, i) => ({
+            if (battle.genre || battle.formatConfig?.formatType === 'multi_line') { // Multi-line / Final battle format
+                const premiseText = battle.formatConfig?.premise || battle.premise || '';
+                const headerText = battle.formatConfig?.genre || battle.genre || '';
+                const finalPromptTokens = tokenizeSimple(`${headerText} ${premiseText}`).map((tok, i) => ({
                     id: `fpt-${battle.id}-${i}`,
                     text: tok,
                     authorId: null,
@@ -138,6 +141,7 @@
         if (!form) return;
         
         const newAnswerWord = { ...word, id: `ans-${Math.random().toString(36).substring(2, 9)}` };
+        const targetLine = form.isFinal ? form.activeLine : 'main';
 
         if (form.isFinal) {
             if (form.activeLine === 'title') {
@@ -149,8 +153,45 @@
             form.answerWords = [...form.answerWords, newAnswerWord];
         }
 
+        form.undoStack = [...(form.undoStack || []), { wordId: newAnswerWord.id, lineType: targetLine }];
+
         battleForms = {...battleForms};
         saveBattlePartial(battleId);
+    }
+
+    function undoLastWord(battleId) {
+        const form = battleForms[battleId];
+        if (!form || !form.undoStack || form.undoStack.length === 0) return;
+
+        const lastAction = form.undoStack.pop();
+        if (!lastAction) return;
+
+        if (form.isFinal) {
+            if (lastAction.lineType === 'title') {
+                form.titleWords = form.titleWords.filter(w => w && w.id !== lastAction.wordId);
+            } else {
+                form.taglineWords = form.taglineWords.filter(w => w && w.id !== lastAction.wordId);
+            }
+        } else {
+            form.answerWords = form.answerWords.filter(w => w && w.id !== lastAction.wordId);
+        }
+
+        form.undoStack = [...form.undoStack];
+        battleForms = {...battleForms};
+        saveBattlePartial(battleId);
+    }
+
+    function shuffleBank(battleId) {
+        const form = battleForms[battleId];
+        if (!form || !form.wordBankWords) return;
+
+        const shuffled = [...form.wordBankWords];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        form.wordBankWords = shuffled;
+        battleForms = {...battleForms};
     }
 
     function deleteWord(wordId, battleId) {
@@ -168,6 +209,10 @@
             form.answerWords = form.answerWords.filter(w => w && w.id !== wordId);
         }
 
+        if (form.undoStack) {
+            form.undoStack = form.undoStack.filter(item => item.wordId !== wordId);
+        }
+
         battleForms = {...battleForms};
         saveBattlePartial(battleId);
     }
@@ -177,14 +222,20 @@
         if (!form) return;
 
         if (form.isFinal) {
-            if (lineType === 'title') form.titleWords = [];
-            else if (lineType === 'tagline') form.taglineWords = [];
-            else {
+            if (lineType === 'title') {
+                form.titleWords = [];
+                if (form.undoStack) form.undoStack = form.undoStack.filter(item => item.lineType !== 'title');
+            } else if (lineType === 'tagline') {
+                form.taglineWords = [];
+                if (form.undoStack) form.undoStack = form.undoStack.filter(item => item.lineType !== 'tagline');
+            } else {
                 form.titleWords = [];
                 form.taglineWords = [];
+                form.undoStack = [];
             }
         } else {
             form.answerWords = [];
+            form.undoStack = [];
         }
 
         battleForms = {...battleForms};
@@ -390,7 +441,25 @@
 
                 <!-- WORD BANK -->
                 <div>
-                    <h3 class="font-bold mb-2 text-neutral-300 font-display text-left">{$t.wordBank}</h3>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-neutral-300 font-display text-left">{$t.wordBank}</h3>
+                        <div class="flex items-center gap-2">
+                            <button 
+                                class="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-cyan-300 border border-cyan-500/50 rounded font-semibold transition-all inline-flex items-center gap-1 {(!battleForm.undoStack || battleForm.undoStack.length === 0) ? 'opacity-40 pointer-events-none' : 'hover:scale-105'}"
+                                on:click={() => undoLastWord(battle.id)}
+                                title={$t.undo}
+                            >
+                                <span>↩</span> {$t.undo}
+                            </button>
+                            <button 
+                                class="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-yellow-300 border border-yellow-500/50 rounded font-semibold transition-all hover:scale-105 inline-flex items-center gap-1"
+                                on:click={() => shuffleBank(battle.id)}
+                                title={$t.shuffleBank}
+                            >
+                                <span>🔀</span> {$t.shuffleBank}
+                            </button>
+                        </div>
+                    </div>
                     <div class="p-3 bg-neutral-900 border border-neutral-700 max-h-64 sm:max-h-72 overflow-y-auto flex flex-wrap gap-2 justify-center items-start select-none rounded-md">
                         {#each battleForm.wordBankWords as word (word.id)}
                             <button 

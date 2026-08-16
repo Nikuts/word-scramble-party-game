@@ -66,6 +66,32 @@
         }, 200);
     }
 
+    $: rerollsLeft = $gameState?.playerAnswers?.[$currentPlayer?.id]?.rerollsLeft ?? 0;
+    let isFlipping = false;
+
+    function handleRerollQuestion() {
+        if (!currentQuestion || rerollsLeft <= 0 || isFlipping) return;
+        isFlipping = true;
+        
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+            debounceTimer = null;
+        }
+
+        if (answers[currentQuestion.id]) {
+            answers[currentQuestion.id].text = '';
+            answers = { ...answers };
+        }
+        
+        sendMessage('reroll-question', {
+            gameId: $gameState.id,
+            playerId: $currentPlayer.id,
+            questionId: currentQuestion.id
+        });
+
+        setTimeout(() => { isFlipping = false; }, 400);
+    }
+
     function submitCurrentAnswer() {
         if (!currentQuestion || !isAnswerValid) return;
 
@@ -98,8 +124,20 @@
         <h1 class="text-3xl mb-2">{$t.questionPhase}</h1>
         <h2 class="text-xl text-primary mb-6">{$t.answeringQuestion.replace('{currentQ}', answeredCount + 1).replace('{totalQ}', totalQuestions)}</h2>
         
-        <div class="bg-neutral-900/50 border border-neutral-700 p-6 mb-4 rounded-md">
-            <p class="text-xl sm:text-2xl min-h-[6rem] flex items-center justify-center">{currentQuestion.text}</p>
+        <div class="bg-neutral-900/50 border border-neutral-700 p-4 sm:p-6 mb-4 rounded-md relative transition-all duration-300 {isFlipping ? 'scale-95 opacity-40' : 'scale-100 opacity-100'}">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">{$t.prompt}</span>
+                {#if rerollsLeft > 0}
+                    <button 
+                        class="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-yellow-400 border border-yellow-500/50 rounded-full font-bold inline-flex items-center gap-1 shadow-sm transition-all hover:scale-105"
+                        on:click={handleRerollQuestion}
+                        title={$t.rerollQuestion}
+                    >
+                        <span>🎲</span> {$t.reroll} ({rerollsLeft})
+                    </button>
+                {/if}
+            </div>
+            <p class="text-xl sm:text-2xl min-h-[5rem] flex items-center justify-center font-medium leading-relaxed">{currentQuestion.text}</p>
         </div>
         <textarea
             class="w-full h-40 p-3 bg-black border-2 rounded-md text-lg focus:outline-none focus:border-primary focus:shadow-[0_0_15px_var(--color-primary)] transition-all"

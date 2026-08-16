@@ -105,3 +105,31 @@ export function handleVote(io, socket, { gameId, playerId, battleId, voteForPlay
         helpers.broadcastGameState(io, gameId);
     }
 }
+
+export function handleRerollQuestion(io, socket, { gameId, playerId, questionId }) {
+    const game = manager.getGame(gameId);
+    if (game?.phase !== 'question') return;
+
+    const pa = game.playerAnswers[playerId];
+    if (!pa || (pa.rerollsLeft || 0) <= 0) return;
+
+    const question = pa.questions.find(q => q.id === questionId);
+    if (!question || question.answer) return; // Cannot reroll answered question
+
+    const reservePool = game.reserveQuestions?.[playerId] || [];
+    let newQuestionText = reservePool.shift();
+
+    if (!newQuestionText) {
+        newQuestionText = 'What is the weirdest secret you would never tell your boss?';
+    }
+
+    question.text = newQuestionText;
+    pa.rerollsLeft = Math.max(0, (pa.rerollsLeft || 1) - 1);
+
+    // Clear partial answer draft for this question
+    if (game.partialAnswers?.[questionId]) {
+        delete game.partialAnswers[questionId];
+    }
+
+    helpers.broadcastGameState(io, gameId);
+}

@@ -26,7 +26,8 @@ import {
     handleSubmitAnswer,
     handleUpdatePartialAnswer,
     handleSubmitBattleAnswer,
-    handleVote
+    handleVote,
+    handleRerollQuestion
 } from './handlers/gameplayHandlers.js';
 
 export { withValidation };
@@ -56,6 +57,7 @@ export function registerEventHandlers(io, socket) {
     
     // In-game actions
     socket.on('submit-answer', withValidation(schemas.submitAnswerSchema, handleSubmitAnswer.bind(socket)));
+    socket.on('reroll-question', withValidation(schemas.rerollQuestionSchema, handleRerollQuestion.bind(socket)));
     socket.on('update-partial-answer', withValidation(schemas.updatePartialAnswerSchema, handleUpdatePartialAnswer.bind(socket)));
     socket.on('submit-battle-answer', withValidation(schemas.submitBattleAnswerSchema, handleSubmitBattleAnswer.bind(socket)));
     socket.on('vote', withValidation(schemas.voteSchema, handleVote.bind(socket)));
