@@ -97,7 +97,7 @@
             <p class="text-base mb-2">{$t.openBrowserTo}</p>
             <p class="text-lg font-mono font-bold text-accent break-words">{connectURL || '...'}</p>
             <p class="text-base my-3">{$t.orEnterId}</p>
-            <p class="font-display text-4xl sm:text-5xl tracking-widest text-white" style="text-shadow: 0 0 10px #fff;">{$gameState.id}</p>
+            <p class="font-display text-4xl sm:text-5xl tracking-widest text-white" style="text-shadow: 0 0 10px #fff;" data-testid="game-id">{$gameState.id}</p>
             <div class="mt-3 flex justify-center">
                 <button 
                     type="button"

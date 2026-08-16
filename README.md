@@ -257,9 +257,12 @@ The game features two distinct algorithms for generating word banks, which can b
 
 ## 🧪 Testing
 
-The codebase includes an automated **Vitest** test suite verifying server logic, state sanitization, input validation, and fallback algorithms:
+The codebase includes comprehensive test suites spanning fast unit/logic tests with **Vitest** and full multi-client browser End-to-End (E2E) UI tests with **Playwright**.
 
-- **Run all tests:**
+### 1. Unit & Logic Tests (Vitest)
+Fast backend tests verifying game algorithms, scheduling, validation schemas, and state sanitization:
+
+- **Run all unit tests:**
   ```bash
   npm test
   ```
@@ -268,11 +271,45 @@ The codebase includes an automated **Vitest** test suite verifying server logic,
   npm run test:watch
   ```
 
-### Test Coverage Areas:
+#### Unit Test Coverage Areas:
 1. **Helper Utilities (`test/helpers.test.js`):** In-place Fisher-Yates array shuffling, alphanumeric game ID generation, cryptographic token generation, and secure client-facing state sanitization (stripping secret player tokens).
 2. **Schema Validation (`test/validation.test.js`):** Zod schema boundary tests for player registration, avatar selection, answer length constraints, voting, and theme selection.
-3. **Fallback Content (`test/fallbackContent.test.js`):** Bilingual fallback packs, theme non-repetition, and prompt structure verification.
-4. **Game State Manager (`test/manager.test.js`):** Room lifecycle, game instance registration, retrieval, and deletion.
+3. **Battle Scheduling & Pairings (`test/battleSchedule.test.js`):** Group size distributions (2-player duos vs 3-player trios), opponent non-repetition, 11-player rotation matrix, and fairness guarantees across 3 to 14 players.
+4. **Round Pre-fetching (`test/roundPrefetch.test.js`):** Asynchronous background data pre-fetching during active rounds to eliminate transition lag.
+5. **Fallback Content (`test/fallbackContent.test.js`):** Bilingual fallback packs, theme non-repetition, and prompt structure verification.
+6. **Game State Manager (`test/manager.test.js`):** Room lifecycle, game instance registration, retrieval, and deletion.
+
+---
+
+### 2. Multi-Client End-to-End (E2E) UI Tests (Playwright)
+End-to-End browser tests simulating a real game session with **1 Desktop Host Display + 3 Mobile Phone Controllers** running concurrently:
+
+- **Run all E2E tests (headless):**
+  ```bash
+  npm run test:e2e
+  ```
+- **Run E2E tests with interactive visual UI:**
+  ```bash
+  npm run test:e2e:ui
+  ```
+- **Run E2E tests with visible browser windows:**
+  ```bash
+  npm run test:e2e:headed
+  ```
+
+#### E2E Test Coverage Areas:
+1. **Lobby & Settings Synchronization (`e2e/lobby.spec.js`):**
+   - Host display creation and 4-letter Game ID extraction.
+   - Concurrent 3-player mobile join flow (name entry, avatar selection).
+   - Real-time player counter and avatar list synchronization across all devices.
+   - Avatar collision prevention (taken avatars rejected and dynamically disabled).
+   - Real-time theme selection and floating reaction emoji broadcasts.
+2. **Full Multi-Player Game Flow (`e2e/gameFlow.spec.js`):**
+   - Complete lifecycle from Lobby → Phase 1 Question Answering → Phase 2 Word Scramble Battle → Phase 3 Voting & Scoring.
+   - Question textarea input, word count validation, and multi-question submission across all 3 players.
+   - Dynamic clause bundle parsing and word bank tile generation.
+   - Word bank tile clicking and scramble answer submission.
+   - Real-time voting resolution, host reveal, and scoreboard progression.
 
 ---
 
