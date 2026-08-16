@@ -174,6 +174,67 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
             expect(game.players.find(p => p.id === 'p3').score).toBe(0);
             expect(game.players.find(p => p.id === 'p4').score).toBe(0);
         });
+        it('does NOT award duplicate royalties if multiple words from the same author are used', () => {
+            const game = createMockGame(1, 4);
+            const battle = {
+                id: 'b_multi_words_same_author',
+                competitors: ['p1', 'p2'],
+                answers: {
+                    p1: 'Alpha beta gamma delta epsilon',
+                    p2: 'Losing answer'
+                },
+                votes: { p3: 'p1', p4: 'p1' },
+                wordBanks: {
+                    p1: [
+                        { text: 'alpha', authorId: 'p2' },
+                        { text: 'beta', authorId: 'p2' },
+                        { text: 'gamma', authorId: 'p2' },
+                        { text: 'delta', authorId: 'p2' },
+                        { text: 'epsilon', authorId: 'p2' }
+                    ],
+                    p2: []
+                }
+            };
+
+            calculateBattlePoints(game, battle);
+
+            // p2 contributed 5 words, but should receive flat royalty ONCE (50 pts, not 250 pts)
+            expect(game.players.find(p => p.id === 'p2').score).toBe(50);
+            expect(battle.royalties).toHaveLength(1);
+            expect(battle.royalties[0]).toEqual({
+                authorId: 'p2',
+                authorName: 'Player 2',
+                usedBy: 'p1',
+                points: 50
+            });
+        });
+
+        it('awards royalties to authors from multiple competing answers in the same battle', () => {
+            const game = createMockGame(1, 6);
+            const battle = {
+                id: 'b_multi_comp_royalties',
+                competitors: ['p1', 'p2', 'p3'],
+                answers: {
+                    p1: 'Answer using words from p4',
+                    p2: 'Answer using words from p5 and p6',
+                    p3: 'Unused words'
+                },
+                votes: { p4: 'p1', p5: 'p2', p6: 'p2' },
+                wordBanks: {
+                    p1: [{ text: 'words', authorId: 'p4' }],
+                    p2: [{ text: 'words', authorId: 'p5' }, { text: 'and', authorId: 'p6' }],
+                    p3: []
+                }
+            };
+
+            calculateBattlePoints(game, battle);
+
+            // p4 earned royalty from p1's vote (50 pts)
+            expect(game.players.find(p => p.id === 'p4').score).toBe(50);
+            // p5 and p6 earned royalties from p2's votes (50 pts each)
+            expect(game.players.find(p => p.id === 'p5').score).toBe(50);
+            expect(game.players.find(p => p.id === 'p6').score).toBe(50);
+        });
     });
 
     describe('Rainbow Variety Bonus', () => {
@@ -207,6 +268,55 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
             // Total = 1050
             expect(battle.pointsAwarded['p1']).toBe(1050);
             expect(game.players.find(p => p.id === 'p1').score).toBe(1050);
+        });
+
+        it('scales Rainbow Bonus in Round 2 (+200) and Round 3 (+400)', () => {
+            // Round 2
+            const gameR2 = createMockGame(2, 5);
+            const battleR2 = {
+                id: 'b_rainbow_r2',
+                competitors: ['p1', 'p2'],
+                answers: { p1: 'Cybernetic space dragon unleashed', p2: 'Other answer' },
+                votes: { p3: 'p1', p4: 'p1', p5: 'p1' },
+                wordBanks: {
+                    p1: [
+                        { text: 'cybernetic', authorId: 'p3' },
+                        { text: 'space', authorId: 'p4' },
+                        { text: 'dragon', authorId: 'p5' }
+                    ],
+                    p2: []
+                }
+            };
+            calculateBattlePoints(gameR2, battleR2);
+            // 3 votes * 600 (1800) + win (400) + sweep (300) + rainbow R2 (200) = 2700
+            expect(battleR2.pointsAwarded['p1']).toBe(2700);
+
+            // Round 3 (Final Round Movie Title & Tagline object)
+            const gameR3 = createMockGame(3, 5);
+            const battleR3 = {
+                id: 'b_rainbow_r3',
+                competitors: ['p1', 'p2'],
+                answers: { 
+                    p1: { title: 'Galactic Detective', tagline: 'Solving crimes across dimensions' }, 
+                    p2: { title: 'Normal Movie', tagline: 'Regular tagline' } 
+                },
+                votes: { p3: 'p1', p4: 'p1', p5: 'p1' },
+                wordBanks: {
+                    p1: [
+                        { text: 'galactic', authorId: 'p3' },
+                        { text: 'crimes', authorId: 'p4' },
+                        { text: 'dimensions', authorId: 'p5' }
+                    ],
+                    p2: []
+                }
+            };
+            calculateBattlePoints(gameR3, battleR3);
+            // 3 votes * 1200 (3600) + win (800) + sweep (600) + rainbow R3 (400) = 5400
+            expect(battleR3.pointsAwarded['p1']).toBe(5400);
+            // Each author earns flat royalty in R3 = 100 pts (FLAT_ROYALTY_PER_ROUND[2])
+            expect(gameR3.players.find(p => p.id === 'p3').score).toBe(100);
+            expect(gameR3.players.find(p => p.id === 'p4').score).toBe(100);
+            expect(gameR3.players.find(p => p.id === 'p5').score).toBe(100);
         });
 
         it('does NOT award Rainbow Bonus if only 2 distinct authors are used', () => {
