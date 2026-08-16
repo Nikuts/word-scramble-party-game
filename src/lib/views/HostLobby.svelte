@@ -173,7 +173,7 @@
                         <button 
                             type="button"
                             on:click={() => handleSelectTheme(themeOption)} 
-                            class="p-2.5 text-xs sm:text-sm text-center transition-all rounded-md cursor-pointer border {
+                            class="p-2.5 text-xs sm:text-sm text-center transition-all rounded-md cursor-pointer border-2 {
                                 $gameState?.theme === themeOption 
                                 ? 'bg-primary text-black font-bold border-white shadow-[0_0_10px_rgba(6,182,212,0.8)]' 
                                 : 'bg-neutral-800/80 border-neutral-600 hover:bg-neutral-700 text-gray-200'

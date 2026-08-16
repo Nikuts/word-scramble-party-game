@@ -310,6 +310,12 @@ End-to-End browser tests simulating a real game session with **1 Desktop Host Di
    - Dynamic clause bundle parsing and word bank tile generation.
    - Word bank tile clicking and scramble answer submission.
    - Real-time voting resolution, host reveal, and scoreboard progression.
+3. **Full 3-Round Lifecycle, Movie Dialogue Finale & Winner Podium (`e2e/finalRoundAndVoting.spec.js`):**
+   - Full progression across all 3 rounds of the game.
+   - Sequential battle voting across every matchup in each round.
+   - Round 3 Finale format: Movie Genre & Premise, Movie Title builder, and Movie Tagline builder with workspace switching.
+   - Final movie battle voting with Title + Tagline dialogue comparison.
+   - Game Over screen, winner celebration podium, and "Play Again" button validation.
 
 ---
 

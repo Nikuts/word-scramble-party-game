@@ -123,9 +123,20 @@
                         <p class="text-warning text-sm text-center">AI content generation failed. A random built-in theme will be chosen automatically when you start the game.</p>
                     </div>
                 {/if}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
                     {#each (game?.preGeneratedThemes[$language] || []) as theme}
-                        <button on:click={() => handleThemeClick(theme)} disabled={isApiDisabled || game?.isGeneratingThemes} class="p-3 text-sm text-center transition-all rounded-md cursor-pointer {game?.theme === theme ? 'bg-primary text-black font-bold ring-2 ring-white shadow-[0_0_8px_rgba(6,182,212,0.8)]' : 'bg-neutral-800 border border-neutral-600 hover:bg-neutral-700'} disabled:opacity-50 disabled:cursor-not-allowed">{theme}</button>
+                        <button 
+                            type="button"
+                            on:click={() => handleThemeClick(theme)} 
+                            disabled={isApiDisabled || game?.isGeneratingThemes} 
+                            class="p-3 text-sm text-center transition-all rounded-md cursor-pointer border-2 {
+                                game?.theme === theme 
+                                ? 'bg-primary text-black font-bold border-white shadow-[0_0_8px_rgba(6,182,212,0.8)]' 
+                                : 'bg-neutral-800 border-neutral-600 hover:bg-neutral-700 text-gray-200'
+                            } disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {theme}
+                        </button>
                     {/each}
                 </div>
                 <div class="relative mb-6">

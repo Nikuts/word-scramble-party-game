@@ -92,29 +92,38 @@ export async function joinPlayerSession(page, { gameId, playerName, avatar }) {
 }
 
 /**
- * Fills in and submits answers during Phase 1 (Question Answering).
+ * Answers all available questions for a player in a round dynamically until all questions are answered.
  * 
  * @param {import('@playwright/test').Page} page
- * @param {string} answerText
+ * @param {string} playerName
  */
-export async function submitQuestionAnswer(page, answerText = "This is a wonderful test answer for the question.") {
+export async function submitAllRoundQuestions(page, playerName) {
     const textarea = page.locator('textarea');
-    await textarea.waitFor({ state: 'visible', timeout: 15000 });
-    await textarea.fill(answerText);
+    await textarea.waitFor({ state: 'visible', timeout: 25000 });
 
-    const submitBtn = page.locator('button.btn-arcade:has-text("Submit"), button.btn-arcade:has-text("Надіслати")');
-    await submitBtn.waitFor({ state: 'visible' });
-    await submitBtn.click();
+    let qCount = 0;
+    while (await textarea.isVisible()) {
+        qCount++;
+        await textarea.fill(`Creative test answer number ${qCount} from ${playerName} for this awesome question.`);
+        
+        const submitBtn = page.locator('button.btn-arcade:has-text("Submit"), button.btn-arcade:has-text("Надіслати")');
+        await submitBtn.waitFor({ state: 'visible' });
+        await submitBtn.click();
+        await page.waitForTimeout(400);
+
+        // Check if all questions are answered
+        const isWaiting = await page.locator('text=Waiting for other players, text=Чекаємо на інших').first().isVisible().catch(() => false);
+        if (isWaiting) break;
+    }
 }
 
 /**
- * Selects words from the word bank and submits an answer during Phase 2 (Word Scramble Battle).
+ * Selects words from the word bank and submits an answer during regular battle rounds (Rounds 1 & 2).
  * 
  * @param {import('@playwright/test').Page} page
  * @param {number} wordCount Number of words to click from word bank
  */
 export async function submitScrambleBattleAnswer(page, wordCount = 4) {
-    // Wait for the word bank or answer container to appear
     const wordBankButtons = page.locator('.p-3.bg-neutral-900 button, button:has-text("✕") ~ div button');
     await wordBankButtons.first().waitFor({ state: 'visible', timeout: 20000 });
 
@@ -125,28 +134,112 @@ export async function submitScrambleBattleAnswer(page, wordCount = 4) {
         const btn = wordBankButtons.nth(i);
         if (await btn.isVisible()) {
             await btn.click();
-            await page.waitForTimeout(100);
+            await page.waitForTimeout(80);
         }
     }
 
-    // Submit the battle answer
     const submitBtn = page.locator('button.btn-arcade:has-text("Submit Battle Answer"), button.btn-arcade:has-text("Надіслати відповідь")');
     await submitBtn.waitFor({ state: 'visible' });
     await submitBtn.click();
 }
 
 /**
- * Casts a vote on the battle voting screen.
+ * Selects words and fills both Movie Title and Tagline during Round 3 (Finale).
  * 
  * @param {import('@playwright/test').Page} page
- * @param {number} optionIndex 0 for Answer A, 1 for Answer B, etc.
  */
-export async function castBattleVote(page, optionIndex = 0) {
-    const voteButtons = page.locator('button.btn-arcade:has-text("Vote For This Answer"), button.btn-arcade:has-text("Голосувати за цю відповідь")');
-    await voteButtons.first().waitFor({ state: 'visible', timeout: 20000 });
+export async function submitFinalBattleAnswer(page) {
+    const wordBankButtons = page.locator('.p-3.bg-neutral-900 button');
+    await wordBankButtons.first().waitFor({ state: 'visible', timeout: 20000 });
 
-    const targetBtn = voteButtons.nth(optionIndex);
-    if (await targetBtn.isVisible()) {
-        await targetBtn.click();
+    // 1. Add words to Title (default active line)
+    const totalAvailable = await wordBankButtons.count();
+    const titleWords = Math.min(2, totalAvailable);
+    for (let i = 0; i < titleWords; i++) {
+        const btn = wordBankButtons.nth(i);
+        if (await btn.isVisible()) {
+            await btn.click();
+            await page.waitForTimeout(80);
+        }
+    }
+
+    // 2. Switch to Tagline
+    const taglineBox = page.locator('[aria-label="Select Movie Tagline for adding words"]');
+    if (await taglineBox.isVisible()) {
+        await taglineBox.click();
+        await page.waitForTimeout(100);
+    }
+
+    // 3. Add words to Tagline
+    const remainingCount = await wordBankButtons.count();
+    const taglineWords = Math.min(3, remainingCount);
+    for (let i = 0; i < taglineWords; i++) {
+        const btn = wordBankButtons.nth(i);
+        if (await btn.isVisible()) {
+            await btn.click();
+            await page.waitForTimeout(80);
+        }
+    }
+
+    // 4. Submit Final Battle Answer
+    const submitBtn = page.locator('button.btn-arcade:has-text("Submit Battle Answer"), button.btn-arcade:has-text("Надіслати відповідь")');
+    await submitBtn.waitFor({ state: 'visible' });
+    await submitBtn.click();
+}
+
+/**
+ * Submits all battles for a given player in a round.
+ * 
+ * @param {import('@playwright/test').Page} page
+ * @param {boolean} isFinalRound
+ */
+export async function submitAllPlayerBattles(page, isFinalRound = false) {
+    for (let b = 0; b < 2; b++) {
+        const submitBtn = page.locator('button.btn-arcade:has-text("Submit Battle Answer")');
+        try {
+            if (await submitBtn.isVisible({ timeout: 5000 })) {
+                if (isFinalRound) {
+                    await submitFinalBattleAnswer(page);
+                } else {
+                    await submitScrambleBattleAnswer(page, 4);
+                }
+                await page.waitForTimeout(400);
+            }
+        } catch {
+            // Already completed or transitioned
+        }
+    }
+}
+
+/**
+ * Handles sequential voting for all battles in a round:
+ * Locates the non-competing voter for each active battle, casts a vote,
+ * and waits for the 7-second reveal before handling the next battle.
+ * 
+ * @param {Array<{page: import('@playwright/test').Page, name: string}>} players
+ * @param {import('@playwright/test').Page} hostPage
+ * @param {number} battleCount
+ */
+export async function completeAllBattlesVoting(players, hostPage, battleCount = 3) {
+    for (let i = 0; i < battleCount; i++) {
+        let voted = false;
+        const startTime = Date.now();
+        
+        while (!voted && Date.now() - startTime < 30000) {
+            for (const p of players) {
+                const voteBtn = p.page.locator('button.btn-arcade:has-text("Vote For This Answer")').first();
+                if (await voteBtn.isVisible()) {
+                    await voteBtn.click();
+                    voted = true;
+                    break;
+                }
+            }
+            if (!voted) {
+                await hostPage.waitForTimeout(300);
+            }
+        }
+        
+        // Wait for reveal duration + next battle transition
+        await hostPage.waitForTimeout(7500);
     }
 }
