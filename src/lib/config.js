@@ -11,6 +11,16 @@ export const PLAYER_RECONNECTION_TIMEOUT = 5 * 60 * 1000; // 5 minutes in millis
 export const HOST_REASSIGNMENT_TIMEOUT_SECONDS = 90; // The grace period before a disconnected host is replaced.
 export const SOUNDS_ON_HOST_ONLY = false; // Set to true to play sounds only on the host display.
 
+// --- Server Resource & Capacity Safeguards ---
+// Optional manual overrides (null = dynamically auto-detected from host RAM & CPU cores)
+export const MAX_CONCURRENT_GAMES = (typeof process !== 'undefined' && process.env?.MAX_CONCURRENT_GAMES)
+    ? parseInt(process.env.MAX_CONCURRENT_GAMES, 10)
+    : null;
+
+export const MAX_MEMORY_THRESHOLD_MB = (typeof process !== 'undefined' && process.env?.MAX_MEMORY_THRESHOLD_MB)
+    ? parseInt(process.env.MAX_MEMORY_THRESHOLD_MB, 10)
+    : null;
+
 // --- Round Structure ---
 // The game now has 3 rounds. The 3rd round's battle is the special final round.
 export const QUESTIONS_PER_ROUND = [4, 3, 2]; // Number of questions in Round 1, 2, and 3.

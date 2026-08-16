@@ -99,4 +99,35 @@ describe('Multi-Game Concurrency & Session Isolation', () => {
         expect(foundGame).toBeDefined();
         expect(foundGame.id).toBe('FAST');
     });
+
+    it('safeguards against server overload by rejecting game creation when max capacity is reached', async () => {
+        const metrics = manager.getServerHealthMetrics();
+        expect(metrics.maxGames).toBeGreaterThan(0);
+        expect(metrics.maxMemoryMb).toBeGreaterThan(0);
+
+        // Fill up to dynamic max games limit
+        for (let i = 0; i < metrics.maxGames; i++) {
+            manager.addGame(`ROOM${i}`, { id: `ROOM${i}`, phase: 'lobby', players: [] });
+        }
+
+        const capacityCheck = manager.checkServerCapacity();
+        expect(capacityCheck.allowed).toBe(false);
+        expect(capacityCheck.reason).toBe('max_games_reached');
+
+        let emittedError = null;
+        const mockSocket = {
+            id: 'host-rejected',
+            emit: (event, payload) => {
+                if (event === 'error-message') emittedError = payload;
+            },
+            join: () => {},
+            data: {}
+        };
+        const mockIo = { to: () => ({ emit: () => {} }), in: () => ({ disconnectSockets: () => {} }) };
+
+        await handleCreateGame(mockIo, mockSocket, { language: 'en' });
+        expect(emittedError).toBeDefined();
+        expect(emittedError.key).toBe('serverBusy');
+        expect(emittedError.fatal).toBe(false);
+    });
 });

@@ -44,6 +44,15 @@ export async function generateInitialThemes(io, game) {
 }
 
 export async function handleCreateGame(io, socket, { language }) {
+    const capacity = manager.checkServerCapacity();
+    if (!capacity.allowed) {
+        return socket.emit('error-message', {
+            key: 'serverBusy',
+            defaultText: "Server is currently at maximum capacity. Please try again in a few moments.",
+            fatal: false
+        });
+    }
+
     let gameId = helpers.generateGameId();
     let attempts = 0;
     while (manager.getGame(gameId) && attempts < 50) {

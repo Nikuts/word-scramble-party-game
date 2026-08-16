@@ -78,6 +78,11 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
     - 🧹 **The Clean Sweeper:** Player with the most unanimous 100% battle victories.
     - 🪶 **The Minimalist:** Shortest answer that still won a battle.
     - 💬 **The Shakespeare:** Longest winning sentence masterpiece.
+- **Adaptive Server Resource & Capacity Safeguards:** Zero-configuration, hardware-agnostic safeguards automatically adapt to any environment (from 512MB free tier containers to multi-core cloud instances):
+    - **Dynamic Hardware Autoscaling:** Auto-detects available host memory (`os.totalmem()` / V8 heap limits) and CPU cores (`os.cpus()`) to calculate safe concurrent game thresholds without hardcoded limits.
+    - **Real-Time Event Loop Lag Monitoring:** Monitors event loop latency in real time (`perf_hooks.monitorEventLoopDelay`). If CPU saturation or event loop lag exceeds 350ms, temporarily pauses new room creations until lag subsides.
+    - **Emergency Memory Sweeps:** Pre-emptively sweeps abandoned rooms when process RSS reaches 85% capacity, shielding the application from container OOM crashes.
+    - **Optional Environment Overrides:** `MAX_CONCURRENT_GAMES` and `MAX_MEMORY_THRESHOLD_MB` remain available for administrators who want to enforce strict custom limits.
 - **Data-Driven Round & Battle Format Architecture (`formatConfig`):** Decouples round formats (single-line prompt completion, multi-line titles & taglines, role-based matchups) into a structured schema, opening the door for new round types.
 - **Responsive Live Lobby:** Players can rapidly send their avatar from their phone, which animates and flies across the main Host Display. Game settings configured by the host, such as the Color Theme, Silly Mode, and 18+ Mode, are also clearly visible to all players on the main display.
 - **Reliable Dependencies:** All external libraries (like `canvas-confetti` and `html2canvas`) are bundled with the application, removing reliance on external CDNs and improving load times and offline availability.

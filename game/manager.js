@@ -1,7 +1,116 @@
 // game/manager.js
+import os from 'os';
+import v8 from 'v8';
+import { monitorEventLoopDelay } from 'perf_hooks';
+import { MAX_CONCURRENT_GAMES, MAX_MEMORY_THRESHOLD_MB } from '../src/lib/config.js';
 
 let games = {}; // Stores all active games { gameId: gameData }
 let gcInterval = null;
+
+let eventLoopMonitor = null;
+if (typeof monitorEventLoopDelay === 'function') {
+    try {
+        eventLoopMonitor = monitorEventLoopDelay({ resolution: 20 });
+        eventLoopMonitor.enable();
+    } catch (e) {
+        eventLoopMonitor = null;
+    }
+}
+
+/**
+ * Dynamically evaluates host hardware limits (RAM, CPU cores, Event Loop lag)
+ * and returns current real-time health metrics.
+ */
+export const getServerHealthMetrics = () => {
+    let rssMb = 0;
+    let maxMemoryMb = 512;
+    let eventLoopLagMs = 0;
+    let cpuCores = 1;
+
+    if (typeof process !== 'undefined' && process.memoryUsage) {
+        const mem = process.memoryUsage();
+        rssMb = Math.round(mem.rss / (1024 * 1024));
+    }
+
+    if (typeof os !== 'undefined') {
+        try {
+            cpuCores = os.cpus()?.length || 1;
+            const totalMemMb = Math.round(os.totalmem() / (1024 * 1024));
+            let heapLimitMb = totalMemMb;
+            if (typeof v8 !== 'undefined' && v8.getHeapStatistics) {
+                heapLimitMb = Math.round(v8.getHeapStatistics().heap_size_limit / (1024 * 1024));
+            }
+            // 85% of effective memory ceiling
+            maxMemoryMb = Math.round(Math.min(totalMemMb, heapLimitMb) * 0.85);
+        } catch (e) {
+            maxMemoryMb = 512;
+        }
+    }
+
+    if (eventLoopMonitor) {
+        // Convert nanoseconds to milliseconds
+        eventLoopLagMs = Math.round((eventLoopMonitor.mean || 0) / 1e6);
+        if (eventLoopMonitor.reset) eventLoopMonitor.reset();
+    }
+
+    // Use environment variable override if explicitly defined, otherwise use dynamic auto-detection
+    const configuredMaxMemory = MAX_MEMORY_THRESHOLD_MB || maxMemoryMb;
+    const configuredMaxGames = MAX_CONCURRENT_GAMES || Math.max(15, Math.min(Math.floor(configuredMaxMemory / 3), cpuCores * 35));
+
+    return {
+        rssMb,
+        maxMemoryMb: configuredMaxMemory,
+        maxGames: configuredMaxGames,
+        eventLoopLagMs,
+        activeGamesCount: Object.keys(games).length
+    };
+};
+
+/**
+ * Checks if the server has sufficient resources to host a new game session
+ * based on dynamic hardware discovery and real-time event loop metrics.
+ * @returns {{ allowed: boolean, reason?: string, metrics?: object }}
+ */
+export const checkServerCapacity = () => {
+    const metrics = getServerHealthMetrics();
+
+    // 1. Concurrent room capacity check
+    if (metrics.activeGamesCount >= metrics.maxGames) {
+        console.warn(`[Capacity Guard] Blocked new game creation: games capacity reached (${metrics.activeGamesCount}/${metrics.maxGames})`);
+        return {
+            allowed: false,
+            reason: 'max_games_reached',
+            metrics
+        };
+    }
+
+    // 2. Event loop CPU lag check (> 350ms average latency)
+    if (metrics.eventLoopLagMs > 350) {
+        console.warn(`[Capacity Guard] Blocked new game creation due to high CPU event loop lag: ${metrics.eventLoopLagMs}ms`);
+        return {
+            allowed: false,
+            reason: 'cpu_overloaded',
+            metrics
+        };
+    }
+
+    // 3. Memory ceiling check
+    if (metrics.rssMb >= metrics.maxMemoryMb) {
+        // Attempt emergency garbage collection of inactive rooms
+        cleanupStaleGames(10 * 60 * 1000);
+        const updatedRssMb = Math.round(process.memoryUsage().rss / (1024 * 1024));
+        if (updatedRssMb >= metrics.maxMemoryMb) {
+            console.warn(`[Capacity Guard] Blocked new game creation due to high memory: ${updatedRssMb}MB / ${metrics.maxMemoryMb}MB threshold`);
+            return {
+                allowed: false,
+                reason: 'high_memory',
+                metrics: { ...metrics, rssMb: updatedRssMb }
+            };
+        }
+    }
+
+    return { allowed: true, metrics };
+};
 
 export const getGames = () => games;
 export const getGame = (gameId) => {
