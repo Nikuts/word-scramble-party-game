@@ -343,6 +343,7 @@ Fast backend tests verifying game algorithms, scheduling, validation schemas, an
 10. **Multi-Competitor Brawls & 11-Player Hybrid Fairness Matrix (`test/multiCompetitorAnd11PlayerBattles.test.js`):** 3-way brawls (1 vs 1 vs 1) and 4-competitor matchups (Answer A vs B vs C vs D), multi-competitor clean sweeps, 2-way and 3-way victory bonus splits, and the 11-player hybrid matrix (6 trios + 2 duos) with strict 2-battle participation, opponent uniqueness, and round-by-round duo rotation.
 11. **Word Bank Engine & Smart Balance Guard (`test/wordBankEngine.test.js`):** Sub-millisecond word bank assembly, 0% self-authored words guarantee, and connector guard ensuring $\ge 4$ essential connectors in English and Ukrainian.
 12. **Superlatives, FormatConfig & Question Re-Roll (`test/superlativesAndRoundMechanics.test.js`):** End-game accolades (Ammo Factory, Rainbow Alchemist, Clean Sweeper, Minimalist, Shakespeare), data-driven `formatConfig` schema, and reserve question re-roll mechanics.
+13. **Multi-Game Concurrency & Session Isolation (`test/multiGameIsolation.test.js`):** Simultaneous independent game rooms, collision-proof 4-letter room ID generation, isolated phase transitions, and $O(1)$ socket lookup performance.
 
 ---
 

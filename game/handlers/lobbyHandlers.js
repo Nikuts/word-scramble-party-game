@@ -44,7 +44,13 @@ export async function generateInitialThemes(io, game) {
 }
 
 export async function handleCreateGame(io, socket, { language }) {
-    const gameId = helpers.generateGameId();
+    let gameId = helpers.generateGameId();
+    let attempts = 0;
+    while (manager.getGame(gameId) && attempts < 50) {
+        gameId = helpers.generateGameId();
+        attempts++;
+    }
+
     const serverIP = helpers.getLocalIpAddress();
     
     const game = {
@@ -81,6 +87,10 @@ export async function handleCreateGame(io, socket, { language }) {
     };
     manager.addGame(gameId, game);
     socket.join(gameId);
+    if (socket) {
+        socket.data = socket.data || {};
+        socket.data.gameId = gameId;
+    }
     socket.emit('game-created', { gameId });
     
     const INACTIVITY_TIMEOUT = 1 * 60 * 60 * 1000; // 1 hour
@@ -128,6 +138,10 @@ export function handleJoinGame(io, socket, { gameId, playerName, language, avata
 
     game.players.push(player);
     socket.join(gameId);
+    if (socket) {
+        socket.data = socket.data || {};
+        socket.data.gameId = gameId;
+    }
     
     socket.emit('player-joined', {
         playerId: player.id,

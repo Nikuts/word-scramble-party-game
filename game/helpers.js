@@ -106,6 +106,7 @@ export function getSanitizedGameState(game) {
         playerAnswers: game.playerAnswers, 
         battleSchedule: game.battleSchedule,
         battleHistory: game.battleHistory || [],
+        superlatives: game.superlatives || null,
     };
 
     return sanitizedGame;

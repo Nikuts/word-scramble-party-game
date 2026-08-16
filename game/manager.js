@@ -41,7 +41,7 @@ export const deleteGame = (gameId) => {
  * @returns {object|undefined} The game object or undefined if not found.
  */
 export const getGameFromSocket = (socket) => {
-    const gameId = Array.from(socket.rooms).find(room => room !== socket.id);
+    const gameId = socket.data?.gameId || Array.from(socket.rooms || []).find(room => room !== socket.id);
     return getGame(gameId);
 };
 

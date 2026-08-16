@@ -99,6 +99,10 @@ export function handleReconnectPlayer(io, socket, { gameId, playerId, playerToke
 
         player.socketId = socket.id;
         socket.join(gameId);
+        if (socket) {
+            socket.data = socket.data || {};
+            socket.data.gameId = gameId;
+        }
         helpers.assignHostPlayer(game);
         
         const partialAnswersForPlayer = {};
@@ -131,6 +135,10 @@ export function handleJoinAsHostDisplay(io, socket, { gameId }) {
     const game = manager.getGame(gameId);
     if (game) {
         socket.join(gameId);
+        if (socket) {
+            socket.data = socket.data || {};
+            socket.data.gameId = gameId;
+        }
         game.hostDisplaySocketId = socket.id;
         socket.emit('player-reconnected', { gameState: helpers.getSanitizedGameState(game) });
         helpers.broadcastGameState(io, gameId);
