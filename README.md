@@ -229,6 +229,10 @@ This application is fully compatible with Google AI Studio's built-in hosting an
 - **Gemini API (`geminiService.js`):** Encapsulates communication with the Google Gemini API using the modern `@google/genai` SDK.
 - **Multi-Model Fallback Chain:** To protect against temporary API traffic spikes or regional 503 "High Demand" errors, requests automatically cascade across a resilient model fallback chain (`gemini-3.7-flash` → `gemini-flash-latest` → `gemini-3.1-flash-lite`).
 - **Exponential Backoff & Jitter:** Transient errors (503 Service Unavailable, 429 Resource Exhausted, 500) trigger intelligent backoff retries before switching candidate models.
+- **Prompt Engine Versioning & Feature Flag (`PROMPT_VERSION`):**
+  - Switchable via Render environment variables (`PROMPT_VERSION="v2"` or `PROMPT_VERSION="v1"`).
+  - **`v2` (Default - Streamlined & Situational):** Engineered specifically for casual party play with limited word banks (30–50 words). Features fast micro-scenario questions (bad advice, weird excuses, secrets), open colon-terminated battle prompts (slogans, rules, warnings, reviews) that accommodate any random word combination, strictly bans case-governing prepositions in Ukrainian, and enriches fallback words with essential connector words (`and`, `but`, `because` / `і`, `але`, `бо`, `щоб`).
+  - **`v1` (Classic):** Preserves the original prompt templates and instructions.
 - **Zero-Stall Fallback Packs:** If all AI models are unreachable or the error threshold is reached, the server seamlessly falls back to rich, human-authored bilingual content packs (`game/fallbackContent.js`), guaranteeing smooth gameplay without game interruptions.
 
 ### Smart TV & Low Power Display Optimization
@@ -268,6 +272,7 @@ The game features two distinct algorithms for generating word banks, which can b
 
 ## ⚙️ Configuration (`src/lib/config.js`)
 
+- **`PROMPT_VERSION`**: A string (`'v2'` or `'v1'`) controlling the active prompt engine. Configurable via `PROMPT_VERSION` environment variable on Render.com or in `.env`. Defaults to `'v2'`.
 - **`MIN_PLAYERS`, `MAX_PLAYERS`**: Player count limits.
 - **`POINTS_PER_VOTE`, `VICTORY_BONUS_PER_ROUND`, `CLEAN_SWEEP_BONUS_PER_ROUND`, `FLAT_ROYALTY_PER_ROUND`, `RAINBOW_BONUS_PER_ROUND`**: Configurable scaled scoring matrix per round.
 - **`USE_PRIORITIZED_WORD_BANK_ALGO`**: A boolean (`true`/`false`) to select the word bank algorithm. `true` uses the new, prioritized algorithm; `false` uses the current one.
@@ -362,7 +367,11 @@ End-to-End browser tests simulating real multiplayer game sessions with **1 Desk
 
 ## 🏷️ Version History & Checkpoints
 
-- **`v1.2.0` (Latest Release)**:
+- **`v1.3.0` (Latest Release)**:
+  - **Prompt Engine Versioning & Feature Flag (`PROMPT_VERSION`):** Configurable via Render.com environment variable (`v2` vs `v1`).
+  - **`v2` Situational Battle Prompts & Ukrainian Grammar Safeguards:** Streamlined prompt engine designed specifically for casual party play and limited word banks (30–50 words). Uses fast reaction micro-scenarios in Phase 1, open colon-terminated situational prompts (slogans, rules, warnings, reviews, bad excuses) in Phase 2, strictly bans case-governing prepositions in Ukrainian, and enriches fallback words with essential connectors.
+  - **`v1` Classic Engine Preservation:** Full backward compatibility preserved under `prompts/v1/`.
+- **`v1.2.0`**:
   - **14-Player Scale, 3-Way & 4-Way Brawls:** Expanded lobby capacity to 14 players. For 10+ player lobbies, battles automatically partition into high-energy 4-player quads (**"🔥 4-Way Brawl"**) and 3-player trios (**"💥 3-Way Brawl"**), reducing total voting rounds to just 5-7 battles.
   - **Balanced Hybrid Pairing Matrix:** 11 and 13-player matches partition into quads and trios with round-by-round rotation, guaranteeing 2 battles per player with unique opponents and zero duos.
   - **TV Display & Controller Presentation Badging:** Battles are dynamically badged as **"⚡ 1-on-1 Showdown"**, **"💥 3-Way Brawl"**, or **"🔥 4-Way Brawl"** with responsive 2, 3, and 4-card layouts.

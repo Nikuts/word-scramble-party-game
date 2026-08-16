@@ -37,6 +37,11 @@ export const USE_FLEXIBLE_UKRAINIAN_PROMPTS = true;
 // questions that encourage storytelling and the use of more creative words.
 export const USE_ENHANCED_QUESTION_PROMPTS = true;
 
+// --- Prompt Engine Version ---
+// 'v2' = New streamlined, situational prompts with Ukrainian case safeguards
+// 'v1' = Original classic prompts
+export const PROMPT_VERSION = (typeof process !== 'undefined' && process.env?.PROMPT_VERSION) ? process.env.PROMPT_VERSION : 'v2';
+
 // Tiered min/max word counts for each battle's word bank, per round.
 export const WORD_BANK_SIZES = {
     1: { min: 30, max: 50 },    // Round 1
