@@ -437,3 +437,10 @@ body[data-tv-mode="true"] {
     contain: layout paint;
   }
 }
+
+/* Background & Battery Throttling when tab/app is hidden */
+body[data-app-hidden="true"] .synthwave-grid-background::before,
+body[data-app-hidden="true"] .flying-emoji,
+body[data-app-hidden="true"] * {
+  animation-play-state: paused !important;
+}

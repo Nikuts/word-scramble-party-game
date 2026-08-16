@@ -59,10 +59,24 @@
     }
   }
 
-  // Initialize the socket connection when the app mounts
+  // Initialize the socket connection and background throttling when the app mounts
   onMount(() => {
     currentView = $view; // Set initial view without transition
     initializeSocket();
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined') {
+        if (document.visibilityState === 'hidden') {
+          document.body.setAttribute('data-app-hidden', 'true');
+        } else {
+          document.body.removeAttribute('data-app-hidden');
+        }
+      }
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
 
     // Check for a gameId in the URL, which happens when scanning the QR code or clicking a shared link.
     const urlParams = new URLSearchParams(window.location.search);
@@ -72,6 +86,12 @@
         joinForm.update(form => ({...form, gameId: gameId.toUpperCase()}));
         view.set('joinPrompt');
     }
+
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+    };
   });
 
   const views = {

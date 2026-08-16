@@ -28,7 +28,8 @@ export function initAiClient() {
             apiKey: apiKey,
             httpOptions: {
                 headers: {
-                    'User-Agent': 'aistudio-build'
+                    'User-Agent': 'aistudio-build',
+                    'Connection': 'keep-alive'
                 }
             }
         });
@@ -128,7 +129,8 @@ export async function getPrompt(promptName, replacements = {}, version = null) {
     try {
         await fs.access(promptPath);
     } catch {
-        promptPath = path.join(__dirname, 'prompts', `${promptName}.txt`);
+        const fallbackVersion = v === 'v1' ? 'v2' : 'v1';
+        promptPath = path.join(__dirname, 'prompts', fallbackVersion, `${promptName}.txt`);
     }
 
     let template = await fs.readFile(promptPath, 'utf-8');
@@ -140,19 +142,36 @@ export async function getPrompt(promptName, replacements = {}, version = null) {
     return template;
 }
 
-
 /**
- * Parses a JSON string from the model response, removing markdown fences.
+ * Parses a JSON string from the model response, removing markdown fences or surrounding chatter.
  * @param {string} jsonString The raw string from the model.
  * @returns {object | null} The parsed JSON object or null if parsing fails.
  */
 function parseJsonResponse(jsonString) {
-  if (!jsonString) return null;
+  if (!jsonString || typeof jsonString !== 'string') return null;
   let cleanString = jsonString.trim();
-  const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
+
+  // Strip markdown code fences (```json ... ``` or ``` ... ```)
+  const fenceRegex = /```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/i;
   const match = cleanString.match(fenceRegex);
-  if (match && match[2]) {
-    cleanString = match[2].trim();
+  if (match && match[1]) {
+    cleanString = match[1].trim();
+  }
+
+  // Find outermost JSON object/array boundaries if extra conversational text exists
+  const firstBrace = cleanString.indexOf('{');
+  const firstBracket = cleanString.indexOf('[');
+  let startIdx = -1;
+  if (firstBrace !== -1 && firstBracket !== -1) {
+    startIdx = Math.min(firstBrace, firstBracket);
+  } else if (firstBrace !== -1) {
+    startIdx = firstBrace;
+  } else if (firstBracket !== -1) {
+    startIdx = firstBracket;
+  }
+
+  if (startIdx > 0) {
+    cleanString = cleanString.slice(startIdx);
   }
 
   try {

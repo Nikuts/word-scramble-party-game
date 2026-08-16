@@ -1,41 +1,135 @@
 // src/lib/utils.js
 import confetti from 'canvas-confetti';
 
+const SOUND_ASSETS = {
+    'sfx_timer_tick': '/sounds/sfx_timer_tick.mp3',
+    'vo_get_ready_questions_en': '/sounds/vo_get_ready_questions_en.mp3',
+    'vo_get_ready_questions_uk': '/sounds/vo_get_ready_questions_uk.mp3',
+    'vo_battle_incoming_en': '/sounds/vo_battle_incoming_en.mp3',
+    'vo_battle_incoming_uk': '/sounds/vo_battle_incoming_uk.mp3',
+    'vo_voting_starts_en': '/sounds/vo_voting_starts_en.mp3',
+    'vo_voting_starts_uk': '/sounds/vo_voting_starts_uk.mp3',
+    'vo_final_scores_en': '/sounds/vo_final_scores_en.mp3',
+    'vo_final_scores_uk': '/sounds/vo_final_scores_uk.mp3'
+};
+
+class WebAudioSoundEngine {
+    constructor() {
+        this.ctx = null;
+        this.buffers = new Map();
+        this.isUnlocked = false;
+        this.playCounts = new Map();
+        this.loadingPromises = new Map();
+    }
+
+    initContext() {
+        if (typeof window === 'undefined') return null;
+        if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+                this.ctx = new AudioCtx();
+            }
+        }
+        return this.ctx;
+    }
+
+    async preloadSound(soundId, url) {
+        if (this.buffers.has(soundId) || this.loadingPromises.has(soundId)) {
+            return this.loadingPromises.get(soundId);
+        }
+        const promise = (async () => {
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                const ctx = this.initContext();
+                if (ctx) {
+                    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+                    this.buffers.set(soundId, audioBuffer);
+                }
+            } catch (e) {
+                console.warn(`[SoundEngine] Could not decode audio for ${soundId}:`, e);
+            }
+        })();
+        this.loadingPromises.set(soundId, promise);
+        return promise;
+    }
+
+    async unlock() {
+        if (this.isUnlocked || typeof window === 'undefined') return;
+        const ctx = this.initContext();
+        if (ctx) {
+            if (ctx.state === 'suspended') {
+                await ctx.resume().catch(() => {});
+            }
+            this.isUnlocked = true;
+            // Pre-decode all audio assets in parallel into memory
+            Object.entries(SOUND_ASSETS).forEach(([id, url]) => {
+                this.preloadSound(id, url);
+            });
+        }
+    }
+
+    play(soundId, options = {}) {
+        const { pitch = 1.0, volume = 1.0 } = options;
+        this.playCounts.set(soundId, (this.playCounts.get(soundId) || 0) + 1);
+
+        const ctx = this.initContext();
+        const buffer = this.buffers.get(soundId);
+
+        if (ctx && buffer && ctx.state === 'running') {
+            try {
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                source.playbackRate.value = pitch;
+
+                const gainNode = ctx.createGain();
+                gainNode.gain.value = volume;
+
+                source.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                source.start(0);
+                return;
+            } catch (e) {
+                console.warn(`[SoundEngine] Web Audio play failed for ${soundId}:`, e);
+            }
+        }
+
+        // Graceful fallback to HTML5 Audio element
+        if (typeof document !== 'undefined') {
+            try {
+                const el = document.getElementById(soundId);
+                if (el) {
+                    el.currentTime = 0;
+                    el.playbackRate = pitch;
+                    el.volume = Math.max(0, Math.min(1, volume));
+                    const p = el.play();
+                    if (p && typeof p.catch === 'function') p.catch(() => {});
+                }
+            } catch (e) {
+                console.warn(`[SoundEngine] Fallback audio play failed for ${soundId}:`, e);
+            }
+        }
+    }
+
+    getPlayCount(soundId) {
+        return this.playCounts.get(soundId) || 0;
+    }
+}
+
+export const soundEngine = new WebAudioSoundEngine();
+if (typeof window !== 'undefined') {
+    window.__soundEngine = soundEngine;
+}
+
 let isAudioUnlocked = false;
 
 /**
- * Unlocks audio playback for browsers (especially mobile Safari/Chrome)
- * by warming up audio elements on the first user interaction.
+ * Unlocks audio playback for browsers on first user interaction.
  */
 export function unlockAudio() {
-    if (isAudioUnlocked || typeof document === 'undefined') return;
-    
-    try {
-        const audioContainer = document.getElementById('audio-assets');
-        if (audioContainer) {
-            const audioElements = audioContainer.querySelectorAll('audio');
-            audioElements.forEach(audio => {
-                // Pre-warm audio element without producing audible sound
-                const originalVolume = audio.volume;
-                audio.volume = 0;
-                const promise = audio.play();
-                if (promise !== undefined) {
-                    promise
-                        .then(() => {
-                            audio.pause();
-                            audio.currentTime = 0;
-                            audio.volume = originalVolume;
-                        })
-                        .catch(() => {
-                            audio.volume = originalVolume;
-                        });
-                }
-            });
-        }
-        isAudioUnlocked = true;
-    } catch (e) {
-        console.warn('Audio pre-warm attempted:', e);
-    }
+    if (isAudioUnlocked) return;
+    soundEngine.unlock();
+    isAudioUnlocked = true;
 }
 
 // Auto-register user gesture listeners for seamless audio playback
@@ -53,26 +147,8 @@ export function escapeHTML(str) {
     return str.replace(/[&<>"']/g, (match) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[match]));
 }
 
-export function playSound(soundId) {
-    if (typeof document === 'undefined') return;
-    try {
-        const audioElement = document.getElementById(soundId);
-        if (audioElement) {
-            audioElement.currentTime = 0;
-            const playPromise = audioElement.play();
-
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    // Autoplay restriction or sound not ready
-                    console.warn(`Audio playback for '${soundId}' paused or waiting for user gesture.`);
-                });
-            }
-        } else {
-            console.warn(`Audio element with ID '${soundId}' not found in the DOM.`);
-        }
-    } catch (e) {
-        console.error(`An unexpected error occurred in playSound for ID '${soundId}':`, e);
-    }
+export function playSound(soundId, options = {}) {
+    soundEngine.play(soundId, options);
 }
 
 export function triggerConfetti(options = {}) {
@@ -95,7 +171,6 @@ export function triggerConfetti(options = {}) {
 /**
  * A language-agnostic function to correctly tokenize text into words and punctuation.
  * It uses a Unicode-aware regex to handle both English and Ukrainian text.
- * This is used on the client-side for the word scramble mechanic.
  * @param {string} text The text to tokenize.
  * @returns {string[]} An array of words and punctuation.
  */

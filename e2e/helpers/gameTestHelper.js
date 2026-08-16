@@ -245,3 +245,41 @@ export async function completeAllBattlesVoting(players, hostPage, battleCount = 
         await hostPage.waitForTimeout(7500);
     }
 }
+
+/**
+ * Creates an isolated mobile browser context with mobile viewport and touch capabilities.
+ * @param {import('@playwright/test').Browser} browser
+ * @param {Object} [overrides]
+ * @returns {Promise<import('@playwright/test').BrowserContext>}
+ */
+export async function createMobilePlayerContext(browser, overrides = {}) {
+    return browser.newContext({
+        viewport: { width: 390, height: 844 }, // iPhone dimensions
+        hasTouch: true,
+        isMobile: true,
+        ...overrides
+    });
+}
+
+/**
+ * Checks whether the Web Audio SoundEngine has been unlocked via user gesture on the page.
+ * @param {import('@playwright/test').Page} page
+ * @returns {Promise<boolean>}
+ */
+export async function isAudioEngineUnlocked(page) {
+    return page.evaluate(() => {
+        return window.__soundEngine?.isUnlocked === true;
+    }).catch(() => false);
+}
+
+/**
+ * Retrieves the count of times a sound has been triggered through the SoundEngine.
+ * @param {import('@playwright/test').Page} page
+ * @param {string} soundId
+ * @returns {Promise<number>}
+ */
+export async function getSoundPlayCount(page, soundId) {
+    return page.evaluate((id) => {
+        return window.__soundEngine?.getPlayCount(id) || 0;
+    }, soundId).catch(() => 0);
+}

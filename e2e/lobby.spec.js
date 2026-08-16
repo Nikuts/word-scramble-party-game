@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createHostSession, joinPlayerSession, navigateToMainMenu } from './helpers/gameTestHelper.js';
+import { createHostSession, joinPlayerSession, navigateToMainMenu, createMobilePlayerContext, isAudioEngineUnlocked } from './helpers/gameTestHelper.js';
 
 test.describe('Lobby & Multiplayer Session Setup', () => {
     test('creates host display, joins 3 players, and validates lobby state and settings', async ({ browser }) => {
@@ -12,21 +12,22 @@ test.describe('Lobby & Multiplayer Session Setup', () => {
         await expect(hostPage.locator('[data-testid="game-id"]')).toHaveText(gameId);
 
         // 2. First Player Joins (Becomes Host Player)
-        const player1Context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const player1Context = await createMobilePlayerContext(browser);
         const p1Page = await player1Context.newPage();
         await joinPlayerSession(p1Page, { gameId, playerName: 'Alice', avatar: '👽' });
 
         // Player 1 should see Host controls (Start Game button, theme settings)
         await expect(p1Page.locator('text=You are the Host')).toBeVisible();
         await expect(p1Page.locator('button.btn-arcade:has-text("Start Game")')).toBeVisible();
+        expect(await isAudioEngineUnlocked(p1Page)).toBe(true);
 
         // 3. Second Player Joins
-        const player2Context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const player2Context = await createMobilePlayerContext(browser);
         const p2Page = await player2Context.newPage();
         await joinPlayerSession(p2Page, { gameId, playerName: 'Bob', avatar: '🦊' });
 
         // 4. Third Player Joins
-        const player3Context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const player3Context = await createMobilePlayerContext(browser);
         const p3Page = await player3Context.newPage();
         await joinPlayerSession(p3Page, { gameId, playerName: 'Charlie', avatar: '🤖' });
 
@@ -40,7 +41,7 @@ test.describe('Lobby & Multiplayer Session Setup', () => {
         await expect(hostPage.locator('text=Players (3)')).toBeVisible();
 
         // 6. Test Avatar Selection Screen & Taken Avatar Disabling
-        const player4Context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const player4Context = await createMobilePlayerContext(browser);
         const p4Page = await player4Context.newPage();
         await navigateToMainMenu(p4Page);
         await p4Page.click('button:has-text("Join as Player")');

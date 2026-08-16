@@ -4,7 +4,9 @@ import {
     joinPlayerSession, 
     submitAllRoundQuestions, 
     submitAllPlayerBattles, 
-    completeAllBattlesVoting 
+    completeAllBattlesVoting,
+    createMobilePlayerContext,
+    isAudioEngineUnlocked
 } from './helpers/gameTestHelper.js';
 
 test.describe('Complete 3-Player Game Flow', () => {
@@ -16,18 +18,21 @@ test.describe('Complete 3-Player Game Flow', () => {
         const hostPage = await hostContext.newPage();
         const gameId = await createHostSession(hostPage);
 
-        // 2. Setup 3 Players
-        const p1Context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        // 2. Setup 3 Players on Mobile Contexts
+        const p1Context = await createMobilePlayerContext(browser);
         const p1Page = await p1Context.newPage();
         await joinPlayerSession(p1Page, { gameId, playerName: 'Alice', avatar: '👽' });
 
-        const p2Context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const p2Context = await createMobilePlayerContext(browser);
         const p2Page = await p2Context.newPage();
         await joinPlayerSession(p2Page, { gameId, playerName: 'Bob', avatar: '🦊' });
 
-        const p3Context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const p3Context = await createMobilePlayerContext(browser);
         const p3Page = await p3Context.newPage();
         await joinPlayerSession(p3Page, { gameId, playerName: 'Charlie', avatar: '🤖' });
+
+        // Verify Web Audio Engine unlocked on mobile user interaction
+        expect(await isAudioEngineUnlocked(p1Page)).toBe(true);
 
         const players = [
             { page: p1Page, name: 'Alice' },

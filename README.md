@@ -215,18 +215,27 @@ This application is fully compatible with Google AI Studio's built-in hosting an
   - `gameplayHandlers.js`: Idempotent question answers, incremental draft synchronizations, battle response submissions, and live voting.
   - `game/handlers.js`: Clean single registration hub connecting event listeners to validated domain handlers.
 
-### Audio & Mobile Interaction System
-- **Auto Audio Pre-Warming:** Modern mobile web browsers (Safari iOS and Chrome Mobile) impose strict autoplay policies. The client includes automated gesture-activated audio unlocking (`unlockAudio()` in `src/lib/utils.js`) on the first tap/click to prime audio elements for game voiceovers and countdown ticks.
+### Audio & Sound Architecture
+- **Web Audio API SoundEngine (`src/lib/utils.js`):** Audio playback is powered by a Web Audio API `AudioContext` and in-memory pre-decoded `AudioBuffer` pool.
+  - **Zero-Latency Concurrent Playback:** Multiple audio events (e.g. countdown ticks, voting cues, score fanfares) trigger simultaneously without clipping, audio stutter, or mobile latency.
+  - **Dynamic Countdown Pitch Escalation:** During the final 5 seconds of time-critical phases, timer ticks (`sfx_timer_tick`) dynamically scale pitch from 1.0x to 1.3x for arcade tension.
+  - **Auto Audio Pre-Warming:** Gesture-activated audio unlocking (`unlockAudio()`) primes audio buffers on the first tap/click across mobile browsers (Safari iOS and Chrome Mobile).
+  - **Graceful DOM Fallback:** Transparently falls back to HTML5 `<audio>` elements if Web Audio API is unsupported.
 
-### Performance & Reliability
-- **Declarative Input Validation (Zod):** To ensure security and reliability, all incoming socket events on the server are validated using strict, declarative schemas defined with the **Zod** library. This prevents malformed data from being processed and makes the validation logic clean and self-documenting.
-- **High-Performance Word Bank Engine (`wordBankEngine.js`):** The word chunk collection, syntactic clause distribution, and fallback padding operations are encapsulated in an optimized, pure engine executing sub-millisecond in-process generation (<2ms) with resilient Node.js `Worker` thread fallback.
-- **Dynamic Frontend Code-Splitting & Lazy Loading:** Heavy image-rendering libraries (`html2canvas`) are lazy-loaded on demand only when a player explicitly requests a battle card export, reducing the initial JavaScript bundle by ~60% (from 508 kB to 195 kB).
-- **Vendor Chunk Optimization:** Rollup output chunking splits vendor modules (`socket.io-client`, `sortablejs`, `canvas-confetti`, `qrcode-generator`) for optimal HTTP browser caching.
-- **Idempotent Reactivity & Network Debouncing:**
-  - **Debounced Draft Synchronization:** Mobile textarea typing during Phase 1 question answering is debounced by 200ms, slashing network packet traffic by 90% in 14-player lobbies while preserving instant 60 FPS local input responsiveness.
-  - **Non-Thrashing Answering State:** The battle answering view uses reactive initialization guards instead of per-frame `beforeUpdate` triggers, eliminating unnecessary object reallocations on timer countdown ticks.
-- **Lightweight Timer Tick Broadcasting:** Server phase timers broadcast lightweight countdown ticks (`timer-tick`) across the 1-second interval, avoiding deep game state serialization on non-state-changing seconds while preserving full state synchronization on phase transitions.
+### Full-Stack Performance & Reliability
+- **HTTP Compression & Immutable Caching (`server.js`):**
+  - Gzip/Deflate compression enabled for all static assets and HTTP endpoints.
+  - Content-hashed static JS/CSS chunks (`dist/assets/`) are cached with `Cache-Control: max-age=31536000, immutable`, while `index.html` uses `no-cache, must-revalidate` for instant zero-downtime client updates.
+- **WebSocket Transport Optimization:** Direct WebSocket connections (`transports: ['websocket', 'polling']`) eliminate initial long-polling handshake overhead, while `perMessageDeflate: false` removes CPU compression overhead on high-frequency small packets (e.g. 20-byte `timer-tick` broadcasts and reaction bursts).
+- **GPU, Page Visibility & Battery Throttling:**
+  - **Background Tab Freezing (`src/App.svelte` / `src/app.css`):** Listens to `visibilitychange` (`data-app-hidden="true"`) to automatically pause 60 FPS 3D canvas grid animations and CSS keyframes when the phone is locked or browser tab is hidden.
+  - **Emoji Sprite Pool:** Floating reactions are capped at 20 concurrent elements on screen to prevent DOM bloat during party reaction bursts.
+  - **Async Image Decoding:** Character avatars in `PixelAvatar.svelte` use `loading="lazy"` and `decoding="async"` with explicit dimensions to prevent main-thread UI layout jank.
+- **Persistent AI Connection Pooling (`geminiService.js`):** Persistent HTTP Keep-Alive sockets eliminate TCP/TLS handshake latency (~100–250ms saved per prompt) across background round pre-fetches.
+- **Automated Memory Lifecycle & Garbage Collection (`game/manager.js`):** Periodic 30-minute background sweep automatically prunes abandoned rooms older than 2 hours with no active socket connections, releasing memory and timers.
+- **High-Performance Word Bank Engine (`wordBankEngine.js`):** Sub-millisecond in-process generation (<2ms) with resilient Node.js `Worker` thread fallback.
+- **Dynamic Code-Splitting & Reactivity:** Lazy-loaded `html2canvas`, Rollup manual vendor chunking (shrinking initial client JS from 508 kB to 195 kB), and 200ms debounced Phase 1 draft syncs.
+- **Lightweight Timer Tick Broadcasting:** Server phase timers broadcast lightweight countdown ticks (`timer-tick`) across the 1-second interval, avoiding deep game state serialization on non-state-changing seconds.
 - **CSS Paint & Layout Containment:** CSS `contain: layout style;` is applied to active answer dropzones, word bank grids, and arcade panels, isolating browser style calculations and layout reflows.
 
 ### Sequential Battle & Voting State Machine

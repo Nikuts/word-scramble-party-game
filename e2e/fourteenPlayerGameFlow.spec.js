@@ -4,7 +4,8 @@ import {
     joinPlayerSession, 
     submitAllRoundQuestions, 
     submitAllPlayerBattles, 
-    completeAllBattlesVoting 
+    completeAllBattlesVoting,
+    createMobilePlayerContext
 } from './helpers/gameTestHelper.js';
 
 test.describe('14-Player Maximum Lobby Scale Game Flow', () => {
@@ -16,7 +17,7 @@ test.describe('14-Player Maximum Lobby Scale Game Flow', () => {
         const hostPage = await hostContext.newPage();
         const gameId = await createHostSession(hostPage);
 
-        // 2. Setup 14 Players with unique avatars
+        // 2. Setup 14 Players with unique avatars on Mobile Contexts
         const playerConfigs = [
             { name: 'Alice', avatar: '👽' },
             { name: 'Bob', avatar: '🦊' },
@@ -38,7 +39,7 @@ test.describe('14-Player Maximum Lobby Scale Game Flow', () => {
         const contexts = [hostContext];
 
         for (const config of playerConfigs) {
-            const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+            const ctx = await createMobilePlayerContext(browser);
             contexts.push(ctx);
             const page = await ctx.newPage();
             await joinPlayerSession(page, { gameId, playerName: config.name, avatar: config.avatar });

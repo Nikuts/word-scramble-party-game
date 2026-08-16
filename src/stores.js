@@ -180,7 +180,8 @@ export function initializeSocket() {
         if (timerPhasesForTick.includes(newGameState.phase) && remaining <= 10 && remaining > 0) {
             if (remaining !== lastTickSecond) {
                 if (!newGameState.soundsOnHostOnly || _isHostDisplay) {
-                    playSound('sfx_timer_tick');
+                    const pitch = remaining <= 5 ? (1.0 + (5 - remaining) * 0.06) : 1.0;
+                    playSound('sfx_timer_tick', { pitch });
                 }
                 lastTickSecond = remaining;
             }
@@ -202,7 +203,8 @@ export function initializeSocket() {
         if (timerPhasesForTick.includes(phase) && remaining <= 10 && remaining > 0) {
             if (remaining !== lastTickSecond) {
                 if (!currentGameState?.soundsOnHostOnly || _isHostDisplay) {
-                    playSound('sfx_timer_tick');
+                    const pitch = remaining <= 5 ? (1.0 + (5 - remaining) * 0.06) : 1.0;
+                    playSound('sfx_timer_tick', { pitch });
                 }
                 lastTickSecond = remaining;
             }
@@ -324,10 +326,13 @@ export function initializeSocket() {
     });
 
     socket.on('lobby-emoji-sent', ({ avatar }) => {
-        flyingEmojis.update(emojis => [...emojis, {
-            id: Date.now() + Math.random(),
-            avatar: avatar
-        }]);
+        flyingEmojis.update(emojis => {
+            const next = [...emojis, {
+                id: Date.now() + Math.random(),
+                avatar: avatar
+            }];
+            return next.length > 20 ? next.slice(next.length - 20) : next;
+        });
     });
     
     socket.on('play-sound', ({ soundId }) => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getGames, getGame, addGame, deleteGame } from '../game/manager.js';
+import { getGames, getGame, addGame, deleteGame, cleanupStaleGames } from '../game/manager.js';
 
-describe('Game State Manager', () => {
+describe('Game State Manager & Garbage Collection', () => {
     beforeEach(() => {
         // Clear active games before each test
         const allGames = getGames();
@@ -20,5 +20,32 @@ describe('Game State Manager', () => {
         deleteGame('GAME1');
         expect(getGame('GAME1')).toBeUndefined();
         expect(Object.keys(getGames())).toHaveLength(0);
+    });
+
+    it('should clean up inactive stale games without active connections', () => {
+        const now = Date.now();
+        const activeGame = {
+            id: 'ACTIVE',
+            createdAt: now,
+            lastActivityAt: now,
+            hostDisplaySocketId: 'sock-host',
+            players: [{ id: 'p1', socketId: 'sock-1' }]
+        };
+        const staleGame = {
+            id: 'STALE',
+            createdAt: now - (3 * 60 * 60 * 1000), // 3 hours old
+            lastActivityAt: now - (3 * 60 * 60 * 1000),
+            hostDisplaySocketId: null,
+            players: [{ id: 'p2', socketId: null }]
+        };
+
+        addGame('ACTIVE', activeGame);
+        addGame('STALE', staleGame);
+        expect(Object.keys(getGames())).toHaveLength(2);
+
+        const cleaned = cleanupStaleGames(2 * 60 * 60 * 1000);
+        expect(cleaned).toBe(1);
+        expect(getGame('ACTIVE')).toBeDefined();
+        expect(getGame('STALE')).toBeUndefined();
     });
 });

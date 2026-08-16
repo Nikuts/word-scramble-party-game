@@ -4,7 +4,8 @@ import {
     joinPlayerSession, 
     submitAllRoundQuestions,
     submitAllPlayerBattles,
-    completeAllBattlesVoting
+    completeAllBattlesVoting,
+    createMobilePlayerContext
 } from './helpers/gameTestHelper.js';
 
 test.describe('Full Multi-Round Lifecycle, Voting & Final Round Showdown', () => {
@@ -16,16 +17,16 @@ test.describe('Full Multi-Round Lifecycle, Voting & Final Round Showdown', () =>
         const hostPage = await hostContext.newPage();
         const gameId = await createHostSession(hostPage);
 
-        // 2. Connect 3 Players (Alice = Host Player, Bob, Charlie)
-        const p1Context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        // 2. Connect 3 Players on Mobile
+        const p1Context = await createMobilePlayerContext(browser);
         const p1Page = await p1Context.newPage();
         await joinPlayerSession(p1Page, { gameId, playerName: 'Alice', avatar: '👽' });
 
-        const p2Context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const p2Context = await createMobilePlayerContext(browser);
         const p2Page = await p2Context.newPage();
         await joinPlayerSession(p2Page, { gameId, playerName: 'Bob', avatar: '🦊' });
 
-        const p3Context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const p3Context = await createMobilePlayerContext(browser);
         const p3Page = await p3Context.newPage();
         await joinPlayerSession(p3Page, { gameId, playerName: 'Charlie', avatar: '🤖' });
 
