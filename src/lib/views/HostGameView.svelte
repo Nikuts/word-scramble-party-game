@@ -234,11 +234,12 @@
                 <SevenSegmentDisplay time={$phaseTimer} />
                 <h1 class="text-2xl sm:text-3xl my-4">{$t.voteForBestAnswer}</h1>
                 {#if battle}
-                    {@const isTrio = battle.competitors.length >= 3}
+                    {@const isQuad = battle.competitors.length === 4}
+                    {@const isTrio = battle.competitors.length === 3}
                     {@const isFinal = !!battle.genre}
                     <div class="mb-4">
-                        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-base font-bold tracking-wider border shadow-md {isTrio ? 'bg-purple-950/80 border-purple-400 text-purple-200' : 'bg-cyan-950/80 border-cyan-400 text-cyan-200'}">
-                            {isTrio ? $t.brawlLabel : $t.showdownLabel}
+                        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-base font-bold tracking-wider border shadow-md {isQuad ? 'bg-orange-950/80 border-orange-400 text-orange-200' : (isTrio ? 'bg-purple-950/80 border-purple-400 text-purple-200' : 'bg-cyan-950/80 border-cyan-400 text-cyan-200')}">
+                            {isQuad ? $t.quadLabel : (isTrio ? $t.brawlLabel : $t.showdownLabel)}
                         </span>
                     </div>
                     <div class="text-neutral-300 text-lg sm:text-xl leading-relaxed mb-6 p-4 bg-black/50 border border-neutral-700 rounded-md max-w-4xl mx-auto">
@@ -249,7 +250,7 @@
                             {battle.prompt}
                         {/if}
                     </div>
-                    <div class="grid grid-cols-1 {isTrio ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 mt-6">
+                    <div class="grid grid-cols-1 {isQuad ? 'md:grid-cols-2 lg:grid-cols-4' : (isTrio ? 'md:grid-cols-3' : 'md:grid-cols-2')} gap-6 mt-6">
                         {#each battle.competitors as c_id, i (c_id)}
                             {@const answer = renderAnswer(battle.answers[c_id])}
                             {@const answerLabel = i === 0 ? $t.answerA : (i === 1 ? $t.answerB : (i === 2 ? $t.answerC : $t.answerD))}
@@ -269,12 +270,13 @@
                 <SevenSegmentDisplay time={$phaseTimer} />
                 <h1 class="text-3xl sm:text-4xl mb-4">{$t.battleReveal}</h1>
                  {#if battle}
-                    {@const isTrio = battle.competitors.length >= 3}
+                    {@const isQuad = battle.competitors.length === 4}
+                    {@const isTrio = battle.competitors.length === 3}
                     {@const winner = $gamePlayers.find(p => p.id === battle.winnerId)}
                     {@const isFinal = !!battle.genre}
                     <div class="mb-4">
-                        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-base font-bold tracking-wider border shadow-md {isTrio ? 'bg-purple-950/80 border-purple-400 text-purple-200' : 'bg-cyan-950/80 border-cyan-400 text-cyan-200'}">
-                            {isTrio ? $t.brawlLabel : $t.showdownLabel}
+                        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-base font-bold tracking-wider border shadow-md {isQuad ? 'bg-orange-950/80 border-orange-400 text-orange-200' : (isTrio ? 'bg-purple-950/80 border-purple-400 text-purple-200' : 'bg-cyan-950/80 border-cyan-400 text-cyan-200')}">
+                            {isQuad ? $t.quadLabel : (isTrio ? $t.brawlLabel : $t.showdownLabel)}
                         </span>
                     </div>
                     <div class="panel-arcade w-full max-w-5xl mx-auto" style="--neon-color: var(--color-accent); --neon-color-rgb: var(--color-accent-rgb);">
@@ -286,7 +288,7 @@
                                 {battle.prompt}
                             {/if}
                         </div>
-                         <div class="grid grid-cols-1 {isTrio ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6">
+                         <div class="grid grid-cols-1 {isQuad ? 'md:grid-cols-2 lg:grid-cols-4' : (isTrio ? 'md:grid-cols-3' : 'md:grid-cols-2')} gap-6">
                             {#each battle.competitors as c_id (c_id)}
                                 {@const c = $gamePlayers.find(p => p.id === c_id)}
                                 {@const answer = battle.answers[c_id]}

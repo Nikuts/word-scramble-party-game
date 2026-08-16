@@ -56,7 +56,7 @@
             {/if}
         </div>
         
-        <div class="grid grid-cols-1 {battle.competitors.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 mt-6">
+        <div class="grid grid-cols-1 {battle.competitors.length === 4 ? 'md:grid-cols-2 lg:grid-cols-4' : (battle.competitors.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2')} gap-6 mt-6">
             {#each battle.competitors as c_id, i (c_id)}
                 {@const c = players.find(p => p.id === c_id)}
                 {@const answerLabel = i === 0 ? $t.answerA : (i === 1 ? $t.answerB : (i === 2 ? $t.answerC : $t.answerD))}

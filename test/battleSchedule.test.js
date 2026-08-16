@@ -58,59 +58,70 @@ describe('Battle Scheduling & Pairing Algorithms', () => {
             }
         });
 
-        it('should create 6 trios (0 duos) for 9 players (total 6 battles)', () => {
+        it('should create 6 trios (0 duos, 0 quads) for 9 players (total 6 battles)', () => {
             const playerIds = Array.from({ length: 9 }, (_, i) => `p_${i + 1}`);
             const pairings = generateBattlePairings(playerIds, 1);
             expect(pairings.length).toBe(6);
             const trios = pairings.filter(b => b.length === 3);
-            const duos = pairings.filter(b => b.length === 2);
             expect(trios.length).toBe(6);
-            expect(duos.length).toBe(0);
         });
 
-        it('should create 6 trios + 1 duo for 10 players (total 7 battles)', () => {
+        it('should create 5 quads (4-way brawls) for 10 players (total 5 battles)', () => {
             const playerIds = Array.from({ length: 10 }, (_, i) => `p_${i + 1}`);
             const pairings = generateBattlePairings(playerIds, 1);
-            expect(pairings.length).toBe(7);
-            const trios = pairings.filter(b => b.length === 3);
-            const duos = pairings.filter(b => b.length === 2);
-            expect(trios.length).toBe(6);
-            expect(duos.length).toBe(1);
+            expect(pairings.length).toBe(5);
+            const quads = pairings.filter(b => b.length === 4);
+            expect(quads.length).toBe(5);
         });
 
-        it('should create 6 trios + 2 duos for 11 players (total 8 battles)', () => {
+        it('should create 4 quads + 2 trios for 11 players (total 6 battles)', () => {
             const playerIds = Array.from({ length: 11 }, (_, i) => `p_${i + 1}`);
             const pairings = generateBattlePairings(playerIds, 1);
-            expect(pairings.length).toBe(8);
+            expect(pairings.length).toBe(6);
+            const quads = pairings.filter(b => b.length === 4);
             const trios = pairings.filter(b => b.length === 3);
-            const duos = pairings.filter(b => b.length === 2);
-            expect(trios.length).toBe(6);
-            expect(duos.length).toBe(2);
+            expect(quads.length).toBe(4);
+            expect(trios.length).toBe(2);
         });
 
-        it('should create 8 trios (0 duos) for 12 players (total 8 battles)', () => {
+        it('should create 6 quads for 12 players (total 6 battles)', () => {
             const playerIds = Array.from({ length: 12 }, (_, i) => `p_${i + 1}`);
             const pairings = generateBattlePairings(playerIds, 1);
-            expect(pairings.length).toBe(8);
-            const trios = pairings.filter(b => b.length === 3);
-            const duos = pairings.filter(b => b.length === 2);
-            expect(trios.length).toBe(8);
-            expect(duos.length).toBe(0);
+            expect(pairings.length).toBe(6);
+            const quads = pairings.filter(b => b.length === 4);
+            expect(quads.length).toBe(6);
         });
 
-        it('should rotate duo participants fairly across rounds for 11 players', () => {
-            const playerIds = Array.from({ length: 11 }, (_, i) => `p_${i + 1}`);
-            const duoPlayersRound1 = new Set(generateBattlePairings(playerIds, 1).filter(b => b.length === 2).flat());
-            const duoPlayersRound2 = new Set(generateBattlePairings(playerIds, 2).filter(b => b.length === 2).flat());
-            const duoPlayersRound3 = new Set(generateBattlePairings(playerIds, 3).filter(b => b.length === 2).flat());
+        it('should create 5 quads + 2 trios for 13 players (total 7 battles)', () => {
+            const playerIds = Array.from({ length: 13 }, (_, i) => `p_${i + 1}`);
+            const pairings = generateBattlePairings(playerIds, 1);
+            expect(pairings.length).toBe(7);
+            const quads = pairings.filter(b => b.length === 4);
+            const trios = pairings.filter(b => b.length === 3);
+            expect(quads.length).toBe(5);
+            expect(trios.length).toBe(2);
+        });
 
-            // Check that different rounds rotate the duo players
-            expect(duoPlayersRound1.size).toBe(4);
-            expect(duoPlayersRound2.size).toBe(4);
-            expect(duoPlayersRound3.size).toBe(4);
-            // The union of duo players across 3 rounds should cover most/all players
-            const combinedDuoPlayers = new Set([...duoPlayersRound1, ...duoPlayersRound2, ...duoPlayersRound3]);
-            expect(combinedDuoPlayers.size).toBeGreaterThanOrEqual(8);
+        it('should create 7 quads (4-way brawls) for 14 players (total 7 battles)', () => {
+            const playerIds = Array.from({ length: 14 }, (_, i) => `p_${i + 1}`);
+            const pairings = generateBattlePairings(playerIds, 1);
+            expect(pairings.length).toBe(7);
+            const quads = pairings.filter(b => b.length === 4);
+            expect(quads.length).toBe(7);
+        });
+
+        it('should rotate trio participants fairly across rounds for 11 players', () => {
+            const playerIds = Array.from({ length: 11 }, (_, i) => `p_${i + 1}`);
+            const trioPlayersRound1 = new Set(generateBattlePairings(playerIds, 1).filter(b => b.length === 3).flat());
+            const trioPlayersRound2 = new Set(generateBattlePairings(playerIds, 2).filter(b => b.length === 3).flat());
+            const trioPlayersRound3 = new Set(generateBattlePairings(playerIds, 3).filter(b => b.length === 3).flat());
+
+            // Check that different rounds rotate the trio players
+            expect(trioPlayersRound1.size).toBeGreaterThanOrEqual(5);
+            expect(trioPlayersRound2.size).toBeGreaterThanOrEqual(5);
+            expect(trioPlayersRound3.size).toBeGreaterThanOrEqual(5);
+            const combinedTrioPlayers = new Set([...trioPlayersRound1, ...trioPlayersRound2, ...trioPlayersRound3]);
+            expect(combinedTrioPlayers.size).toBeGreaterThanOrEqual(8);
         });
     });
 });

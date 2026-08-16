@@ -134,18 +134,18 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
     describe('Scenario 2: 11-Player Hybrid Allocation & Fairness Matrix', () => {
         const playerIds11 = Array.from({ length: 11 }, (_, i) => `player_${i + 1}`);
 
-        it('partitions 11 players into exactly 6 Trios (1 vs 1 vs 1) and 2 Duos (1 vs 1) across all rounds', () => {
+        it('partitions 11 players into exactly 4 Quads (4-way brawls) and 2 Trios (3-way brawls) across all rounds', () => {
             for (let round = 1; round <= 3; round++) {
                 const pairings = generateBattlePairings(playerIds11, round);
-                expect(pairings).toHaveLength(8);
+                expect(pairings).toHaveLength(6);
 
+                const quads = pairings.filter(b => b.length === 4);
                 const trios = pairings.filter(b => b.length === 3);
-                const duos = pairings.filter(b => b.length === 2);
 
-                expect(trios).toHaveLength(6);
-                expect(duos).toHaveLength(2);
+                expect(quads).toHaveLength(4);
+                expect(trios).toHaveLength(2);
 
-                // Total competitor slots: (6 * 3) + (2 * 2) = 22 = 11 * 2
+                // Total competitor slots: (4 * 4) + (2 * 3) = 22 = 11 * 2
                 const totalSlots = pairings.reduce((acc, b) => acc + b.length, 0);
                 expect(totalSlots).toBe(22);
             }
@@ -186,26 +186,59 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
             }
         });
 
-        it('rotates duo assignments across rounds so duo battles are shared fairly among players', () => {
-            const duoPlayersByRound = [];
+        it('rotates trio assignments across rounds so trio battles are shared fairly among players', () => {
+            const trioPlayersByRound = [];
 
             for (let round = 1; round <= 3; round++) {
                 const pairings = generateBattlePairings(playerIds11, round);
-                const duos = pairings.filter(b => b.length === 2);
-                const playersInDuos = new Set(duos.flat());
-                duoPlayersByRound.push(playersInDuos);
+                const trios = pairings.filter(b => b.length === 3);
+                const playersInTrios = new Set(trios.flat());
+                trioPlayersByRound.push(playersInTrios);
             }
 
-            // Verify that Round 1, Round 2, and Round 3 do not assign the exact same set of players to duos
-            const round1DuoStr = [...duoPlayersByRound[0]].sort().join(',');
-            const round2DuoStr = [...duoPlayersByRound[1]].sort().join(',');
-            const round3DuoStr = [...duoPlayersByRound[2]].sort().join(',');
+            // Verify that Round 1, Round 2, and Round 3 rotate the players in trios
+            const round1TrioStr = [...trioPlayersByRound[0]].sort().join(',');
+            const round2TrioStr = [...trioPlayersByRound[1]].sort().join(',');
+            const round3TrioStr = [...trioPlayersByRound[2]].sort().join(',');
 
-            expect(round1DuoStr).not.toBe(round2DuoStr);
-            expect(round2DuoStr).not.toBe(round3DuoStr);
+            expect(round1TrioStr).not.toBe(round2TrioStr);
+            expect(round2TrioStr).not.toBe(round3TrioStr);
         });
 
-        it('verifies scoring fairness between 1-on-1 duos and 3-way trios in an 11-player lobby', () => {
+        it('guarantees balanced 3-round allocation across Quads and Trios for all 11 players', () => {
+            const trioCountPerPlayer = {};
+            const quadCountPerPlayer = {};
+            playerIds11.forEach(id => {
+                trioCountPerPlayer[id] = 0;
+                quadCountPerPlayer[id] = 0;
+            });
+
+            for (let round = 1; round <= 3; round++) {
+                const pairings = generateBattlePairings(playerIds11, round);
+                pairings.forEach(battle => {
+                    if (battle.length === 3) {
+                        battle.forEach(id => trioCountPerPlayer[id]++);
+                    } else if (battle.length === 4) {
+                        battle.forEach(id => quadCountPerPlayer[id]++);
+                    }
+                });
+            }
+
+            // In 11 players over 3 rounds:
+            // Every player participates in 6 total battles
+            const allTrioPlayers = new Set();
+            playerIds11.forEach(id => {
+                expect(trioCountPerPlayer[id] + quadCountPerPlayer[id]).toBe(6);
+                expect(trioCountPerPlayer[id]).toBeGreaterThanOrEqual(0);
+                expect(trioCountPerPlayer[id]).toBeLessThanOrEqual(3);
+                expect(quadCountPerPlayer[id]).toBeGreaterThanOrEqual(3);
+                expect(quadCountPerPlayer[id]).toBeLessThanOrEqual(6);
+                if (trioCountPerPlayer[id] > 0) allTrioPlayers.add(id);
+            });
+            expect(allTrioPlayers.size).toBeGreaterThanOrEqual(8);
+        });
+
+        it('verifies scoring fairness between 4-way quads and 3-way trios in an 11-player lobby', () => {
             const game11 = {
                 id: 'GAME_11',
                 currentRound: 1,
@@ -213,43 +246,86 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
                 battleSchedule: []
             };
 
-            // Duo battle: 2 competitors, 9 voters (11 - 2 = 9 votes total)
-            const duoBattle = {
-                id: 'duo_11',
-                competitors: ['player_1', 'player_2'],
-                answers: { player_1: 'Duo Ans A', player_2: 'Duo Ans B' },
+            // Quad battle: 4 competitors, 7 voters (11 - 4 = 7 votes total)
+            const quadBattle = {
+                id: 'quad_11',
+                competitors: ['player_1', 'player_2', 'player_3', 'player_4'],
+                answers: { player_1: 'Quad Ans A', player_2: 'Quad Ans B', player_3: 'Quad Ans C', player_4: 'Quad Ans D' },
                 votes: {
-                    player_3: 'player_1', player_4: 'player_1', player_5: 'player_1', player_6: 'player_1', player_7: 'player_1',
-                    player_8: 'player_2', player_9: 'player_2', player_10: 'player_2', player_11: 'player_2'
+                    player_5: 'player_1', player_6: 'player_1', player_7: 'player_1', player_8: 'player_1',
+                    player_9: 'player_2', player_10: 'player_2',
+                    player_11: 'player_3'
                 },
-                wordBanks: { player_1: [], player_2: [] }
+                wordBanks: { player_1: [], player_2: [], player_3: [], player_4: [] }
             };
 
-            calculateBattlePoints(game11, duoBattle);
-            // player_1 gets 5 votes * 300 + 200 = 1700; player_2 gets 4 votes * 300 = 1200
-            expect(duoBattle.winnerId).toBe('player_1');
-            expect(duoBattle.pointsAwarded['player_1']).toBe(1700);
-            expect(duoBattle.pointsAwarded['player_2']).toBe(1200);
+            calculateBattlePoints(game11, quadBattle);
+            // player_1 gets 4 votes * 300 + 200 = 1400; player_2 gets 2 * 300 = 600; player_3 gets 1 * 300 = 300; player_4 gets 0
+            expect(quadBattle.winnerId).toBe('player_1');
+            expect(quadBattle.pointsAwarded['player_1']).toBe(1400);
+            expect(quadBattle.pointsAwarded['player_2']).toBe(600);
+            expect(quadBattle.pointsAwarded['player_3']).toBe(300);
+            expect(quadBattle.pointsAwarded['player_4']).toBe(0);
 
             // Trio battle: 3 competitors, 8 voters (11 - 3 = 8 votes total)
             const trioBattle = {
                 id: 'trio_11',
-                competitors: ['player_3', 'player_4', 'player_5'],
-                answers: { player_3: 'Trio Ans A', player_4: 'Trio Ans B', player_5: 'Trio Ans C' },
+                competitors: ['player_5', 'player_6', 'player_7'],
+                answers: { player_5: 'Trio Ans A', player_6: 'Trio Ans B', player_7: 'Trio Ans C' },
                 votes: {
-                    player_1: 'player_3', player_2: 'player_3', player_6: 'player_3', player_7: 'player_3',
-                    player_8: 'player_4', player_9: 'player_4',
-                    player_10: 'player_5', player_11: 'player_5'
+                    player_1: 'player_5', player_2: 'player_5', player_3: 'player_5', player_4: 'player_5',
+                    player_8: 'player_6', player_9: 'player_6',
+                    player_10: 'player_7', player_11: 'player_7'
                 },
-                wordBanks: { player_3: [], player_4: [], player_5: [] }
+                wordBanks: { player_5: [], player_6: [], player_7: [] }
             };
 
             calculateBattlePoints(game11, trioBattle);
-            // player_3 gets 4 votes * 300 + 200 = 1400; player_4 gets 2 * 300 = 600; player_5 gets 2 * 300 = 600
-            expect(trioBattle.winnerId).toBe('player_3');
-            expect(trioBattle.pointsAwarded['player_3']).toBe(1400);
-            expect(trioBattle.pointsAwarded['player_4']).toBe(600);
-            expect(trioBattle.pointsAwarded['player_5']).toBe(600);
+            // player_5 gets 4 votes * 300 + 200 = 1400; player_6 gets 2 * 300 = 600; player_7 gets 2 * 300 = 600
+            expect(trioBattle.winnerId).toBe('player_5');
+            expect(trioBattle.pointsAwarded['player_5']).toBe(1400);
+            expect(trioBattle.pointsAwarded['player_6']).toBe(600);
+            expect(trioBattle.pointsAwarded['player_7']).toBe(600);
+        });
+
+        it('guarantees 13-player hybrid matrix partitions into 5 quads + 2 trios with balanced 3-round allocation', () => {
+            const playerIds13 = Array.from({ length: 13 }, (_, i) => `p13_${i + 1}`);
+            const trioCountPerPlayer = {};
+            const quadCountPerPlayer = {};
+            playerIds13.forEach(id => {
+                trioCountPerPlayer[id] = 0;
+                quadCountPerPlayer[id] = 0;
+            });
+
+            for (let round = 1; round <= 3; round++) {
+                const pairings = generateBattlePairings(playerIds13, round);
+                expect(pairings).toHaveLength(7);
+
+                const quads = pairings.filter(b => b.length === 4);
+                const trios = pairings.filter(b => b.length === 3);
+                expect(quads).toHaveLength(5);
+                expect(trios).toHaveLength(2);
+
+                pairings.forEach(battle => {
+                    if (battle.length === 3) {
+                        battle.forEach(id => trioCountPerPlayer[id]++);
+                    } else if (battle.length === 4) {
+                        battle.forEach(id => quadCountPerPlayer[id]++);
+                    }
+                });
+            }
+
+            // Every player in 13-player lobby has 6 total battles across 3 rounds
+            const all13TrioPlayers = new Set();
+            playerIds13.forEach(id => {
+                expect(trioCountPerPlayer[id] + quadCountPerPlayer[id]).toBe(6);
+                expect(trioCountPerPlayer[id]).toBeGreaterThanOrEqual(0);
+                expect(trioCountPerPlayer[id]).toBeLessThanOrEqual(3);
+                expect(quadCountPerPlayer[id]).toBeGreaterThanOrEqual(3);
+                expect(quadCountPerPlayer[id]).toBeLessThanOrEqual(6);
+                if (trioCountPerPlayer[id] > 0) all13TrioPlayers.add(id);
+            });
+            expect(all13TrioPlayers.size).toBeGreaterThanOrEqual(8);
         });
     });
 });

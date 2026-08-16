@@ -9,11 +9,32 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
 ## 🚀 Core Features
 
 - **Local Multiplayer (3-14 Players):** Designed for parties on a shared local network. One device acts as a "Host Display" (e.g., a TV or laptop), while players use their phones or tablets to play.
-- **Dynamic 1-on-1 Showdowns & 3-Way Brawls:**
-    - **Pacing Optimization for Large Groups:** For 3 to 8 players, games run standard 2-player duos ($N$ battles per round). For 9 to 14 players, the engine switches to high-energy 3-player trios to keep the game length brisk and engaging without dragging out voting.
-    - **11-Player Fair Balance:** Handled cleanly with 6 trios + 2 duos (8 battles total) with rotating duo participants each round so every player gets an equal distribution of matchups.
-    - **TV Display Presentation Framing:** Battles are dynamically badged on the Host TV display as **"⚡ 1-on-1 Showdown"** or **"💥 3-Way Brawl"**, building hype and visual variety on the big screen.
-    - **Fairness Guarantee:** Every player participates in **exactly 2 battles per round** and faces completely distinct opponents in each battle.
+- **Dynamic 1-on-1 Showdowns, 3-Way Brawls & 4-Way Brawls:**
+    - **Pacing Optimization for Large Groups:**
+      - **3 to 8 Players**: Standard 2-player duos ($N$ battles per round).
+      - **9 Players**: Pure 3-player trios (6 battles per round).
+      - **10, 12, 14 Players**: High-energy 4-player quads (5, 6, and 7 battles per round).
+      - **11 & 13 Players**: Balanced hybrid of 4-player quads + 3-player trios (6 and 7 battles per round).
+    - **TV Display Presentation Framing:** Battles are dynamically badged on the Host TV display and mobile controllers as **"⚡ 1-on-1 Showdown"**, **"💥 3-Way Brawl"**, or **"🔥 4-Way Brawl"**, with dynamic 2, 3, and 4-card responsive layouts.
+    - **Fairness Guarantee:** Every player participates in **exactly 2 battles per round** and faces completely distinct opponents in each battle. Group assignments rotate across rounds.
+
+    #### 🎮 Player Counts & Battle Structure Matrix
+
+    | Player Count | Total Slots ($2N$) | Matchup Partition | Battles / Round | Active Voters / Battle | Primary Battle Format |
+    | :---: | :---: | :---: | :---: | :---: | :--- |
+    | **3** | 6 | 3 Duos | **3** | 1 | ⚡ 1-on-1 Showdowns |
+    | **4** | 8 | 4 Duos | **4** | 2 | ⚡ 1-on-1 Showdowns |
+    | **5** | 10 | 5 Duos | **5** | 3 | ⚡ 1-on-1 Showdowns |
+    | **6** | 12 | 6 Duos | **6** | 4 | ⚡ 1-on-1 Showdowns |
+    | **7** | 14 | 7 Duos | **7** | 5 | ⚡ 1-on-1 Showdowns |
+    | **8** | 16 | 8 Duos | **8** | 6 | ⚡ 1-on-1 Showdowns |
+    | **9** | 18 | 6 Trios | **6** | 6 | 💥 3-Way Brawls |
+    | **10** | 20 | 5 Quads | **5** | 6 | 🔥 4-Way Brawls |
+    | **11** | 22 | 4 Quads + 2 Trios | **6** | 7 (Quads) / 8 (Trios) | Balanced Hybrid (Rotates each round) |
+    | **12** | 24 | 6 Quads | **6** | 8 | 🔥 4-Way Brawls |
+    | **13** | 26 | 5 Quads + 2 Trios | **7** | 9 (Quads) / 10 (Trios) | Balanced Hybrid (Rotates each round) |
+    | **14** *(Max)* | 28 | 7 Quads | **7** | 10 | 🔥 4-Way Brawls |
+
 - **Easy Connection with QR Codes:** The host screen displays a QR code that players can scan. This takes them directly to the game's page and **automatically pre-fills the Game ID**, making it incredibly fast to join a lobby.
 - **In-Game Tutorial:** A dedicated "How to Play" screen, accessible from the lobby, provides a quick, multilingual guide to the game rules, ensuring new players can get up to speed without friction.
 - **Expressive Image Avatars:** Players can choose from a fun selection of 20 different character avatars (including aliens, wizards, and zombies) to represent themselves, adding a touch of personal flair to the game.
@@ -314,14 +335,14 @@ End-to-End browser tests simulating real multiplayer game sessions with **1 Desk
    - Dynamic clause bundle parsing and word bank tile generation.
    - Word bank tile clicking and scramble answer submission.
    - Real-time sequential voting across all matchups, host reveal, and scoreboard progression.
-3. **3-Way Brawl (1 vs 1 vs 1) Game Flow (`e2e/threeWayBrawlsGameFlow.spec.js`):**
-   - 9-player pure 3-way brawl session (1 Host + 9 Mobile devices: Alice, Bob, Charlie, Dave, Eve, Frank, Grace, Heidi, Ivan).
-   - 6 trios (1 vs 1 vs 1) scheduled per round with 3 answer cards (Answer A, B, C) and 6 non-competing voters per matchup.
-   - 3-way multi-voter tallying, victory bonus distributions, clean sweeps, and real-time scoreboard progression.
-4. **11-Player Hybrid (1 vs 1 and 1 vs 1 vs 1) Game Flow (`e2e/elevenPlayerGameFlow.spec.js`):**
+3. **11-Player Hybrid (1 vs 1 and 1 vs 1 vs 1) Game Flow (`e2e/elevenPlayerGameFlow.spec.js`):**
    - 11-player full game flow (1 Host + 11 Mobile devices: Alice, Bob, Charlie, Dave, Eve, Frank, Grace, Heidi, Ivan, Judy, Kevin).
    - 8 battles scheduled per round: exactly 6 Trios (1 vs 1 vs 1) and 2 Duos (1 vs 1), validating 22 player slots (2 battles per player).
    - Multi-voter tallying across both trio brawls and duo showdowns with round-by-round duo rotation.
+4. **14-Player Maximum Scale Game Flow (`e2e/fourteenPlayerGameFlow.spec.js`):**
+   - Maximum lobby capacity testing (1 Host + 14 Mobile devices: Alice, Bob, Charlie, Dave, Eve, Frank, Grace, Heidi, Ivan, Judy, Kevin, Leo, Mia, Noah).
+   - 10 battles scheduled per round: 8 Trios (1 vs 1 vs 1) and 2 Duos (1 vs 1), validating 28 player slots (2 battles per player).
+   - Simultaneous question answering for 14 clients, word scramble answering, and multi-voter tallying with 11-12 voters per battle.
 5. **Browser Reload & Reconnection Resiliency (`e2e/reconnection.spec.js`):**
    - Mid-game mobile player browser reload / refresh: verifies instant auto-reconnection via localStorage session tokens without losing the active question phase or answers.
    - Host Display browser reload / refresh: verifies instant auto-reconnection as Host Display, re-rendering active timers and all player lists without disrupting connected clients.
@@ -337,9 +358,9 @@ End-to-End browser tests simulating real multiplayer game sessions with **1 Desk
 ## 🏷️ Version History & Checkpoints
 
 - **`v1.2.0` (Latest Release)**:
-  - **14-Player Scale & 3-Way Brawls:** Expanded lobby capacity to 14 players. For 9+ player lobbies, battles automatically partition into 3-player trios, reducing total battle duration by 33%.
-  - **Balanced 11-Player Matrix:** 11-player matches partition into 6 trios + 2 duos with round-by-round duo player rotation, maintaining 2 battles per player with unique opponents.
-  - **TV Display Presentation Badging:** Battles on the Host display are highlighted as **"⚡ 1-on-1 Showdown"** or **"💥 3-Way Brawl"** with dynamic 3-card responsive layouts.
+  - **14-Player Scale, 3-Way & 4-Way Brawls:** Expanded lobby capacity to 14 players. For 10+ player lobbies, battles automatically partition into high-energy 4-player quads (**"🔥 4-Way Brawl"**) and 3-player trios (**"💥 3-Way Brawl"**), reducing total voting rounds to just 5-7 battles.
+  - **Balanced Hybrid Pairing Matrix:** 11 and 13-player matches partition into quads and trios with round-by-round rotation, guaranteeing 2 battles per player with unique opponents and zero duos.
+  - **TV Display & Controller Presentation Badging:** Battles are dynamically badged as **"⚡ 1-on-1 Showdown"**, **"💥 3-Way Brawl"**, or **"🔥 4-Way Brawl"** with responsive 2, 3, and 4-card layouts.
 - **`v1.1.0`**:
   - **Interactive Prompt Tiles:** Battle prompts, movie genres, and scenario premises are broken into interactive clickable tiles, allowing instant integration into answers without cluttering the bottom bank.
   - **Multi-Use Word Engine:** Words from both the prompt and word bank can be selected multiple times to craft repeated words and rhythm.

@@ -104,29 +104,35 @@ export function generateBattlePairings(playerIds, roundNumber = 1) {
         return pairs;
     }
 
-    // For 9+ players: switch to 3-player trios with duos for non-multiples of 3
+    // For 9 players: 6 3-player trios (3-way brawls)
+    // For 10+ players: switch to 4-player quads (4-way brawls) with trios for non-multiples of 4
     const totalSlots = 2 * N;
+    let numQuads = 0;
     let numTrios = 0;
     let numDuos = 0;
 
-    if (totalSlots % 3 === 0) {
-        numTrios = totalSlots / 3;
-        numDuos = 0;
-    } else if (totalSlots % 3 === 1) {
-        numDuos = 2;
-        numTrios = (totalSlots - 4) / 3;
+    if (N === 9) {
+        numTrios = 6;
+        numQuads = 0;
     } else {
-        numDuos = 1;
-        numTrios = (totalSlots - 2) / 3;
+        if (totalSlots % 4 === 0) {
+            numQuads = totalSlots / 4;
+            numTrios = 0;
+        } else {
+            // totalSlots % 4 === 2 (since 2N is always even)
+            numTrios = 2;
+            numQuads = (totalSlots - 6) / 4;
+        }
     }
 
     const targetSizes = [
+        ...Array(numQuads).fill(4),
         ...Array(numTrios).fill(3),
         ...Array(numDuos).fill(2)
     ];
     const totalGroups = targetSizes.length;
 
-    // Rotate player order based on round so duo assignment rotates fairly across rounds
+    // Rotate player order based on round so group assignment rotates fairly across rounds
     const roundOffset = ((roundNumber - 1) * Math.max(1, Math.floor(N / 3))) % N;
     const orderedPlayerIds = [];
     for (let i = 0; i < N; i++) {
@@ -148,7 +154,11 @@ export function generateBattlePairings(playerIds, roundNumber = 1) {
         }
 
         const currentGroup = groups[groupIndex];
-        for (let p = 0; p < N; p++) {
+        const minP = slotIndex > 0 
+            ? currentGroup[slotIndex - 1] + 1 
+            : (groupIndex > 0 && targetSizes[groupIndex] === targetSizes[groupIndex - 1] ? groups[groupIndex - 1][0] : 0);
+
+        for (let p = minP; p < N; p++) {
             if (appearances[p] >= 2) continue;
             if (currentGroup.includes(p)) continue;
 

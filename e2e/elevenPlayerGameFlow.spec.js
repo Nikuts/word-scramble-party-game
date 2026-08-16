@@ -63,7 +63,7 @@ test.describe('11-Player Hybrid (1 vs 1 and 1 vs 1 vs 1) Game Flow', () => {
             await submitAllRoundQuestions(p.page, p.name);
         }
 
-        // 5. Phase 2: Word Scramble Battles (8 battles scheduled: 6 trios * 3 + 2 duos * 2 = 22 slots = 2 battles per player)
+        // 5. Phase 2: Word Scramble Battles (6 battles scheduled: 4 quads * 4 + 2 trios * 3 = 22 slots = 2 battles per player)
         await expect(
             p1Page.locator('.p-3.bg-neutral-900 button, button:has-text("Submit Battle Answer")').first()
         ).toBeVisible({ timeout: 25000 });
@@ -72,13 +72,13 @@ test.describe('11-Player Hybrid (1 vs 1 and 1 vs 1 vs 1) Game Flow', () => {
             await submitAllPlayerBattles(p.page, false);
         }
 
-        // 6. Phase 3: Voting on Hybrid Battles (8 Battles total: 6 Trios + 2 Duos)
+        // 6. Phase 3: Voting on Hybrid Battles (6 Battles total: 4 Quads + 2 Trios)
         await expect(
-            hostPage.locator('h1, h2, h3').filter({ hasText: /Vote|Showdown|Brawl|1-on-1|3-Way|Battle/i }).first()
+            hostPage.locator('h1, h2, h3').filter({ hasText: /Vote|Showdown|Brawl|1-on-1|3-Way|4-Way|Battle/i }).first()
         ).toBeVisible({ timeout: 30000 });
 
-        // Complete voting for all 8 hybrid battles in the round
-        await completeAllBattlesVoting(players, hostPage, 8);
+        // Complete voting for all 6 hybrid battles in the round
+        await completeAllBattlesVoting(players, hostPage, 6);
 
         // 7. Verify scoreboards updated with all 11 player results
         await expect(
