@@ -112,13 +112,15 @@ This phase is a rapid, sequential series of events where players vote on one bat
 
 ##### **Step C: Sequential Voting & Reveals**
 This is a fast-paced cycle that repeats for every battle in the round.
-1.  **Vote on One Battle:** The Host Display shows a single battle matchup. All players who are not competing in that specific battle see the two anonymous answers on their devices and cast their vote. The view on the player's device is kept in sync, only ever showing the single, active battle. This part is timed.
-2.  **Immediate Reveal:** As soon as voting for that one battle is complete (either by timer or all votes are in), the results for *that battle only* are shown on the Host Display. 
-    - The winner is celebrated, points animate with a satisfying visual flourish, and confetti flies. This animation now correctly displays even in auto-win scenarios.
-    - The full, un-truncated text of the battle prompt is visible.
-    - The names of players who voted for an answer are now displayed next to their avatars.
+1.  **Vote on One Battle:** The Host Display shows a single battle matchup. All players who are not competing in that specific battle see the anonymous answers on their devices and cast their vote. The view on the player's device is kept in sync, only ever showing the single, active battle. This part is timed.
+2.  **Immediate Reveal & Visual Highlights:** As soon as voting for that one battle is complete (either by timer or all votes are in), the results for *that battle only* are shown on the Host Display:
+    - **Anonymous Color-Coded Word Highlighting:** Words within revealed answers are dynamically styled with distinct neon color accents (Cyan, Magenta, Emerald, Amber, Slate) corresponding to their anonymous author sources, visually proving the sentence was stitched together from multiple friends without compromising anonymity.
+    - **🌈 Rainbow Variety Bonus Badge:** A glowing rainbow badge appears on any answer card that successfully combined words from $\ge 3$ distinct players.
+    - **Hands-Free Score Breakdown Micro-Pills:** Compact, high-visibility pills appear beneath the total score reveal (`🗳️ Votes`, `🏆 Win Bonus`, `🧹 Clean Sweep`, `🌈 Rainbow Bonus`), giving couch viewers immediate clarity on how points were earned.
+    - **Responsive TV Screen Fitting:** Dynamically scales typography, padding, and avatar sizes across 2-player duos, 3-player trios, and 4-player quads so all cards fit cleanly without vertical scrollbars.
+    - **Confetti & Winner Flourish:** The winner is celebrated, points animate smoothly, and voter attribution chips display next to each answer.
 3.  **Advance to Next:** After a short reveal, the game automatically moves to the next battle, and the "Vote -> Reveal" cycle begins again.
-4.  **Auto-Win Condition:** If only one of the two competitors in a battle submits an answer, they automatically win. The voting phase for that battle is skipped, and the game proceeds directly to a slightly longer result reveal.
+4.  **Auto-Win Condition:** If only one competitor in a battle submits an answer, they automatically win. The voting phase for that battle is skipped, and the game proceeds directly to a slightly longer result reveal.
 
 This continues until all battles for the round have been voted on and revealed.
 

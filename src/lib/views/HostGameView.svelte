@@ -130,6 +130,15 @@
         }
         return `(${$t.noAnswerSubmitted})`;
     }
+
+    function getWordColorClass(authorIndex) {
+        if (authorIndex === 0) return 'text-cyan-300 border-b border-cyan-400/80 bg-cyan-950/40 px-1 py-0.5 rounded-sm inline-block';
+        if (authorIndex === 1) return 'text-pink-300 border-b border-pink-400/80 bg-pink-950/40 px-1 py-0.5 rounded-sm inline-block';
+        if (authorIndex === 2) return 'text-emerald-300 border-b border-emerald-400/80 bg-emerald-950/40 px-1 py-0.5 rounded-sm inline-block';
+        if (authorIndex === 3) return 'text-amber-300 border-b border-amber-400/80 bg-amber-950/40 px-1 py-0.5 rounded-sm inline-block';
+        if (authorIndex === 4) return 'text-purple-300 border-b border-purple-400/80 bg-purple-950/40 px-1 py-0.5 rounded-sm inline-block';
+        return 'text-neutral-300';
+    }
 </script>
 
 <div class="p-4 sm:p-8 flex flex-col md:flex-row gap-8 min-h-screen relative host-game-container">
@@ -288,36 +297,58 @@
                                 {battle.prompt}
                             {/if}
                         </div>
-                         <div class="grid grid-cols-1 {isQuad ? 'md:grid-cols-2 lg:grid-cols-4' : (isTrio ? 'md:grid-cols-3' : 'md:grid-cols-2')} gap-6">
+                         <div class="grid grid-cols-1 {isQuad ? 'md:grid-cols-2 lg:grid-cols-4 gap-3' : (isTrio ? 'md:grid-cols-3 gap-4' : 'md:grid-cols-2 gap-6')}">
                             {#each battle.competitors as c_id (c_id)}
                                 {@const c = $gamePlayers.find(p => p.id === c_id)}
                                 {@const answer = battle.answers[c_id]}
                                 {@const isWinner = battle.winnerId === c_id}
                                 {@const isTie = !battle.winnerId && battle.pointsAwarded?.[c_id] > 0}
-                                <div class="bg-neutral-900 p-4 border-2 rounded-md relative {isWinner ? 'winner-card' : ''} {isTie ? 'ring-2 ring-yellow-500' : 'border-neutral-700'}">
-                                    <div class="relative flex items-center gap-4 text-xl sm:text-2xl font-bold mb-3">
-                                        <div class="w-12 h-12 flex-shrink-0">
-                                            <PixelAvatar avatar={c?.avatar || '❓'} />
+                                {@const bdown = battle.scoreBreakdown?.[c_id]}
+                                {@const hasRainbow = bdown?.rainbowBonus > 0}
+                                <div class="bg-neutral-900 {isQuad ? 'p-3' : (isTrio ? 'p-3.5' : 'p-4')} border-2 rounded-md relative flex flex-col justify-between {isWinner ? 'winner-card' : ''} {isTie ? 'ring-2 ring-yellow-500' : 'border-neutral-700'} {hasRainbow && !isWinner ? 'shadow-[0_0_12px_rgba(236,72,153,0.3)]' : ''}">
+                                    <div>
+                                        <div class="relative flex items-center {isQuad ? 'gap-2 mb-2 text-base sm:text-lg' : 'gap-3 mb-3 text-xl sm:text-2xl'} font-bold">
+                                            <div class="{isQuad ? 'w-8 h-8' : 'w-11 h-11'} flex-shrink-0">
+                                                <PixelAvatar avatar={c?.avatar || '❓'} />
+                                            </div>
+                                            <span class="truncate">{c?.name || $t.disconnected}</span>
                                         </div>
-                                        <span class="truncate">{c?.name || $t.disconnected}</span>
+                                        <div class="text-left {isQuad ? 'text-xs sm:text-sm min-h-[5.5rem] p-2' : (isTrio ? 'text-sm sm:text-base min-h-[6.5rem] p-2.5' : 'text-base sm:text-lg min-h-[7.5rem] p-3')} bg-black/75 border border-neutral-600 rounded-md mt-1 leading-relaxed">
+                                            {#if battle.annotatedAnswers?.[c_id]}
+                                                {@const annotated = battle.annotatedAnswers[c_id]}
+                                                {#if annotated.isFinal}
+                                                    <div class="mb-1"><span class="font-bold text-primary mr-1">Title:</span>{#each annotated.title as tok}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}{/each}</div>
+                                                    <div><span class="font-bold text-primary mr-1">Tagline:</span>{#each annotated.tagline as tok}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}{/each}</div>
+                                                {:else}
+                                                    {#each annotated.words as tok}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}{/each}
+                                                {/if}
+                                            {:else}
+                                                <span class="whitespace-pre-wrap">{renderAnswer(answer)}</span>
+                                            {/if}
+                                        </div>
+                                        {#if hasRainbow}
+                                            <div class="mt-2 flex justify-center"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold tracking-wide bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-cyan-500/20 border border-pink-400 text-pink-300 shadow-[0_0_8px_rgba(236,72,153,0.3)] animate-pulse">{$t.rainbowBadge} (+{bdown.rainbowBonus})</span></div>
+                                        {/if}
+                                        {#if battle.pointsAwarded?.[c_id] > 0}
+                                            <div class="points-reveal-animation my-1 {isQuad ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-extrabold text-accent">+{battle.pointsAwarded[c_id]}</div>
+                                            {#if bdown}
+                                                <div class="flex flex-wrap items-center justify-center gap-1 mt-1 text-[11px] font-semibold">
+                                                    {#if bdown.votePoints > 0}<span class="px-1.5 py-0.5 rounded bg-neutral-800 border border-neutral-600 text-neutral-300">🗳️ {bdown.votes} {$t.votesBreakdown} (+{bdown.votePoints})</span>{/if}
+                                                    {#if bdown.winBonus > 0}<span class="px-1.5 py-0.5 rounded bg-yellow-950/80 border border-yellow-500/80 text-yellow-300">🏆 {$t.winBonusBreakdown} (+{bdown.winBonus})</span>{/if}
+                                                    {#if bdown.sweepBonus > 0}<span class="px-1.5 py-0.5 rounded bg-purple-950/80 border border-purple-500/80 text-purple-300">🧹 {$t.sweepBonusBreakdown} (+{bdown.sweepBonus})</span>{/if}
+                                                </div>
+                                            {/if}
+                                        {/if}
                                     </div>
-                                    <p class="text-left text-lg sm:text-xl min-h-[8rem] bg-black/75 border border-neutral-600 p-3 rounded-md mt-1 whitespace-pre-wrap">{renderAnswer(answer)}</p>
-                                    {#if battle.pointsAwarded?.[c_id] > 0}
-                                        <div class="points-reveal-animation">
-                                            +{battle.pointsAwarded[c_id]}
-                                        </div>
-                                    {/if}
-                                    <div class="mt-4 text-left">
-                                        <p class="text-lg font-bold text-neutral-400 mb-2">{$t.votedForYou}:</p>
-                                        <div class="flex flex-wrap gap-2">
+                                    <div class="mt-3 text-left">
+                                        <p class="{isQuad ? 'text-[11px]' : 'text-xs sm:text-sm'} font-bold text-neutral-400 mb-1">{$t.votedForYou}:</p>
+                                        <div class="flex flex-wrap gap-1">
                                             {#each Object.entries(battle.votes) as [voterId, votedFor]}
                                                 {#if votedFor === c_id}
                                                     {@const voter = $gamePlayers.find(p => p.id === voterId)}
-                                                    <span class="px-2 py-1 bg-neutral-800 border border-neutral-600 flex items-center gap-2 text-base rounded-md" title={voter?.name}>
-                                                        <div class="w-8 h-8 flex-shrink-0">
-                                                            <PixelAvatar avatar={voter?.avatar} />
-                                                        </div>
-                                                        <span class="truncate">{voter?.name}</span>
+                                                    <span class="{isQuad ? 'px-1 py-0.5 text-[11px] gap-1' : 'px-2 py-0.5 text-xs gap-1.5'} bg-neutral-800 border border-neutral-600 flex items-center rounded-md" title={voter?.name}>
+                                                        <div class="{isQuad ? 'w-5 h-5' : 'w-6 h-6'} flex-shrink-0"><PixelAvatar avatar={voter?.avatar} /></div>
+                                                        <span class="truncate max-w-[65px]">{voter?.name}</span>
                                                     </span>
                                                 {/if}
                                             {/each}

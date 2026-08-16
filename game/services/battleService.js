@@ -403,6 +403,8 @@ export function calculateBattlePoints(game, battle) {
 
     const competitors = battle.competitors || [];
     battle.pointsAwarded = {};
+    battle.scoreBreakdown = {};
+    battle.annotatedAnswers = {};
     battle.winnerId = null;
     battle.royalties = [];
 
@@ -413,6 +415,14 @@ export function calculateBattlePoints(game, battle) {
     
     competitors.forEach(cId => {
         battle.pointsAwarded[cId] = 0;
+        battle.scoreBreakdown[cId] = {
+            votes: 0,
+            votePoints: 0,
+            winBonus: 0,
+            sweepBonus: 0,
+            rainbowBonus: 0,
+            total: 0
+        };
     });
 
     const roundIdx = Math.max(0, Math.min((game.currentRound || 1) - 1, 2));
@@ -451,12 +461,24 @@ export function calculateBattlePoints(game, battle) {
         compPoints[winnerId] = (ptsPerVote * 2) + winBonus + sweepBonus;
         battle.winnerId = winnerId;
         voteCounts[winnerId] = 2; // Treat as voted for royalties calculation
+        battle.scoreBreakdown[winnerId] = {
+            votes: 2,
+            votePoints: ptsPerVote * 2,
+            winBonus: winBonus,
+            sweepBonus: sweepBonus,
+            rainbowBonus: 0,
+            total: compPoints[winnerId]
+        };
     } else if (answeredCompetitors.length === 0) {
         // No one answered - all get 0
     } else {
         // 2 or more answered
         competitors.forEach(cId => {
-            compPoints[cId] = voteCounts[cId] * ptsPerVote;
+            const vCount = voteCounts[cId] || 0;
+            const vPts = vCount * ptsPerVote;
+            compPoints[cId] = vPts;
+            battle.scoreBreakdown[cId].votes = vCount;
+            battle.scoreBreakdown[cId].votePoints = vPts;
         });
 
         // Find max votes among answered competitors
@@ -467,15 +489,18 @@ export function calculateBattlePoints(game, battle) {
             const winnerId = topCompetitors[0];
             battle.winnerId = winnerId;
             compPoints[winnerId] += winBonus;
+            battle.scoreBreakdown[winnerId].winBonus = winBonus;
             // Clean sweep: received 100% of all votes cast
             if (totalVotes > 0 && maxVotes === totalVotes) {
                 compPoints[winnerId] += sweepBonus;
+                battle.scoreBreakdown[winnerId].sweepBonus = sweepBonus;
             }
         } else if (topCompetitors.length > 1) {
             // Tie among top competitors: split victory bonus evenly
             const splitWin = Math.round(winBonus / topCompetitors.length);
             topCompetitors.forEach(cId => {
                 compPoints[cId] += splitWin;
+                battle.scoreBreakdown[cId].winBonus = splitWin;
             });
         }
     }
@@ -529,14 +554,59 @@ export function calculateBattlePoints(game, battle) {
         return 0;
     };
 
+    // --- Anonymous Word Highlighting Generator ---
+    const annotateWords = (rawText, bankTokens, competitorId) => {
+        if (!rawText || rawText === TIMEOUT_ANSWER_PLACEHOLDER) return [];
+        const words = String(rawText).trim().split(/\s+/).filter(Boolean);
+        const authorIndexMap = new Map();
+        let nextIndex = 0;
+
+        return words.map(w => {
+            const cleanWord = w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').toLowerCase();
+            let authorIndex = -1;
+            if (cleanWord) {
+                const match = bankTokens.find(bt => {
+                    const bText = (typeof bt === 'object' && bt !== null ? bt.text : bt).toLowerCase();
+                    const bAuthor = typeof bt === 'object' && bt !== null ? bt.authorId : null;
+                    return bText === cleanWord && bAuthor && bAuthor !== competitorId;
+                });
+                if (match && match.authorId) {
+                    if (!authorIndexMap.has(match.authorId)) {
+                        authorIndexMap.set(match.authorId, nextIndex++);
+                    }
+                    authorIndex = authorIndexMap.get(match.authorId);
+                }
+            }
+            return { text: w, authorIndex };
+        });
+    };
+
     competitors.forEach(cId => {
         const rainbow = processCompetitorRoyalties(cId, voteCounts[cId]);
         compPoints[cId] += rainbow;
+
+        battle.scoreBreakdown[cId].rainbowBonus = rainbow;
+        battle.scoreBreakdown[cId].total = compPoints[cId];
 
         const player = game.players.find(p => p.id === cId);
         if (player) {
             player.score += compPoints[cId];
         }
         battle.pointsAwarded[cId] = (battle.pointsAwarded[cId] || 0) + compPoints[cId];
+
+        const rawAns = battle.answers[cId];
+        const bankTokens = battle.wordBanks[cId] || [];
+        if (rawAns && typeof rawAns === 'object' && (rawAns.title || rawAns.tagline)) {
+            battle.annotatedAnswers[cId] = {
+                isFinal: true,
+                title: annotateWords(rawAns.title, bankTokens, cId),
+                tagline: annotateWords(rawAns.tagline, bankTokens, cId)
+            };
+        } else if (typeof rawAns === 'string') {
+            battle.annotatedAnswers[cId] = {
+                isFinal: false,
+                words: annotateWords(rawAns, bankTokens, cId)
+            };
+        }
     });
 }

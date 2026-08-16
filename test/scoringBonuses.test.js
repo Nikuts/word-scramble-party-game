@@ -268,6 +268,30 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
             // Total = 1050
             expect(battle.pointsAwarded['p1']).toBe(1050);
             expect(game.players.find(p => p.id === 'p1').score).toBe(1050);
+
+            // Verify structured score breakdown
+            expect(battle.scoreBreakdown['p1']).toEqual({
+                votes: 2,
+                votePoints: 600,
+                winBonus: 200,
+                sweepBonus: 150,
+                rainbowBonus: 100,
+                total: 1050
+            });
+
+            // Verify anonymous word highlighting annotations
+            expect(battle.annotatedAnswers['p1'].isFinal).toBe(false);
+            const annotatedWords = battle.annotatedAnswers['p1'].words;
+            expect(annotatedWords).toHaveLength(5);
+            // "Quantum" -> author p2 (authorIndex: 0)
+            expect(annotatedWords[0]).toEqual({ text: 'Quantum', authorIndex: 0 });
+            // "laser" -> author p3 (authorIndex: 1)
+            expect(annotatedWords[1]).toEqual({ text: 'laser', authorIndex: 1 });
+            // "penguin" -> author p4 (authorIndex: 2)
+            expect(annotatedWords[2]).toEqual({ text: 'penguin', authorIndex: 2 });
+            // "strikes" & "back" -> neutral (-1)
+            expect(annotatedWords[3]).toEqual({ text: 'strikes', authorIndex: -1 });
+            expect(annotatedWords[4]).toEqual({ text: 'back', authorIndex: -1 });
         });
 
         it('scales Rainbow Bonus in Round 2 (+200) and Round 3 (+400)', () => {
