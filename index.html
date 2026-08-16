@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Scramble Party Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/app.css">
+  
+  <!-- Fallback styling to prevent Flash of Unstyled Content (FOUC) -->
+  <style>
+    body {
+      background-color: #0d0221; /* Dark purple base */
+      color: #e2e8f0; /* Light text */
+    }
+  </style>
+
+<script type="importmap">
+{
+  "imports": {
+    "dotenv": "https://esm.sh/dotenv@^17.2.0",
+    "url": "https://esm.sh/url@^0.11.4",
+    "@google/genai": "https://esm.sh/@google/genai@^1.9.0",
+    "vite": "https://esm.sh/vite@^7.0.4",
+    "path": "https://esm.sh/path@^0.12.7",
+    "zod": "https://esm.sh/zod@^4.0.5",
+    "express": "https://esm.sh/express@^5.1.0",
+    "http": "https://esm.sh/http@^0.0.1-security",
+    "fs": "https://esm.sh/fs@^0.0.1-security",
+    "socket.io": "https://esm.sh/socket.io@^4.8.1",
+    "svelte/": "https://esm.sh/svelte@^5.36.2/",
+    "@sveltejs/vite-plugin-svelte": "https://esm.sh/@sveltejs/vite-plugin-svelte@^6.1.0",
+    "os": "https://esm.sh/os@^0.1.2",
+    "canvas-confetti": "https://esm.sh/canvas-confetti@^1.9.3"
+  }
+}
+</script>
+</head>
+<body>
+  <div class="synthwave-grid-background"></div>
+  <div id="app"></div>
+
+  <!-- Audio elements for preloading -->
+  <div id="audio-assets" style="display: none;">
+    <audio id="sfx_timer_tick" src="/sounds/sfx_timer_tick.mp3" preload="auto"></audio>
+
+    <audio id="vo_get_ready_questions_en" src="/sounds/vo_get_ready_questions_en.mp3" preload="auto"></audio>
+    <audio id="vo_get_ready_questions_uk" src="/sounds/vo_get_ready_questions_uk.mp3" preload="auto"></audio>
+    
+    <audio id="vo_battle_incoming_en" src="/sounds/vo_battle_incoming_en.mp3" preload="auto"></audio>
+    <audio id="vo_battle_incoming_uk" src="/sounds/vo_battle_incoming_uk.mp3" preload="auto"></audio>
+
+    <audio id="vo_voting_starts_en" src="/sounds/vo_voting_starts_en.mp3" preload="auto"></audio>
+    <audio id="vo_voting_starts_uk" src="/sounds/vo_voting_starts_uk.mp3" preload="auto"></audio>
+
+    <audio id="vo_final_scores_en" src="/sounds/vo_final_scores_en.mp3" preload="auto"></audio>
+    <audio id="vo_final_scores_uk" src="/sounds/vo_final_scores_uk.mp3" preload="auto"></audio>
+  </div>
+
+  <!-- Svelte entry point -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

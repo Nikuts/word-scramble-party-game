@@ -1,0 +1,21 @@
+You are a lead comedy writer for an acclaimed social party game. The game's theme is "${theme}". The language is ${languageFullName}.
+
+Your task is to generate ${numPrompts} concise, punchy "Movie Poster / Slogan" prompts for the game's final showdown round.
+Players will craft a 2-part answer: a punchy Title and a hilarious Tagline.
+
+Your response MUST be a single valid JSON object following this exact structure:
+{
+  "finalPrompts": [
+    {
+      "genre": "Short recognizable genre (e.g. Action Comedy, Sci-Fi Thriller)",
+      "premise": "A punchy, 1-to-2 sentence direct scenario set in this theme."
+    }
+  ]
+}
+
+Follow these strict rules:
+- The `genre` must be short and recognizable (2-3 words).
+- The `premise` MUST be short, direct, and easy to read quickly on mobile (maximum 1-2 sentences). Do NOT overcomplicate with excessive lore.
+- Tone: ${toneInstruction}
+
+CRITICAL: Do not include any extra text, comments, or markdown outside of the main JSON object. The response must be parsable as-is.

@@ -1,0 +1,433 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Define base color palette and theme variables */
+  :root {
+    --color-primary-rgb: 0, 207, 253;
+    --color-primary: #00CFFD;
+    --color-secondary-rgb: 255, 0, 168;
+    --color-secondary: #FF00A8;
+    --color-accent-rgb: 57, 255, 20;
+    --color-accent: #39FF14;
+    --color-warning-rgb: 250, 204, 21;
+    --color-warning: #facc15;
+    --color-danger-rgb: 239, 68, 68;
+    --color-danger: #ef4444;
+
+    --color-bg-base: #0d0221;
+    --color-text-base: #e2e8f0; /* Replaced theme('colors.neutral.200') */
+    --color-text-muted: #94a3b8; /* Replaced theme('colors.neutral.400') */
+  }
+
+  body[data-theme="vaporwave"] {
+    --color-primary-rgb: 45, 212, 191;
+    --color-primary: #2dd4bf;
+    --color-secondary-rgb: 244, 114, 182;
+    --color-secondary: #f472b6;
+    --color-accent-rgb: 253, 224, 71;
+    --color-accent: #fde047;
+  }
+
+  body[data-theme="outrun"] {
+    --color-primary-rgb: 251, 146, 60;
+    --color-primary: #fb923c;
+    --color-secondary-rgb: 192, 132, 252;
+    --color-secondary: #c084fc;
+    --color-accent-rgb: 244, 114, 182;
+    --color-accent: #f472b6;
+  }
+
+  body {
+    @apply bg-[var(--color-bg-base)] text-[var(--color-text-base)] font-body text-base; /* Corrected usage of CSS variables */
+    text-shadow: 0 0 2px rgba(226, 232, 240, 0.2);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display uppercase tracking-wider;
+  }
+}
+
+/* Neon Arcade Component Styles */
+@layer components {
+    .btn-arcade {
+        @apply px-6 py-3 font-display text-lg text-white transition-all duration-150 ease-in-out;
+        background-color: theme('colors.neutral.900');
+        border: 2px solid;
+        border-color: var(--btn-color, var(--color-accent));
+        box-shadow: 
+            inset 0 0 0.5em 0 var(--btn-color, var(--color-accent)), 
+            0 0 0.5em 0 var(--btn-color, var(--color-accent));
+        text-shadow: 0 0 0.125em hsl(0 0% 100% / 0.3), 0 0 0.45em currentColor;
+    }
+    .btn-arcade:hover {
+        background-color: var(--btn-color, var(--color-accent));
+        color: theme('colors.neutral.950');
+        text-shadow: none;
+        box-shadow: 0 0 2em 0.5em var(--btn-color, var(--color-accent));
+    }
+    .btn-arcade:disabled {
+        @apply opacity-50 cursor-not-allowed bg-neutral-800 text-neutral-500 border-neutral-600;
+        box-shadow: none;
+        text-shadow: none;
+    }
+
+    /* New modifier for neutral buttons */
+    .btn-arcade.btn-neutral {
+        --btn-color: theme('colors.neutral.600');
+    }
+    .btn-arcade.btn-neutral:hover {
+        background-color: theme('colors.neutral.700');
+        color: theme('colors.white'); /* Keep text white for better contrast */
+        text-shadow: 0 0 8px theme('colors.white');
+        box-shadow: 0 0 1.5em 0.25em theme('colors.neutral.600');
+    }
+
+    .input-arcade {
+        @apply block w-full bg-black border-2 p-3 text-lg uppercase tracking-widest text-center font-display transition-all duration-200;
+        color: var(--color-accent);
+        border-color: var(--color-accent);
+        text-shadow: 0 0 5px var(--color-accent);
+        box-shadow: 0 0 8px var(--color-accent), inset 0 0 8px rgba(var(--color-accent-rgb), 0.2);
+    }
+    .input-arcade:focus {
+        @apply outline-none;
+        color: var(--color-primary);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 15px var(--color-primary), inset 0 0 15px rgba(var(--color-primary-rgb), 0.2);
+    }
+    
+    .panel-arcade {
+        @apply bg-black/80 p-6 border-2 rounded-lg; /* Standardized padding and added subtle border-radius */
+        border-color: var(--neon-color, var(--color-primary));
+        box-shadow: 0 0 15px rgba(var(--neon-color-rgb, var(--color-primary-rgb)), 0.4), 
+                    inset 0 0 15px rgba(var(--neon-color-rgb, var(--color-primary-rgb)), 0.2);
+    }
+}
+
+/* Animations & Utility Styles */
+
+/* SortableJS placeholder */
+.sortable-ghost {
+  @apply opacity-60 bg-primary border-2 border-dashed border-white;
+}
+
+.delete-word-btn {
+    @apply bg-transparent border-none text-secondary font-display text-lg cursor-pointer p-1 leading-none transition-all duration-100;
+    -webkit-tap-highlight-color: transparent;
+}
+.delete-word-btn:hover, .delete-word-btn:focus-visible {
+    @apply text-white bg-secondary;
+    text-shadow: 0 0 8px white;
+    outline: none;
+}
+
+/* View Transitions */
+@keyframes view-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes view-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.view-out {
+  animation: view-fade-out 0.2s forwards ease-in-out;
+}
+.view-in {
+  animation: view-fade-in 0.2s forwards ease-in-out;
+}
+
+/* Points Animations */
+@keyframes fade-up-and-out {
+  0% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; transform: translateY(-30px); }
+  100% { opacity: 0; transform: translateY(-40px); }
+}
+.points-animation {
+  @apply absolute text-accent font-display text-xl pointer-events-none;
+  top: -10px;
+  right: 10px;
+  text-shadow: 0 0 5px var(--color-accent), 0 0 10px var(--color-accent);
+  animation: fade-up-and-out 2.5s ease-out forwards;
+}
+
+@keyframes fade-up-and-out-reveal {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  70% { opacity: 1; transform: translateY(-50px) scale(1.5); }
+  100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
+}
+.points-reveal-animation {
+  @apply absolute font-display pointer-events-none z-20;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: theme('colors.yellow.400');
+  font-size: 4rem; /* Kept large for impact */
+  text-shadow: 0 0 10px theme('colors.yellow.400'), 0 0 20px theme('colors.yellow.400');
+  animation: fade-up-and-out-reveal 7s ease-out forwards;
+}
+
+/* Avatar Selection */
+.avatar-selector {
+    @apply grid gap-2 max-h-80 overflow-y-auto p-2 bg-neutral-900 border-2 border-accent;
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+}
+.avatar-option {
+    @apply w-full aspect-square flex items-center justify-center cursor-pointer transition-all duration-100 bg-neutral-800 border-2 border-neutral-700 p-1 relative;
+}
+.avatar-option:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 5px var(--color-primary);
+}
+.avatar-option.selected {
+    background-color: var(--color-primary);
+    border-color: white;
+    box-shadow: 0 0 10px var(--color-primary);
+}
+.avatar-option.disabled-taken {
+    @apply cursor-not-allowed opacity-40 bg-neutral-800;
+}
+.avatar-option.disabled-taken:hover {
+    @apply border-neutral-700;
+    box-shadow: none;
+}
+.avatar-option.disabled-taken::after {
+    content: 'X';
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-secondary font-bold font-display text-3xl leading-none z-10;
+    text-shadow: 0 0 5px var(--color-secondary), 0 0 10px var(--color-secondary);
+}
+
+/* Winner Animations - OPTIMIZED */
+@keyframes winner-pulse-arcade {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+.winner-card {
+  box-shadow: 0 0 25px var(--color-accent), inset 0 0 10px var(--color-accent);
+  animation: winner-pulse-arcade 1.5s ease-in-out infinite;
+  border-color: var(--color-accent);
+  @apply z-10 relative;
+}
+
+@keyframes final-winner-glow-arcade {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0.7; }
+}
+.final-winner-card {
+    border: 2px solid theme('colors.yellow.500');
+    box-shadow: 0 0 25px 10px rgba(251, 191, 36, 0.6), inset 0 0 8px rgba(255, 255, 255, 0.5);
+    animation: final-winner-glow-arcade 2s ease-in-out infinite;
+}
+
+/* Flying Emoji */
+@keyframes fly-across {
+  0% { bottom: -10%; left: var(--start-x); opacity: 1; transform: scale(0.8) rotate(var(--start-rotate)); }
+  100% { bottom: 110%; left: var(--end-x); opacity: 0; transform: scale(1.5) rotate(var(--end-rotate)); }
+}
+.flying-emoji {
+  @apply absolute w-20 h-20 pointer-events-none;
+  animation: fly-across 5s linear forwards;
+  will-change: transform, opacity;
+}
+
+/* Synthwave Background - STABLE FLICKER FIX */
+.synthwave-grid-background {
+  @apply fixed top-0 left-0 right-0 bottom-0 -z-10 overflow-hidden;
+  background-color: var(--color-bg-base);
+  perspective: 400px;
+}
+.synthwave-grid-background::before {
+  content: '';
+  @apply absolute top-1/2 left-1/2 w-[200%] h-[200%];
+  transform-style: preserve-3d;
+  transform: translate(-50%, -50%) rotateX(60deg);
+  background-image:
+    linear-gradient(to right, rgba(var(--color-primary-rgb), 0.15) 2px, transparent 2px),
+    linear-gradient(to bottom, rgba(var(--color-primary-rgb), 0.15) 2px, transparent 2px);
+  background-size: 50px 50px;
+  animation: scroll-grid 5s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+.synthwave-grid-background::after {
+  content: '';
+  @apply absolute inset-0;
+  background: 
+    linear-gradient(to top, transparent 25%, var(--color-bg-base) 75%),
+    radial-gradient(ellipse at 50% 150%, rgba(var(--color-secondary-rgb), 0.2), transparent 70%);
+}
+@keyframes scroll-grid {
+  from { transform: translate(-50%, -50%) rotateX(60deg) translateY(0px); }
+  to { transform: translate(-50%, -50%) rotateX(60deg) translateY(-50px); }
+}
+
+
+/* Neon Spinner - OPTIMIZED */
+@keyframes neon-spinner-animation {
+  0% { transform: rotate(0deg); border-color: var(--color-primary); }
+  50% { transform: rotate(180deg); border-color: var(--color-secondary); }
+  100% { transform: rotate(360deg); border-color: var(--color-primary); }
+}
+.neon-spinner {
+    @apply w-12 h-12 border-4 rounded-full;
+    box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+    animation: neon-spinner-animation 1.5s linear infinite;
+    will-change: transform, border-color;
+}
+
+/* 7-Segment Display */
+.segment-display {
+    @apply flex gap-1.5;
+}
+.digit {
+    position: relative;
+    width: 24px;
+    height: 42px;
+}
+.segment {
+    position: absolute;
+    @apply bg-neutral-700 transition-all duration-200 ease-in-out rounded-sm;
+}
+.h-segment { width: 16px; height: 4px; left: 4px; }
+.v-segment { width: 4px; height: 16px; top: 5px; }
+.seg-a { top: 0; }
+.seg-b { right: 0; }
+.seg-c { right: 0; top: 21px; }
+.seg-d { top: 38px; }
+.seg-e { left: 0; top: 21px; }
+.seg-f { left: 0; }
+.seg-g { top: 19px; }
+
+/* Lit state for segments */
+.digit[style*="--seg-a: 1"] .seg-a,
+.digit[style*="--seg-b: 1"] .seg-b,
+.digit[style*="--seg-c: 1"] .seg-c,
+.digit[style*="--seg-d: 1"] .seg-d,
+.digit[style*="--seg-e: 1"] .seg-e,
+.digit[style*="--seg-f: 1"] .seg-f,
+.digit[style*="--seg-g: 1"] .seg-g {
+    background-color: var(--color-warning);
+    box-shadow: 0 0 5px var(--color-warning), 0 0 8px rgba(var(--color-warning-rgb), 0.2);
+}
+
+/* Flashing override for lit segments */
+.digit.flashing[style*="--seg-a: 1"] .seg-a,
+.digit.flashing[style*="--seg-b: 1"] .seg-b,
+.digit.flashing[style*="--seg-c: 1"] .seg-c,
+.digit.flashing[style*="--seg-d: 1"] .seg-d,
+.digit.flashing[style*="--seg-e: 1"] .seg-e,
+.digit.flashing[style*="--seg-f: 1"] .seg-f,
+.digit.flashing[style*="--seg-g: 1"] .seg-g {
+    background-color: var(--color-danger);
+    box-shadow: 0 0 6px var(--color-danger), 0 0 10px rgba(var(--color-danger-rgb), 0.4);
+    animation: flicker 1.2s infinite ease-in-out;
+}
+
+/* ==========================================================================
+   Smart TV & Low Power Display Optimization Overrides
+   Activated via body[data-tv-mode="true"] or @media (display-mode: tv)
+   ========================================================================== */
+
+body[data-tv-mode="true"] {
+  /* 1. Eliminate 60 FPS full-screen grid animation / 3D transform */
+  .synthwave-grid-background::before {
+    animation: none !important;
+    transform: translate(-50%, -50%) rotateX(60deg) !important;
+    will-change: auto !important;
+  }
+
+  /* 2. Remove GPU-heavy multi-layer box shadows and text glow */
+  * {
+    text-shadow: none !important;
+  }
+
+  .btn-arcade,
+  .panel-arcade,
+  .input-arcade,
+  .winner-card,
+  .final-winner-card {
+    box-shadow: none !important;
+  }
+
+  .btn-arcade {
+    border-width: 2px !important;
+  }
+
+  .panel-arcade {
+    background-color: rgba(13, 2, 33, 0.95) !important;
+    border-width: 2px !important;
+  }
+
+  /* 3. Disable heavy continuous pulsing animations on TV screens */
+  .winner-card,
+  .final-winner-card,
+  .flying-emoji {
+    animation: none !important;
+  }
+
+  .winner-card {
+    border: 3px solid var(--color-accent) !important;
+  }
+
+  .final-winner-card {
+    border: 3px solid theme('colors.yellow.400') !important;
+  }
+
+  /* 4. GPU layer containment for Host TV dashboard */
+  .host-game-container,
+  .host-lobby-container {
+    contain: layout paint;
+  }
+}
+
+@media (display-mode: tv) {
+  .synthwave-grid-background::before {
+    animation: none !important;
+    transform: translate(-50%, -50%) rotateX(60deg) !important;
+    will-change: auto !important;
+  }
+
+  * {
+    text-shadow: none !important;
+  }
+
+  .btn-arcade,
+  .panel-arcade,
+  .input-arcade,
+  .winner-card,
+  .final-winner-card {
+    box-shadow: none !important;
+  }
+
+  .btn-arcade {
+    border-width: 2px !important;
+  }
+
+  .panel-arcade {
+    background-color: rgba(13, 2, 33, 0.95) !important;
+    border-width: 2px !important;
+  }
+
+  .winner-card,
+  .final-winner-card,
+  .flying-emoji {
+    animation: none !important;
+  }
+
+  .winner-card {
+    border: 3px solid var(--color-accent) !important;
+  }
+
+  .final-winner-card {
+    border: 3px solid theme('colors.yellow.400') !important;
+  }
+
+  .host-game-container,
+  .host-lobby-container {
+    contain: layout paint;
+  }
+}

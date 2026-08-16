@@ -1,0 +1,9 @@
+{
+  "name": "Word Scramble Party Game",
+  "description": "A real-time, local multiplayer word game for 3 to 10 players. Features creative question-answering and scramble battles, culminating in a final dialogue battle. Supports English and Ukrainian.",
+  "requestFramePermissions": [],
+  "prompt": "",
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

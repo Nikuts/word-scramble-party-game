@@ -1,0 +1,294 @@
+# Word Scramble Party Game
+
+A real-time, local multiplayer word game for 3 to 14 players. The game leverages the Google Gemini API for dynamic content generation, creating a unique experience every time you play. It features creative question-answering, "word scramble" style battles using players' own words, dynamic 1-on-1 showdowns and 3-way brawls, and a climactic final dialogue battle.
+
+**Core Technologies:** Node.js, Express, Socket.io, Svelte, TailwindCSS, Gemini API.
+
+---
+
+## 🚀 Core Features
+
+- **Local Multiplayer (3-14 Players):** Designed for parties on a shared local network. One device acts as a "Host Display" (e.g., a TV or laptop), while players use their phones or tablets to play.
+- **Dynamic 1-on-1 Showdowns & 3-Way Brawls:**
+    - **Pacing Optimization for Large Groups:** For 3 to 8 players, games run standard 2-player duos ($N$ battles per round). For 9 to 14 players, the engine switches to high-energy 3-player trios to keep the game length brisk and engaging without dragging out voting.
+    - **11-Player Fair Balance:** Handled cleanly with 6 trios + 2 duos (8 battles total) with rotating duo participants each round so every player gets an equal distribution of matchups.
+    - **TV Display Presentation Framing:** Battles are dynamically badged on the Host TV display as **"⚡ 1-on-1 Showdown"** or **"💥 3-Way Brawl"**, building hype and visual variety on the big screen.
+    - **Fairness Guarantee:** Every player participates in **exactly 2 battles per round** and faces completely distinct opponents in each battle.
+- **Easy Connection with QR Codes:** The host screen displays a QR code that players can scan. This takes them directly to the game's page and **automatically pre-fills the Game ID**, making it incredibly fast to join a lobby.
+- **In-Game Tutorial:** A dedicated "How to Play" screen, accessible from the lobby, provides a quick, multilingual guide to the game rules, ensuring new players can get up to speed without friction.
+- **Expressive Image Avatars:** Players can choose from a fun selection of 20 different character avatars (including aliens, wizards, and zombies) to represent themselves, adding a touch of personal flair to the game.
+- **Mobile-First UI:** The core gameplay, including an intuitive click-to-add and drag-to-reorder word scramble, is fully functional and optimized for mobile and touch devices.
+- **Immersive Audio & Visuals:** 
+    - **Smooth Screen Transitions:** View changes are handled with a clean and simple fade effect, ensuring a smooth user experience.
+    - **Dynamic Synthwave Background:** The entire game is set against an animated, retro-futuristic grid that scrolls towards the viewer, enhancing the "Neon Arcade" theme.
+    - **Segmented Timer Display:** The countdown timer is rendered as a retro 7-segment display, which flashes red when time is low, adding to the arcade-style tension.
+    - **Animated Score Ticker:** When points are awarded, scores don't just appear—they animate smoothly. The final results screen features a dramatic score ticker, and individual scores in the sidebar and player HUD animate as well, providing satisfying visual feedback.
+    - **Themed Loading Messages:** A pool of funny, themed loading messages like "Reticulating splines..." or "Teaching the AI about sarcasm..." keeps players entertained during brief waits for AI content generation.
+- **Bilingual Support:** Fully playable and internationalized for both **English** and **Ukrainian**.
+- **Dynamic AI Content Generation & Background Pre-fetching:** Utilizes the Google Gemini API to generate unique game content for every match:
+    - **Themes & Custom Party Theme Input:** Generates 3 distinct AI themes for the host to choose from, or allows entering a custom party theme (e.g. "Tech Startups", "Ukrainian Folklore", "90s Nostalgia") directly from either the phone controller or the TV display screen.
+    - **Background Pre-fetching (Zero Loading Lag):** While players are actively typing answers in Phase 1 or voting in battles, the server pre-fetches the next round's questions, battle prompts, and final movie premise data in the background. Round transitions happen instantly without stalling on "Generating Round...".
+    - **Questions:** Generates a unique set of open-ended questions for each player in each round to encourage creative, multi-word answers.
+    - **Battle Prompts:** Generates themed, fill-in-the-blank style battle prompts.
+    - **Final Round:** For the grand finale, it creates a unique movie genre and a bizarre premise for the finalists to create a movie title and tagline for.
+- **Battle History & Export:** From the final results screen, players can review a complete history of every battle from the game. Each battle card—showing the prompt and answers—can be saved as a downloadable image in either a vertical (mobile-friendly) or landscape (desktop-style) orientation, perfect for sharing the funniest moments.
+- **Customizable Game Modes:**
+    - **Themed UI Skins:** The host can choose from several neon color palettes (e.g., Arcade, Vaporwave, Outrun) to customize the visual theme of the game.
+    - **Silly Mode:** Toggles the AI to generate wacky, absurd, and humorous content.
+    - **18+ Mode:** Toggles the AI to generate adult-oriented, edgy, or suggestive content.
+    - **Slowpoke Mode:** Increases all game timers for a more relaxed and thoughtful pace.
+    - **Flexible Ukrainian Prompts:** To address the grammatical complexity of the Ukrainian language, the AI can be configured to generate more open-ended battle prompts (e.g., "Describe your ideal day: ____") instead of strict fill-in-the-blanks, making it easier and more fun to form creative answers.
+- **Resilient & Fair Gameplay:**
+    - **Live Player Status Display:** The Host Display now shows a real-time grid of all players during the question and battle answering phases. This includes their current progress (e.g., "Answered 2/4") and a clear "DISCONNECTED" status, making it easy to track the game's flow.
+    - **AI Fallback System:** If the Gemini API fails **3 consecutive times**, the game seamlessly switches to a large pool of high-quality, pre-written content, ensuring the game is always playable.
+    - **Smart Reconnection:** Disconnected players have a **5-minute window** to rejoin a game in progress. Their score, state, and any partially completed answers are fully restored. If all players disconnect, the server timer automatically pauses and resumes when the first player returns.
+    - **Host Display Reconnection:** If the Host Display's browser is refreshed, it will automatically and seamlessly reconnect to the game in progress. This works even if the lobby is empty, making host setup much more robust and preventing the host from getting stuck.
+    - **Automatic Host Migration:** If the designated Host player disconnects, control is automatically passed to the next available connected player after a short grace period (~90 seconds), ensuring the game never gets stuck.
+    - **Clean Lobby on Restart:** When "Play Again" is selected, any players who were disconnected are automatically removed from the lobby, ensuring the new game starts with only active participants.
+    - **Fair Tie-Handling:** If a battle vote results in a tie, points are split evenly. This now also correctly applies if one or both competitors fail to submit an answer in time; the result is a tie, the voting screen is correctly skipped, and points are split fairly. The game reliably advances to the next stage in all auto-win and tie scenarios, preventing any game stalls. The final results screen also correctly awards winner status to all players who tie for first place.
+- **Responsive Live Lobby:** Players can rapidly send their avatar from their phone, which animates and flies across the main Host Display. Game settings configured by the host, such as the Color Theme, Silly Mode, and 18+ Mode, are also clearly visible to all players on the main display.
+- **Reliable Dependencies:** All external libraries (like `canvas-confetti` and `html2canvas`) are bundled with the application, removing reliance on external CDNs and improving load times and offline availability.
+
+---
+
+## 🎮 How to Play: A Detailed Walkthrough
+
+The game is played over three rounds of increasing stakes, with a final winner crowned at the end.
+
+### 1. Setup & The Lobby
+- A "Host Display" is created on a primary screen (like a laptop or TV), which generates a unique **4-digit Game ID** and displays a **QR code**. Scanning this code with a mobile device will take the player directly to the game's page with the Game ID automatically filled in, making it even faster to join.
+- Players use their mobile devices to navigate to the game's URL, enter the Game ID, a name, and choose an **image avatar** to join the lobby.
+- The first player to join becomes the **Host**. From their device, the Host configures the game options (Color Theme, Game Theme, Silly Mode, etc.) and starts the game when ready.
+
+### 2. The Three Rounds of Play
+
+The game consists of **three rounds**. Each round has a **Question Phase** followed by a **Battle Phase**.
+
+#### **Phase 1: Question Answering**
+- **Objective:** To provide creative, text-based answers that will become the raw material for the upcoming battles.
+- **Gameplay:** Each player receives a unique set of open-ended questions on their screen (e.g., "What's a minor inconvenience that feels like a major tragedy?"). Players type their answers, aiming to be descriptive and funny. The time for this phase scales with the number of questions.
+
+#### **Phase 2: The Battle Phase (Vote -> Reveal -> Next)**
+This phase is a rapid, sequential series of events where players vote on one battle at a time.
+
+##### **Step A: Battle Get Ready! (5 seconds)**
+- The Host Display and player screens show a "Get Ready for Battle!" message, kicking off the action.
+
+##### **Step B: Answering (Timed)**
+- **Gameplay:** A schedule of one-on-one battles is created for the round. On their devices, every player who is competing is presented with all their assigned battle prompts to answer within a single timed phase.
+- **The Timer:** The timer for this phase is dynamic. It is calculated to give each player adequate time to answer their **two battles** for the round (e.g., `2 * seconds_per_battle_answer`). This keeps the game pace brisk and fair, regardless of the total number of players.
+- **Building an Answer with Syntactic Clause Bundles:**
+    - **100% Opponent Words (0% Self-Words):** Players are provided a curated word bank sourced strictly from their opponents' answers and themed fallbacks—a player never receives their own words.
+    - **Grammar & Clause Segmentation:** When players submit full sentences in Phase 1, the engine segments them into natural syntactic clauses and grammatical bundles (using conjunctions and punctuation boundaries). Whole bundles are routed together to an opponent so they have matching subjects, verbs, prepositions, and modifiers to construct fluent and hilarious sentences.
+    - **Individual Single-Word Tiles:** Every word in the bank is delivered as an individual, clickable single-word tile (no forced multi-word clumps), providing maximum freedom to rearrange, scramble, or weave words together.
+- **Interaction:**
+    - **Click to Add:** Players **click** single-word tiles from the Word Bank to add them to their answer.
+    - **Drag and Reorder:** Players can drag and drop the words *within their answer area* to reorder them. A translucent, neon-blue box with a dashed border serves as a placeholder, providing a clear indicator of where the item will be placed.
+    - **Click to Delete:** Each item added to the answer has a small **'x'** icon, making it easy to click and instantly remove it.
+
+##### **Step C: Sequential Voting & Reveals**
+This is a fast-paced cycle that repeats for every battle in the round.
+1.  **Vote on One Battle:** The Host Display shows a single battle matchup. All players who are not competing in that specific battle see the two anonymous answers on their devices and cast their vote. The view on the player's device is kept in sync, only ever showing the single, active battle. This part is timed.
+2.  **Immediate Reveal:** As soon as voting for that one battle is complete (either by timer or all votes are in), the results for *that battle only* are shown on the Host Display. 
+    - The winner is celebrated, points animate with a satisfying visual flourish, and confetti flies. This animation now correctly displays even in auto-win scenarios.
+    - The full, un-truncated text of the battle prompt is visible.
+    - The names of players who voted for an answer are now displayed next to their avatars.
+3.  **Advance to Next:** After a short reveal, the game automatically moves to the next battle, and the "Vote -> Reveal" cycle begins again.
+4.  **Auto-Win Condition:** If only one of the two competitors in a battle submits an answer, they automatically win. The voting phase for that battle is skipped, and the game proceeds directly to a slightly longer result reveal.
+
+This continues until all battles for the round have been voted on and revealed.
+
+### 3. The Final Round: Movie Poster
+- The third and final round follows the same flow, but the battle is elevated.
+- **Final Battle Prompt:** Instead of a simple fill-in-the-blank, the AI generates a **Movie Genre** and a **Bizarre Premise**.
+- **The Task:** The two competing players must use their word banks to create a fitting **Movie Title** and a catchy **Tagline**, turning their opponent's words into a hilarious movie poster concept.
+
+### 4. Game End & Post-Game
+- After the final round, the **Final Scores** are displayed on all screens. All players who tie for the highest score are crowned as winners.
+- **Battle History:** From the results screen, players can tap "View Battle History" to see a full log of every battle. Each battle can be saved as an image to their device.
+- **Play Again:** The **Host Player's device** will show a "Play Again" button. Tapping this instantly resets the game and takes all players (including the Host Display) back to the lobby. Any players who were disconnected at the end of the game are removed, ensuring a clean start for the new match.
+
+---
+
+## 🛠️ Setup & Installation
+
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd word-scramble-party-game
+    ```
+
+2.  **Prerequisites:**
+    - Make sure you have **Node.js** (version 18 or newer) and **npm** installed.
+    - You can download them from [https://nodejs.org/](https://nodejs.org/).
+
+3.  **Set up Environment Variables:**
+    - Create a `.env` file in the project root (see `.env.example` for reference).
+    - Add your Google Gemini API key:
+      ```env
+      GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+      # or API_KEY="YOUR_GEMINI_API_KEY"
+      PORT=3000
+      ```
+    - The server uses `gemini-3.7-flash` with graceful fallback to built-in content packs if an API key is not provided or if requests fail.
+
+4.  **Install Dependencies:**
+    - The first time you set up the project, or after pulling new changes, run:
+    ```bash
+    npm install
+    ```
+
+5.  **Run the Application:**
+
+    ### For macOS Users (Recommended):
+    A convenient script is provided to handle all steps for you.
+    1.  Make the script executable (you only need to do this once):
+        ```bash
+        chmod +x ./start-macos.sh
+        ```
+    2.  Run the script:
+        ```bash
+        ./start-macos.sh
+        ```
+        This script will automatically check for prerequisites, install dependencies, and start the game server.
+
+    ### For All Other Systems (Manual Steps):
+    Run the development server using the following command:
+    ```bash
+    npm run start:dev
+    ```
+    This command concurrently starts the Node.js server and the Vite frontend dev server. The `start:dev` script uses `concurrently` with a `--kill-others` (`-k`) flag. This ensures that if either the frontend or backend process fails, the other is automatically terminated. This prevents `ECONNREFUSED` proxy errors during development where the UI might load before the server is ready.
+
+6.  **Connect and Play:**
+    - **Cloud / AI Studio Public Link:** When running in AI Studio or deployed to Cloud Run, share your app's public URL (or use the built-in **"📋 Copy Game Link"** button / QR code on the Host screen). Players on any network or mobile phone can join instantly.
+    - **Local Network Play:** When running locally on your laptop, the Host screen displays your LAN IP (e.g., `http://192.168.1.10:3000`). Devices on the same Wi-Fi can scan the QR code or enter the 4-letter Room ID.
+
+---
+
+## 🌐 AI Studio & Cloud Run Publishing
+This application is fully compatible with Google AI Studio's built-in hosting and Cloud Run deployment:
+- **Single Port Architecture (`PORT 3000`):** Express serves both the static Svelte frontend and the Socket.IO WebSocket endpoints through a unified origin.
+- **Dynamic Origin Detection:** The Host display automatically detects public web URLs (`*.run.app` / custom domains) and creates universally scannable QR codes and shareable room links with automatic `?gameId=XXXX` routing.
+- **Server-Side Gemini Integration:** AI operations run securely server-side without exposing API keys to player browsers.
+
+---
+
+## 💻 Technical Architecture & Algorithms
+
+### Client-Server Model
+- **Server (Node.js/Express):** The authoritative source of truth. It manages all game state, handles game logic (scoring, phase transitions), communicates with the Gemini API, and uses **Socket.io** for real-time, event-based communication.
+- **Client (Svelte):** A reactive Svelte frontend that renders the UI based on state received from the server.
+  - **Component-Based Architecture:** The UI is broken down into small, reusable components. For example, the `PlayerGameView` is a simple router that renders phase-specific child components (e.g., `PlayerQuestionView`, `PlayerBattleAnsweringView`), making the codebase highly modular and maintainable.
+  - **Centralized State Management:** A central Svelte store (`src/stores.js`) manages the `gameState` and the socket connection on the client-side.
+
+### Modular Server Handler Architecture
+- **Domain-Specific Modules (`game/handlers/`):** The Socket.IO communication layer is split into specialized sub-modules:
+  - `validation.js`: Higher-order schema validation wrapper capturing socket and IO server contexts safely.
+  - `lobbyHandlers.js`: Game creation, joining, configuration (themes, 18+ mode, silly mode, slowpoke mode), and lobby emoji reactions.
+  - `connectionHandlers.js`: Disconnection recovery, session reconnection, host reassignment timers, and room lifecycle teardowns.
+  - `gameplayHandlers.js`: Idempotent question answers, incremental draft synchronizations, battle response submissions, and live voting.
+  - `game/handlers.js`: Clean single registration hub connecting event listeners to validated domain handlers.
+
+### Audio & Mobile Interaction System
+- **Auto Audio Pre-Warming:** Modern mobile web browsers (Safari iOS and Chrome Mobile) impose strict autoplay policies. The client includes automated gesture-activated audio unlocking (`unlockAudio()` in `src/lib/utils.js`) on the first tap/click to prime audio elements for game voiceovers and countdown ticks.
+
+### Performance & Reliability
+- **Declarative Input Validation (Zod):** To ensure security and reliability, all incoming socket events on the server are validated using strict, declarative schemas defined with the **Zod** library. This prevents malformed data from being processed and makes the validation logic clean and self-documenting.
+- **Computation Offloading (Worker Threads):** The most computationally intensive task—generating the unique Word Banks for each battle—is offloaded from the main server process into a **Node.js Worker Thread**. This prevents the main event loop from being blocked, ensuring the server remains highly responsive to all players even while performing heavy calculations.
+
+### Sequential Battle & Voting State Machine
+- The game flow is managed by a phase-based state machine on the server. The battle phase is now a loop: `battle_voting` -> `battle_result_reveal`. The server advances an index (`currentVotingBattleIndex`) and transitions between these two phases until all battles are complete, at which point it moves to the next round. This creates the sequential "vote-reveal-next" experience.
+
+### AI Integration & Resilient Fallback System
+- **Gemini API (`geminiService.js`):** Encapsulates communication with the Google Gemini API using the modern `@google/genai` SDK.
+- **Multi-Model Fallback Chain:** To protect against temporary API traffic spikes or regional 503 "High Demand" errors, requests automatically cascade across a resilient model fallback chain (`gemini-3.7-flash` → `gemini-flash-latest` → `gemini-3.1-flash-lite`).
+- **Exponential Backoff & Jitter:** Transient errors (503 Service Unavailable, 429 Resource Exhausted, 500) trigger intelligent backoff retries before switching candidate models.
+- **Zero-Stall Fallback Packs:** If all AI models are unreachable or the error threshold is reached, the server seamlessly falls back to rich, human-authored bilingual content packs (`game/fallbackContent.js`), guaranteeing smooth gameplay without game interruptions.
+
+### Smart TV & Low Power Display Optimization
+- **Auto-Detection (`isSmartTV`):** Detects Smart TV browsers via User-Agent signatures (LG webOS, Samsung Tizen, Android TV, Google TV, Apple TV, Fire TV sticks, Roku, Hisense, etc.) and `@media (display-mode: tv)`.
+- **Manual Host Switch:** Hosts can toggle **"📺 TV / Low Power Mode"** ON/OFF at any time directly from the Main Menu or Host Lobby, persisting preference to `localStorage`.
+- **Targeted Performance Enhancements (Active in TV Mode):**
+  - **Static Background:** Freezes the 60 FPS full-screen 3D synthwave canvas grid to reduce GPU compositing overhead.
+  - **Zero-Glow Shader Mode:** Eliminates heavy multi-layer box shadows and dynamic text glows, rendering high-contrast, crisp retro borders.
+  - **Confetti & Particle Throttling:** Caps particle quantities during score and winner reveals.
+  - **Paint & Layout Containment:** Uses CSS `contain: layout paint;` on the host dashboard containers to prevent layout thrashing on high-resolution 4K TV screens.
+
+### Word Bank Generation Algorithm
+The game features two distinct algorithms for generating word banks, which can be selected via a configuration flag. This is the core mechanic that makes the battles unique and personal.
+
+**Common Steps for Both Algorithms:**
+1.  **Source Material Collection:** The server gathers all text answers submitted by players from the *current* and all *previous* rounds.
+2.  **Intelligent Chunking:** To preserve context, answers are first split into thematic **"word chunks."**
+3.  **Fair Distribution & Allocation:** The algorithm distributes these chunks to players for their battles, ensuring **players never receive chunks from their own answers**. This forces them to engage with their opponents' ideas.
+4.  **Word Pool Splitting:** To ensure variety in every battle, a player's total allotted word chunks for the round are split evenly between their battles.
+5.  **Word Bank Assembly & Supplementing:** The collected chunks are then tokenized into individual words. If a bank has fewer than the configured minimum number of words, it is supplemented with fallback words. The final bank size is capped at the configured maximum.
+
+**Algorithm Selection:**
+- **`Current` Algorithm:** This is the original logic. It shuffles current-round and past-round chunks separately, but then **mixes them together** into a single large pool before distributing them to players. This results in a highly randomized bank with a good mix of old and new content.
+- **`Prioritized` Algorithm (New Default):** This refined logic first distributes **all chunks from the current round**. Only after the freshest content has been given out does it begin distributing chunks from past rounds to top up the player pools. This ensures the most recent and relevant answers are more likely to appear in the word banks.
+
+### Scoring System (`calculateBattlePoints`)
+- **Scaled 3-Round Economy:** Scoring escalates across the three rounds to reward progression:
+  - **Points Per Vote:** 300 pts (Round 1) → 600 pts (Round 2) → 1,200 pts (Round 3 / Finale).
+  - **Victory Bonus:** +200 pts (R1) → +400 pts (R2) → +800 pts (R3) awarded to the competitor with the most votes.
+  - **Clean Sweep Bonus:** +150 pts (R1) → +300 pts (R2) → +600 pts (R3) awarded for winning 100% of the cast votes.
+  - **Flat Word Royalties:** When another player uses words you wrote in an answer that earns votes, you receive a flat royalty (+50 in R1, +75 in R2, +100 in R3) per answer. This rewards creative word crafting without runaway scoring.
+  - **Rainbow Variety Bonus:** +100 pts (R1) → +200 pts (R2) → +400 pts (R3) awarded to competitors who craft an answer uniting words from 3 or more distinct player authors.
+- **Auto-Win:** If one competitor fails to provide an answer in time, the other player receives the full victory and sweep bonus.
+- **Ties:** If votes are evenly split, the victory bonus is divided equally between the competitors.
+
+---
+
+## ⚙️ Configuration (`src/lib/config.js`)
+
+- **`MIN_PLAYERS`, `MAX_PLAYERS`**: Player count limits.
+- **`POINTS_PER_VOTE`, `VICTORY_BONUS_PER_ROUND`, `CLEAN_SWEEP_BONUS_PER_ROUND`, `FLAT_ROYALTY_PER_ROUND`, `RAINBOW_BONUS_PER_ROUND`**: Configurable scaled scoring matrix per round.
+- **`USE_PRIORITIZED_WORD_BANK_ALGO`**: A boolean (`true`/`false`) to select the word bank algorithm. `true` uses the new, prioritized algorithm; `false` uses the current one.
+- **`USE_FLEXIBLE_UKRAINIAN_PROMPTS`**: A boolean (`true`/`false`) that, when enabled, prompts the AI to generate more open-ended battle prompts for the Ukrainian language to reduce grammatical complexity. Defaults to `true`.
+- **`WORD_BANK_SIZES`**: A new object that defines tiered minimum and maximum word bank sizes for each of the three game rounds, allowing for a better sense of progression as the game continues.
+- **`SOUNDS_ON_HOST_ONLY`**: A boolean (`true`/`false`) to control where sounds are played. If `true`, all sounds (including timer ticks) will only play on the Host Display. Defaults to `false` to play on all devices.
+- **Timers:** All phase timings are defined for both normal and "Slowpoke" modes. This includes fixed timers for transitions and voting, and per-item timers for the Question phase (based on number of questions) and Battle Answering phase (based on number of battles).
+- **`PLAYER_RECONNECTION_TIMEOUT`**: The grace period for players to rejoin (in milliseconds).
+- **`AVATARS`**: The full list of available emoji characters for avatars.
+- **`AVATAR_MAP`**: A map linking emoji characters to their corresponding image file names (e.g., `'🐸': 'frog'`).
+
+---
+
+## 🧪 Testing
+
+The codebase includes an automated **Vitest** test suite verifying server logic, state sanitization, input validation, and fallback algorithms:
+
+- **Run all tests:**
+  ```bash
+  npm test
+  ```
+- **Run tests in watch mode:**
+  ```bash
+  npm run test:watch
+  ```
+
+### Test Coverage Areas:
+1. **Helper Utilities (`test/helpers.test.js`):** In-place Fisher-Yates array shuffling, alphanumeric game ID generation, cryptographic token generation, and secure client-facing state sanitization (stripping secret player tokens).
+2. **Schema Validation (`test/validation.test.js`):** Zod schema boundary tests for player registration, avatar selection, answer length constraints, voting, and theme selection.
+3. **Fallback Content (`test/fallbackContent.test.js`):** Bilingual fallback packs, theme non-repetition, and prompt structure verification.
+4. **Game State Manager (`test/manager.test.js`):** Room lifecycle, game instance registration, retrieval, and deletion.
+
+---
+
+## 🏷️ Version History & Checkpoints
+
+- **`v1.2.0` (Latest Release)**:
+  - **14-Player Scale & 3-Way Brawls:** Expanded lobby capacity to 14 players. For 9+ player lobbies, battles automatically partition into 3-player trios, reducing total battle duration by 33%.
+  - **Balanced 11-Player Matrix:** 11-player matches partition into 6 trios + 2 duos with round-by-round duo player rotation, maintaining 2 battles per player with unique opponents.
+  - **TV Display Presentation Badging:** Battles on the Host display are highlighted as **"⚡ 1-on-1 Showdown"** or **"💥 3-Way Brawl"** with dynamic 3-card responsive layouts.
+- **`v1.1.0`**:
+  - **Interactive Prompt Tiles:** Battle prompts, movie genres, and scenario premises are broken into interactive clickable tiles, allowing instant integration into answers without cluttering the bottom bank.
+  - **Multi-Use Word Engine:** Words from both the prompt and word bank can be selected multiple times to craft repeated words and rhythm.
+  - **Clear Workspace Actions:** Added quick one-tap clear buttons to reset active answer lines.
+  - **Token Authorship & Word Royalties:** Word chunks preserve author metadata, distributing flat royalties to word creators when their words win votes in other players' answers.
+  - **Scaled 3-Round Scoring Matrix:** Implemented per-vote point scaling, victory bonuses, clean sweep bonuses, and rainbow variety bonuses.
+  - **Structured Scenario Prompting:** 3 distinct comedic archetypes in `themes.txt`, rich 5-10 word descriptive question harvesting, and punchy 1-2 sentence movie showdown premises.
+- **`v1.0.0` (Baseline Tag: `v1.0.0`)**:
+  - Stable 3-round word scramble party game with Gemini topic & question generation, fallback content pack, mobile player controls, and winner-take-all battle scoring.
+  - Checkpoint created to allow instant rollback via `git checkout v1.0.0` at any time.
