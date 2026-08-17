@@ -36,7 +36,7 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
     | **14** *(Max)* | 28 | 7 Quads | **7** | 10 | 🔥 4-Way Brawls |
 
 - **Easy Connection with QR Codes:** The host screen displays a QR code that players can scan. This takes them directly to the game's page and **automatically pre-fills the Game ID**, making it incredibly fast to join a lobby.
-- **In-Game Tutorial:** A dedicated "How to Play" screen, accessible from the lobby, provides a quick, multilingual guide to the game rules, ensuring new players can get up to speed without friction.
+- **In-Game Tutorial & Rules:** A dedicated "How to Play" screen, accessible directly from the main menu (after language selection) and during the lobby, provides a quick, multilingual guide to the game rules in the chosen language.
 - **Expressive Image Avatars:** Players can choose from a fun selection of 20 different character avatars (including aliens, wizards, and zombies) to represent themselves, adding a touch of personal flair to the game.
 - **Mobile-First UI:** The core gameplay, including an intuitive click-to-add and drag-to-reorder word scramble, is fully functional and optimized for mobile and touch devices.
 - **Immersive Audio & Visuals:** 

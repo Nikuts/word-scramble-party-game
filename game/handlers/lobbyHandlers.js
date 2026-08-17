@@ -16,8 +16,9 @@ export async function generateInitialThemes(io, game) {
     helpers.broadcastGameState(io, game.id);
 
     const fallbackThemes = {
-        en: FALLBACK_CONTENT.en.map(p => p.theme),
-        uk: FALLBACK_CONTENT.uk.map(p => p.theme)
+        en: helpers.shuffleArray([...(FALLBACK_CONTENT.en || []).map(p => p.theme)]).slice(0, 3),
+        uk: helpers.shuffleArray([...(FALLBACK_CONTENT.uk || FALLBACK_CONTENT.ua || []).map(p => p.theme)]).slice(0, 3),
+        ua: helpers.shuffleArray([...(FALLBACK_CONTENT.ua || FALLBACK_CONTENT.uk || []).map(p => p.theme)]).slice(0, 3)
     };
     
     try {

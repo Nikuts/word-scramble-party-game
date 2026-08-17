@@ -25,7 +25,7 @@ export default defineConfig({
     webServer: {
         command: 'node server.js',
         url: 'http://localhost:3000',
-        reuseExistingServer: false,
+        reuseExistingServer: true,
         stdout: 'pipe',
         stderr: 'pipe',
         timeout: 30000,

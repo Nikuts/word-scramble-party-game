@@ -19,6 +19,7 @@
     <div class="flex flex-col gap-4 w-full max-w-sm">
         <button on:click={createHost} class="btn-arcade text-xl w-full" style="--btn-color: var(--color-secondary);">{$t.createHostDisplay}</button>
         <button on:click={() => changeView('joinPrompt')} class="btn-arcade text-xl w-full" style="--btn-color: var(--color-accent);">{$t.joinAsPlayer}</button>
+        <button on:click={() => changeView('instructions')} class="btn-arcade text-base w-full btn-neutral" style="--btn-color: var(--color-primary);">📖 {$t.howToPlay}</button>
     </div>
     
     <div class="absolute top-4 left-4 flex gap-2">

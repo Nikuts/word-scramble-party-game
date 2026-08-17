@@ -35,7 +35,7 @@
 </script>
 
 {#if $currentPlayerDetails}
-<div class="fixed top-0 left-0 right-0 bg-neutral-950/95 px-4 py-2 z-10 border-b-2" style="border-color: var(--color-secondary); box-shadow: 0 0 10px var(--color-secondary);">
+<div class="fixed top-0 left-0 right-0 bg-neutral-950/95 px-4 py-2 z-10 border-b-2 pt-[max(8px,env(safe-area-inset-top))]" style="border-color: var(--color-secondary); box-shadow: 0 0 10px var(--color-secondary);">
     <div class="w-full max-w-4xl mx-auto flex items-center justify-between gap-4">
         <div class="flex items-center gap-3 min-w-0">
             <div class="w-12 h-12 flex-shrink-0">
@@ -57,7 +57,7 @@
 {/if}
 
 
-<div class="min-h-screen flex flex-col items-center p-4 pt-24 w-full">
+<div class="min-h-screen flex flex-col items-center p-4 pt-[calc(max(8px,env(safe-area-inset-top))+72px)] w-full">
     {#if $showBattleHistory && $gamePhase === 'results'}
         <PlayerBattleHistoryView game={$gameState} player={$currentPlayerDetails} />
     {:else if $gamePhase === 'generating_round'}

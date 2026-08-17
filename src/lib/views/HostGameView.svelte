@@ -208,26 +208,26 @@
                 {/if}
 
                 <div class="mt-6 w-full max-w-4xl mx-auto">
-                    <p class="text-lg font-bold mb-3">{$t.waitingFor}:</p>
+                    <p class="text-xl font-bold mb-3 text-slate-200">{$t.waitingFor}:</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                         {#each $gamePlayers as p (p.id)}
                             {@const isConnected = !!p.socketId}
-                            <div class="p-3 bg-neutral-900 border border-neutral-700 flex items-center gap-3 rounded-md transition-opacity {isConnected ? 'opacity-100' : 'opacity-50'}">
-                                <div class="w-10 h-10 flex-shrink-0">
+                            <div class="p-3.5 bg-neutral-900/90 border border-neutral-600 flex items-center gap-3 rounded-lg transition-opacity shadow-sm {isConnected ? 'opacity-100' : 'opacity-50'}">
+                                <div class="w-11 h-11 flex-shrink-0">
                                     <PixelAvatar avatar={p.avatar} />
                                 </div>
                                 <div class="flex-grow text-left min-w-0">
-                                    <p class="font-bold truncate">{p.name}</p>
+                                    <p class="font-bold text-base text-slate-100 truncate">{p.name}</p>
                                     {#if !isConnected}
-                                        <p class="text-xs font-display text-danger animate-pulse">{$t.disconnected}</p>
+                                        <p class="text-xs font-display text-danger animate-pulse font-bold">{$t.disconnected}</p>
                                     {:else if $gamePhase === 'question'}
                                         {@const totalQs = $gameState.playerAnswers[p.id]?.questions.length || 0}
                                         {@const answeredQs = $gameState.playerAnswers[p.id]?.questions.filter(q => !!q.answer).length || 0}
-                                        <p class="text-xs font-display {answeredQs === totalQs ? 'text-green-400' : 'text-yellow-400 animate-pulse'}">{answeredQs}/{totalQs} {$t.answered}</p>
+                                        <p class="text-xs font-display font-bold {answeredQs === totalQs ? 'text-emerald-400' : 'text-amber-300 animate-pulse'}">{answeredQs}/{totalQs} {$t.answered}</p>
                                     {:else if $gamePhase === 'battle_answering'}
                                          {@const totalBattles = $gameState.battleSchedule.filter(b => b.competitors.includes(p.id)).length}
                                          {@const answeredBattles = $gameState.battleSchedule.filter(b => b.competitors.includes(p.id) && !!b.answers[p.id]).length}
-                                         <p class="text-xs font-display {answeredBattles === totalBattles ? 'text-green-400' : 'text-yellow-400 animate-pulse'}">{answeredBattles}/{totalBattles} {$t.answered}</p>
+                                         <p class="text-xs font-display font-bold {answeredBattles === totalBattles ? 'text-emerald-400' : 'text-amber-300 animate-pulse'}">{answeredBattles}/{totalBattles} {$t.answered}</p>
                                     {/if}
                                 </div>
                             </div>

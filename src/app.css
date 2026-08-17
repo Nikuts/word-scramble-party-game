@@ -444,3 +444,11 @@ body[data-app-hidden="true"] .flying-emoji,
 body[data-app-hidden="true"] * {
   animation-play-state: paused !important;
 }
+
+/* Mobile Safe Area Insets for Notches & Dynamic Islands */
+.safe-top {
+  padding-top: max(16px, env(safe-area-inset-top, 16px));
+}
+.safe-bottom {
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+}

@@ -1,5 +1,13 @@
 <script>
-    import { t, changeView } from '../../stores.js';
+    import { t, changeView, gameState } from '../../stores.js';
+
+    function handleBack() {
+        if ($gameState) {
+            changeView('playerGame');
+        } else {
+            changeView('mainMenu');
+        }
+    }
 </script>
 
 <div class="min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 py-8 justify-center">
@@ -25,7 +33,7 @@
         </div>
 
     </div>
-    <button on:click={() => changeView('playerGame')} class="mt-8 btn-arcade" style="--btn-color: var(--color-secondary);">
-        &larr; {$t.backToLobby}
+    <button on:click={handleBack} class="mt-8 btn-arcade" style="--btn-color: var(--color-secondary);">
+        &larr; {$gameState ? $t.backToLobby : $t.backToMenu}
     </button>
 </div>

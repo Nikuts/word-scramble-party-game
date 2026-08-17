@@ -81,16 +81,19 @@
         sendMessage('set-color-theme', { gameId: game.id, theme: theme });
     }
 </script>
-<div class="p-4 sm:p-6 text-center">
+<div class="p-4 sm:p-6 text-center pt-[max(16px,env(safe-area-inset-top))]">
     <div class="container mx-auto max-w-2xl">
-        <div class="flex justify-between items-center mb-4">
+        <div class="grid grid-cols-2 gap-3 mb-5">
             <button 
                 on:click={() => dispatch('reselectAvatar')} 
-                class="px-3 py-1.5 bg-transparent border border-secondary text-secondary hover:bg-secondary hover:text-black transition-all font-display text-xs rounded-md shadow-sm"
+                class="w-full py-2.5 px-3 bg-neutral-900/80 border-2 border-secondary text-secondary hover:bg-secondary hover:text-black transition-all font-display text-xs rounded-lg shadow-sm flex items-center justify-center min-h-[44px] tracking-wider"
             >
                 {$t.changeCharacter}
             </button>
-            <button on:click={() => changeView('instructions')} class="px-4 py-2 bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-black transition-colors font-display text-sm rounded-md">
+            <button 
+                on:click={() => changeView('instructions')} 
+                class="w-full py-2.5 px-3 bg-neutral-900/80 border-2 border-primary text-primary hover:bg-primary hover:text-black transition-all font-display text-xs rounded-lg shadow-sm flex items-center justify-center min-h-[44px] tracking-wider"
+            >
                 {$t.howToPlay}
             </button>
         </div>
@@ -139,18 +142,18 @@
         {#if isHost}
             <h1 class="text-3xl mb-4 text-primary" style="text-shadow: 0 0 5px var(--color-primary);">{$t.youAreTheHost}</h1>
 
-            <div class="w-full text-left panel-arcade p-4 mb-6" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
-                <!-- Color Theme Selection -->
-                <div class="mb-6">
-                    <h3 class="font-display text-lg mb-2">{$t.colorTheme}</h3>
-                    <div class="flex items-center justify-center gap-2">
+            <div class="w-full text-left panel-arcade p-4 mb-6 space-y-4" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
+                <!-- Color Theme Selection (Neatly Encapsulated) -->
+                <div class="p-3 bg-black/40 border border-neutral-700/60 rounded-lg">
+                    <h3 class="font-display text-xs sm:text-sm uppercase tracking-wider text-primary mb-2.5">{$t.colorTheme}</h3>
+                    <div class="grid grid-cols-3 gap-2">
                         {#each ['arcade', 'vaporwave', 'outrun'] as themeName}
                             <button 
                                 on:click={() => handleColorThemeClick(themeName)}
-                                class="w-full p-2 text-center uppercase font-display text-sm border-2 transition-all rounded-md {
+                                class="w-full py-2 px-1 text-center uppercase font-display text-[9px] sm:text-[11px] tracking-tight border-2 transition-all rounded-md truncate {
                                     game?.colorTheme === themeName 
-                                    ? 'bg-white text-black font-bold border-white' 
-                                    : 'bg-neutral-900/50 border-neutral-600 hover:bg-neutral-700'
+                                    ? 'bg-white text-black font-bold border-white shadow-[0_0_8px_rgba(255,255,255,0.7)]' 
+                                    : 'bg-neutral-900/80 border-neutral-600 hover:bg-neutral-700 text-gray-200'
                                 }"
                             >
                                 {themeName}
@@ -161,7 +164,7 @@
 
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="font-display text-lg">{$t.theme}</h3>
-                    <div class="flex items-center gap-1.5">
+                    <div>
                         <button 
                             type="button" 
                             on:click={() => {
@@ -170,23 +173,9 @@
                                 }
                             }}
                             disabled={isApiDisabled || game?.isGeneratingThemes}
-                            class="px-2 py-0.5 text-xs bg-neutral-800 hover:bg-primary hover:text-black border border-primary/50 rounded text-primary transition-all font-display cursor-pointer disabled:opacity-50"
+                            class="px-3 py-1 text-xs bg-neutral-900/90 hover:bg-primary hover:text-black border border-primary/50 rounded text-primary transition-all font-display uppercase tracking-wider cursor-pointer disabled:opacity-50"
                         >
-                            🔄 {$t.reloadTopics}
-                        </button>
-                        <button 
-                            type="button" 
-                            on:click={() => {
-                                const available = game?.preGeneratedThemes?.[$language] || [];
-                                if (available.length > 0) {
-                                    const randomTheme = available[Math.floor(Math.random() * available.length)];
-                                    handleThemeClick(randomTheme);
-                                }
-                            }}
-                            disabled={isApiDisabled || game?.isGeneratingThemes}
-                            class="px-2 py-0.5 text-xs bg-neutral-800 hover:bg-accent hover:text-black border border-accent/50 rounded text-accent transition-all font-display cursor-pointer disabled:opacity-50"
-                        >
-                            🎲 {$language === 'uk' ? 'Випадкова' : 'Random'}
+                            {$t.reloadThemes}
                         </button>
                     </div>
                 </div>
@@ -292,6 +281,9 @@
                         <PixelAvatar avatar={p.avatar} />
                     </div>
                     <span class="text-lg font-medium flex-grow text-left truncate">{p.name}</span>
+                    {#if p.socketId}
+                        <span class="px-2 py-0.5 bg-emerald-950/80 border border-emerald-400 text-emerald-300 text-xs font-display rounded-sm shadow-[0_0_8px_rgba(52,211,153,0.4)]">✓ {$language === 'uk' ? 'Готовий' : 'Ready'}</span>
+                    {/if}
                     {#if p.isHost}
                         <span class="px-2 py-1 bg-warning text-black text-xs font-display rounded-sm">{$t.host}</span>
                     {/if}
