@@ -3,7 +3,7 @@ import * as helpers from '../helpers.js';
 import * as manager from '../manager.js';
 import * as timerService from './timerService.js';
 import * as gameService from './gameService.js';
-import { FALLBACK_CONTENT, FALLBACK_WORDS } from '../fallbackContent.js';
+import { FALLBACK_CONTENT, FALLBACK_WORDS } from '../fallback/index.js';
 import {
     QUESTIONS_PER_ROUND,
     GET_READY_SECONDS,

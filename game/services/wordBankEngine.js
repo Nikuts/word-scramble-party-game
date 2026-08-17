@@ -1,5 +1,5 @@
 // game/services/wordBankEngine.js
-import { FALLBACK_WORDS } from '../fallbackContent.js';
+import { FALLBACK_WORDS } from '../fallback/index.js';
 import { WORD_BANK_SIZES, USE_PRIORITIZED_WORD_BANK_ALGO } from '../../src/lib/config.js';
 import { shuffleArray, tokenizeText, getChunksFromText } from '../helpers.js';
 

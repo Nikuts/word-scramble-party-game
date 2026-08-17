@@ -4,6 +4,7 @@ import { Worker } from 'worker_threads';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { generateFinalRoundData } from '../../geminiService.js';
+import { getFallbackFinalRoundPrompts } from '../fallback/index.js';
 import * as helpers from '../helpers.js';
 import * as timerService from './timerService.js';
 import * as roundService from './roundService.js';
@@ -308,10 +309,7 @@ export async function prepareBattlePhase(io, game) {
             if (finalPrompts) {
                 promptsForThisRound = finalPrompts;
             } else {
-                promptsForThisRound = Array(numBattles).fill(null).map((_, i) => ({
-                    genre: `Sci-Fi Comedy #${i + 1}`,
-                    premise: "A time-traveling hamster tries to prevent the invention of the wheel."
-                }));
+                promptsForThisRound = getFallbackFinalRoundPrompts(game.language, numBattles);
             }
         }
     } else {

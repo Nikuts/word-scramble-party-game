@@ -3,7 +3,7 @@ import { generateThemes } from '../../geminiService.js';
 import * as manager from '../manager.js';
 import * as roundService from '../services/roundService.js';
 import * as helpers from '../helpers.js';
-import { FALLBACK_CONTENT } from '../fallbackContent.js';
+import { FALLBACK_CONTENT } from '../fallback/index.js';
 import {
     MIN_PLAYERS,
     MAX_PLAYERS,
