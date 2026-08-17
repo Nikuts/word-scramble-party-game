@@ -1,6 +1,6 @@
 <script>
     import { onDestroy } from 'svelte';
-    import { t, flyingEmojis, sendMessage, gameState, gamePhase, gamePlayers, phaseTimer, currentRound, tvMode, toggleTvMode } from '../../stores.js';
+    import { t, flyingEmojis, sendMessage, gameState, gamePhase, gamePlayers, phaseTimer, currentRound, tvMode, toggleTvMode, activeTimeBoostNotice } from '../../stores.js';
     import { tweened } from 'svelte/motion';
     import { cubicOut } from 'svelte/easing';
     import LoadingSpinner from '../shared/LoadingSpinner.svelte';
@@ -141,24 +141,37 @@
     }
 </script>
 
-<div class="p-4 sm:p-8 flex flex-col md:flex-row gap-8 min-h-screen relative host-game-container">
+<div class="p-3 sm:p-6 flex flex-col md:flex-row gap-4 sm:gap-6 min-h-screen relative host-game-container">
+    {#if $activeTimeBoostNotice}
+        <div class="fixed top-6 right-6 z-50 animate-bounce bg-yellow-400 text-black px-4 py-2 rounded-lg font-display font-extrabold shadow-[0_0_20px_rgba(250,204,21,0.8)] border-2 border-white flex items-center gap-2">
+            <span class="text-xl">⏱️</span>
+            <span>{$t.timeBoostUsed.replace('{name}', $activeTimeBoostNotice.playerName)}</span>
+        </div>
+    {/if}
+
     <!-- Player List Sidebar -->
-    <aside class="w-full md:w-2/5 panel-arcade flex flex-col" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
-        <h2 class="text-2xl mb-4 text-primary" style="text-shadow: 0 0 5px var(--color-primary);">{$t.players} ({$gamePlayers.length})</h2>
-        <div class="flex-grow overflow-y-auto pr-2 space-y-3">
+    <aside class="w-full md:w-1/3 lg:w-1/4 panel-arcade flex flex-col" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
+        <!-- Lifted Theme Display -->
+        <div class="mb-4 p-2.5 bg-black/60 border border-primary/60 rounded-md text-left">
+            <span class="text-xs uppercase tracking-wider text-neutral-400 font-semibold block mb-0.5">🎭 {$t.chosenTheme}</span>
+            <span class="font-bold text-primary text-base sm:text-lg break-words block leading-snug">{$gameState.theme || '...'}</span>
+        </div>
+
+        <h2 class="text-xl mb-3 text-primary" style="text-shadow: 0 0 5px var(--color-primary);">{$t.players} ({$gamePlayers.length})</h2>
+        <div class="flex-grow overflow-y-auto pr-1 space-y-2">
             {#each $gamePlayers as p (p.id)}
-                <div class="flex items-center gap-4 bg-neutral-900/80 p-3 border border-neutral-700 rounded-md" data-player-id={p.id}>
-                    <div class="w-12 h-12 flex-shrink-0">
+                <div class="flex items-center gap-3 bg-neutral-900/80 p-2.5 border border-neutral-700 rounded-md" data-player-id={p.id}>
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0">
                         <PixelAvatar avatar={p.avatar} />
                     </div>
                     <div class="flex-grow min-w-0">
-                        <p class="text-lg font-medium flex items-center gap-2">
+                        <p class="text-base font-medium flex items-center gap-1.5">
                             <span class="truncate">{p.name}</span>
                             {#if p.isHost}
-                                <span class="px-2 py-1 bg-warning text-black text-xs font-display rounded-sm flex-shrink-0">{$t.host}</span>
+                                <span class="px-1.5 py-0.5 bg-warning text-black text-[10px] font-display rounded-sm flex-shrink-0">{$t.host}</span>
                             {/if}
                         </p>
-                        <p class="text-primary font-bold text-xl">
+                        <p class="text-primary font-bold text-lg leading-none mt-1">
                             {$gamePhase === 'results' 
                                 ? (displayedScores[p.id] !== undefined ? displayedScores[p.id] : p.score) 
                                 : Math.round($animatedScores[p.id] || p.score)}
@@ -166,18 +179,15 @@
                         </p>
                     </div>
                     {#if !p.socketId}
-                        <span class="px-2 py-1 bg-danger text-white text-xs font-display rounded-sm animate-pulse flex-shrink-0">{$t.disconnected.toUpperCase()}</span>
+                        <span class="px-1.5 py-0.5 bg-danger text-white text-[10px] font-display rounded-sm animate-pulse flex-shrink-0">{$t.disconnected.toUpperCase()}</span>
                     {/if}
                 </div>
             {/each}
         </div>
-        <div class="mt-4 pt-4 border-t border-neutral-700">
-            <p>{$t.chosenTheme}: <span class="font-bold text-primary">{$gameState.theme}</span></p>
-        </div>
     </aside>
 
     <!-- Main Content Area -->
-    <main class="w-full md:w-3/5 flex flex-col items-center py-8" class:flex-grow={$gamePhase === 'generating_round'}>
+    <main class="w-full md:w-2/3 lg:w-3/4 flex flex-col items-center py-4 sm:py-6" class:flex-grow={$gamePhase === 'generating_round'}>
         {#if $gamePhase === 'generating_round'}
              <LoadingSpinner message={loadingMessage} />
         {:else if $gamePhase === 'get_ready'}
@@ -272,30 +282,18 @@
                         {/each}
                     </div>
 
-                    <!-- Live Voter Gauge -->
+                    <!-- Anonymous Live Voter Gauge -->
                     {@const eligibleVoters = $gamePlayers.filter(p => !battle.competitors.includes(p.id))}
-                    {@const votedVoterIds = Object.keys(battle.votes || {})}
-                    <div class="mt-8 pt-4 border-t border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-neutral-950/70 p-3 rounded-lg border border-neutral-700">
-                        <div class="flex items-center gap-2">
-                            <span class="text-base font-bold text-accent">🗳️ {$t.votesLockedIn}:</span>
-                            <span class="text-lg font-extrabold text-white">{votedVoterIds.length} / {eligibleVoters.length}</span>
+                    {@const votedCount = Object.keys(battle.votes || {}).length}
+                    {@const totalVoters = eligibleVoters.length}
+                    {@const percentage = totalVoters > 0 ? Math.round((votedCount / totalVoters) * 100) : 0}
+                    <div class="mt-8 pt-4 border-t border-neutral-800 flex flex-col items-center justify-center gap-3 bg-neutral-950/70 p-4 rounded-lg border border-neutral-700 max-w-md mx-auto w-full">
+                        <div class="flex items-center justify-between w-full">
+                            <span class="text-sm sm:text-base font-bold text-accent">🗳️ {$t.votesLockedIn}:</span>
+                            <span class="text-base sm:text-lg font-extrabold text-white">{votedCount} / {totalVoters}</span>
                         </div>
-                        <div class="flex flex-wrap items-center justify-center gap-2">
-                            {#each eligibleVoters as voter (voter.id)}
-                                {@const hasVoted = votedVoterIds.includes(voter.id)}
-                                <div 
-                                    class="flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-semibold transition-all duration-300 {hasVoted ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.4)] scale-105' : 'bg-neutral-900 border-neutral-700 text-neutral-400 opacity-60'}"
-                                    title={voter.name}
-                                >
-                                    <div class="w-5 h-5 flex-shrink-0">
-                                        <PixelAvatar avatar={voter.avatar} />
-                                    </div>
-                                    <span class="truncate max-w-[80px]">{voter.name}</span>
-                                    {#if hasVoted}
-                                        <span class="text-emerald-400 font-bold text-xs">✓</span>
-                                    {/if}
-                                </div>
-                            {/each}
+                        <div class="w-full bg-neutral-800 rounded-full h-3 overflow-hidden border border-neutral-600">
+                            <div class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full transition-all duration-300 rounded-full" style="width: {percentage}%;"></div>
                         </div>
                     </div>
                 {/if}

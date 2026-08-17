@@ -23,7 +23,7 @@ export async function generateInitialThemes(io, game) {
     try {
         let generatedThemes = null;
         if (game.geminiApiErrorCount < 3) {
-            generatedThemes = await generateThemes(game.is18PlusMode);
+            generatedThemes = await generateThemes(game.is18PlusMode, game.sillyMode);
             if (generatedThemes) {
                 game.geminiApiErrorCount = 0;
             }
@@ -214,14 +214,33 @@ export function handleSetColorTheme(io, socket, { gameId, theme }) {
     }
 }
 
-export function handleSetSillyMode(io, socket, { gameId, sillyMode }) {
+export async function handleSetSillyMode(io, socket, { gameId, sillyMode }) {
     const game = manager.getGame(gameId);
     if (game?.phase === 'lobby') {
+        const modeChanged = game.sillyMode !== sillyMode;
         game.sillyMode = sillyMode;
         if (sillyMode) {
             game.is18PlusMode = false;
         }
-        helpers.broadcastGameState(io, gameId);
+        
+        if (modeChanged) {
+            game.theme = '';
+            await generateInitialThemes(io, game);
+        } else {
+            helpers.broadcastGameState(io, gameId);
+        }
+    }
+}
+
+export async function handleReloadThemes(io, socket, { gameId }) {
+    const game = manager.getGame(gameId);
+    if (game?.phase === 'lobby' && !game.isGeneratingThemes) {
+        const now = Date.now();
+        const lastReload = game.playerActionCooldowns.get('reload-themes') || 0;
+        if (now - lastReload < 1500) return; // 1.5s cooldown to prevent API hammering
+        game.playerActionCooldowns.set('reload-themes', now);
+        game.theme = '';
+        await generateInitialThemes(io, game);
     }
 }
 

@@ -56,12 +56,12 @@
         let styleEl = document.createElement('style');
         
         try {
-            const fontCss = await fetch(fontCssUrl).then(res => res.text());
-            styleEl.textContent = fontCss;
-            document.head.appendChild(styleEl);
-
-            // Wait a moment for the font to apply
-            await new Promise(resolve => setTimeout(resolve, 100));
+            const fontCss = await fetch(fontCssUrl).then(res => res.text()).catch(() => '');
+            if (fontCss) {
+                styleEl.textContent = fontCss;
+                document.head.appendChild(styleEl);
+                await new Promise(resolve => setTimeout(resolve, 80));
+            }
 
             const html2canvasModule = await import('html2canvas');
             const html2canvas = html2canvasModule.default || html2canvasModule;
@@ -74,8 +74,31 @@
                 removeContainer: true, // Cleans up the cloned DOM after capture
             });
 
+            const fileName = `battle-recap-${battleId.replace(/[^a-z0-9]/gi, '_')}-${orientation}.png`;
+
+            // On iOS Safari / mobile devices with Web Share support, trigger native share sheet
+            if (navigator.canShare && canvas.toBlob) {
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (blob) {
+                    const file = new File([blob], fileName, { type: 'image/png' });
+                    if (navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: 'Word Scramble Battle',
+                                text: 'Check out this battle recap from Word Scramble!',
+                            });
+                            return;
+                        } catch (shareErr) {
+                            if (shareErr.name === 'AbortError') return;
+                            console.warn('Web Share API failed, falling back to download:', shareErr);
+                        }
+                    }
+                }
+            }
+
             const link = document.createElement('a');
-            link.download = `battle-recap-${battleId.replace(/[^a-z0-9]/gi, '_')}-${orientation}.png`;
+            link.download = fileName;
             link.href = canvas.toDataURL('image/png');
             link.click();
             
@@ -95,17 +118,16 @@
 </script>
 
 <div class="w-full max-w-4xl mx-auto text-center flex-grow">
-    <div class="sticky top-[76px] bg-neutral-950 z-20 py-4 px-4 border-b-2 border-primary/50">
+    <!-- Non-sticky top header as requested -->
+    <div class="py-4 px-4 border-b-2 border-primary/50 mb-6">
         <h1 class="text-3xl sm:text-4xl mb-4 text-primary">{$t.battleHistory}</h1>
         <button on:click={() => showBattleHistory.set(false)} class="btn-arcade btn-neutral text-lg">
             &larr; {$t.backToScores}
         </button>
     </div>
 
-    <div class="mt-6 space-y-6 pb-8">
+    <div class="space-y-6 pb-8">
         {#each game.battleHistory as battle (battle.id)}
-            {@const c1 = getPlayerById(battle.competitors[0])}
-            {@const c2 = getPlayerById(battle.competitors[1])}
             {@const winnerId = battle.winnerId}
             {@const isFinalRound = !!battle.genre}
             {@const cardId = `battle-card-${battle.id}`}
@@ -120,32 +142,24 @@
                     <h3 class="font-bold text-xl text-primary text-center mb-4 break-words">{battle.prompt}</h3>
                 {/if}
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Competitor 1 -->
-                    {#if c1}
-                    <div class="bg-neutral-900/50 p-3 border-2 rounded-md {winnerId === c1.id ? 'border-accent' : 'border-neutral-700'}">
-                         <div class="flex items-center gap-3 text-lg font-bold mb-2">
-                            <div class="w-10 h-10 flex-shrink-0">
-                                <PixelAvatar avatar={c1.avatar} />
+                <div class="grid grid-cols-1 {battle.competitors.length >= 3 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-2'} gap-4">
+                    {#each battle.competitors as cId (cId)}
+                        {@const competitor = getPlayerById(cId)}
+                        {#if competitor}
+                            <div class="bg-neutral-900/50 p-3 border-2 rounded-md {winnerId === competitor.id ? 'border-accent shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.5)]' : 'border-neutral-700'}">
+                                 <div class="flex items-center gap-3 text-base sm:text-lg font-bold mb-2">
+                                    <div class="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0">
+                                        <PixelAvatar avatar={competitor.avatar} />
+                                    </div>
+                                    <span class="truncate">{competitor.name}</span>
+                                    {#if winnerId === competitor.id}
+                                        <span class="ml-auto text-xs px-2 py-0.5 bg-accent text-black font-bold rounded-sm">👑 {$t.winner}</span>
+                                    {/if}
+                                </div>
+                                <p class="text-base sm:text-lg min-h-[5rem] bg-neutral-900 border border-neutral-600 p-2.5 whitespace-pre-wrap rounded-md leading-relaxed">{renderAnswer(battle.answers[competitor.id])}</p>
                             </div>
-                            <span>{c1.name}</span>
-                        </div>
-                        <p class="text-lg min-h-[6rem] bg-neutral-900 border border-neutral-600 p-2 whitespace-pre-wrap rounded-md">{renderAnswer(battle.answers[c1.id])}</p>
-                    </div>
-                    {/if}
-
-                    <!-- Competitor 2 -->
-                    {#if c2}
-                     <div class="bg-neutral-900/50 p-3 border-2 rounded-md {winnerId === c2.id ? 'border-accent' : 'border-neutral-700'}">
-                         <div class="flex items-center gap-3 text-lg font-bold mb-2">
-                            <div class="w-10 h-10 flex-shrink-0">
-                                <PixelAvatar avatar={c2.avatar} />
-                            </div>
-                            <span>{c2.name}</span>
-                        </div>
-                        <p class="text-lg min-h-[6rem] bg-neutral-900 border border-neutral-600 p-2 whitespace-pre-wrap rounded-md">{renderAnswer(battle.answers[c2.id])}</p>
-                    </div>
-                    {/if}
+                        {/if}
+                    {/each}
                 </div>
 
                 <div class="text-center mt-6 save-btn-container flex flex-wrap justify-center gap-4">
@@ -162,7 +176,6 @@
                         {:else}
                             {$t.saveAsImageLandscape}
                         {/if}
-                    </button>
                 </div>
             </div>
         {/each}

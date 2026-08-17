@@ -72,6 +72,7 @@ export function getSanitizedGameState(game) {
         socketId: p.socketId,
         score: p.score,
         isHost: p.isHost,
+        hasUsedTimeBoost: !!p.hasUsedTimeBoost,
     }));
     
     // Calculate remaining time on the server to be the source of truth.

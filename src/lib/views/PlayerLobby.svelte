@@ -161,20 +161,34 @@
 
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="font-display text-lg">{$t.theme}</h3>
-                    <button 
-                        type="button" 
-                        on:click={() => {
-                            const available = game?.preGeneratedThemes?.[$language] || [];
-                            if (available.length > 0) {
-                                const randomTheme = available[Math.floor(Math.random() * available.length)];
-                                handleThemeClick(randomTheme);
-                            }
-                        }}
-                        disabled={isApiDisabled || game?.isGeneratingThemes}
-                        class="px-2 py-0.5 text-xs bg-neutral-800 hover:bg-accent hover:text-black border border-accent/50 rounded text-accent transition-all font-display cursor-pointer disabled:opacity-50"
-                    >
-                        🎲 {$language === 'uk' ? 'Випадкова' : 'Random'}
-                    </button>
+                    <div class="flex items-center gap-1.5">
+                        <button 
+                            type="button" 
+                            on:click={() => {
+                                if (game && !game.isGeneratingThemes) {
+                                    sendMessage('reload-themes', { gameId: game.id });
+                                }
+                            }}
+                            disabled={isApiDisabled || game?.isGeneratingThemes}
+                            class="px-2 py-0.5 text-xs bg-neutral-800 hover:bg-primary hover:text-black border border-primary/50 rounded text-primary transition-all font-display cursor-pointer disabled:opacity-50"
+                        >
+                            🔄 {$t.reloadTopics}
+                        </button>
+                        <button 
+                            type="button" 
+                            on:click={() => {
+                                const available = game?.preGeneratedThemes?.[$language] || [];
+                                if (available.length > 0) {
+                                    const randomTheme = available[Math.floor(Math.random() * available.length)];
+                                    handleThemeClick(randomTheme);
+                                }
+                            }}
+                            disabled={isApiDisabled || game?.isGeneratingThemes}
+                            class="px-2 py-0.5 text-xs bg-neutral-800 hover:bg-accent hover:text-black border border-accent/50 rounded text-accent transition-all font-display cursor-pointer disabled:opacity-50"
+                        >
+                            🎲 {$language === 'uk' ? 'Випадкова' : 'Random'}
+                        </button>
+                    </div>
                 </div>
                  {#if game?.isGeneratingThemes}
                     <div class="p-3 bg-neutral-900 border border-warning mb-3 text-center rounded-md">

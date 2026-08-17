@@ -186,21 +186,27 @@ function parseJsonResponse(jsonString) {
 /**
  * Generates 3 game themes in both English and Ukrainian.
  * @param {boolean} is18PlusMode Whether to generate adult-oriented themes.
+ * @param {boolean} sillyMode Whether to generate silly/absurd themes.
  * @param {string} [promptVersion] Optional prompt version ('v1' or 'v2').
  * @returns {Promise<object | null>} A promise that resolves to an object like { en: [], uk: [] } or null.
  */
-export async function generateThemes(is18PlusMode = false, promptVersion = null) {
+export async function generateThemes(is18PlusMode = false, sillyMode = false, promptVersion = null) {
   const client = getAiClient();
   if (!client) {
     console.warn("AI client not available. Using fallback themes.");
     return null;
   }
   const v = promptVersion || (typeof process !== 'undefined' && process.env?.PROMPT_VERSION) || PROMPT_VERSION || 'v2';
-  console.log(`Generating new themes from Gemini (Engine: ${v}, 18+ Mode: ${is18PlusMode})...`);
+  console.log(`Generating new themes from Gemini (Engine: ${v}, 18+ Mode: ${is18PlusMode}, Silly Mode: ${sillyMode})...`);
 
-  const themeTypeInstruction = is18PlusMode 
-    ? "adult-oriented, potentially edgy or suggestive party game themes suitable for an 18+ audience" 
-    : "fun, broad, and imaginative party game themes that allow for many creative answers";
+  let themeTypeInstruction;
+  if (is18PlusMode) {
+    themeTypeInstruction = "adult-oriented, potentially edgy or suggestive party game themes suitable for an 18+ audience";
+  } else if (sillyMode) {
+    themeTypeInstruction = "wildly absurd, silly, surreal, and laugh-out-loud funny party game themes (e.g. Secret Cult of Pigeon Worshippers, Vikings at an IKEA, Alien Abduction Support Group)";
+  } else {
+    themeTypeInstruction = "fun, broad, and imaginative party game themes that allow for many creative answers";
+  }
   
   const prompt = await getPrompt('themes', { themeTypeInstruction }, v);
   

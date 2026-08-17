@@ -1,6 +1,7 @@
 // game/handlers/gameplayHandlers.js
 import * as manager from '../manager.js';
 import * as battleService from '../services/battleService.js';
+import * as timerService from '../services/timerService.js';
 import * as helpers from '../helpers.js';
 
 export function handleSubmitAnswer(io, socket, { gameId, playerId, questionId, answer }) {
@@ -132,4 +133,28 @@ export function handleRerollQuestion(io, socket, { gameId, playerId, questionId 
     }
 
     helpers.broadcastGameState(io, gameId);
+}
+
+export function handleUseTimeBoost(io, socket, { gameId, playerId }) {
+    const game = manager.getGame(gameId);
+    if (!game) return;
+    if (game.phase !== 'question' && game.phase !== 'battle_answering') return;
+
+    const player = game.players.find(p => p.id === playerId);
+    if (!player || player.hasUsedTimeBoost) return;
+
+    player.hasUsedTimeBoost = true;
+    timerService.extendPhaseTimer(io, game, 30);
+
+    const remainingTime = game.phaseEndTime ? Math.max(0, Math.round((game.phaseEndTime - Date.now()) / 1000)) : 0;
+
+    io.to(gameId).emit('time-boost-used', {
+        playerId: player.id,
+        playerName: player.name,
+        avatar: player.avatar,
+        phase: game.phase,
+        remainingTime,
+    });
+
+    helpers.playSoundOnClients(io, game, 'sfx_time_boost');
 }

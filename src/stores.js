@@ -14,6 +14,7 @@ export const isHostDisplay = writable(false);
 export const joinForm = writable({ gameId: '', playerName: '', avatar: '' });
 export const showBattleHistory = writable(false);
 export const flyingEmojis = writable([]);
+export const activeTimeBoostNotice = writable(null);
 
 // --- Smart TV & Low Power Display Store ---
 function detectInitialTvMode() {
@@ -108,8 +109,10 @@ export function initializeSocket() {
     if (socket) return;
     socket = io({
         transports: ['websocket', 'polling'],
-        reconnectionAttempts: 5,
+        reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
     });
 
     socket.on('connect', () => {
@@ -334,10 +337,47 @@ export function initializeSocket() {
             return next.length > 20 ? next.slice(next.length - 20) : next;
         });
     });
+
+    socket.on('time-boost-used', (data) => {
+        console.log('[Time Boost] Used by:', data);
+        activeTimeBoostNotice.set(data);
+        setTimeout(() => {
+            activeTimeBoostNotice.update(current => current?.playerId === data.playerId ? null : current);
+        }, 4000);
+    });
     
     socket.on('play-sound', ({ soundId }) => {
         playSound(soundId);
     });
+}
+
+export function reconnectSocket() {
+    const playerSession = JSON.parse(localStorage.getItem('wordScrambleSession'));
+    const hostSession = JSON.parse(localStorage.getItem('wordScrambleHostSession'));
+
+    if (!socket) {
+        initializeSocket();
+        return;
+    }
+
+    if (!socket.connected) {
+        console.log("Reconnecting socket explicitly...");
+        isLoading.set(true);
+        error.set({ ...initialErrorState });
+        socket.connect();
+    } else {
+        if (playerSession?.playerId && playerSession?.playerToken && playerSession?.gameId) {
+            console.log("Resending reconnect-player payload...");
+            isLoading.set(true);
+            error.set({ ...initialErrorState });
+            socket.emit('reconnect-player', playerSession);
+        } else if (hostSession?.gameId) {
+            console.log("Resending join-as-host-display payload...");
+            isLoading.set(true);
+            error.set({ ...initialErrorState });
+            socket.emit('join-as-host-display', { gameId: hostSession.gameId });
+        }
+    }
 }
 
 export function changeView(newView) {

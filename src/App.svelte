@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { view, isLoading, error, t, joinForm, initializeSocket, resetToMenu, gameState } from './stores.js';
+  import { view, isLoading, error, t, joinForm, initializeSocket, reconnectSocket, resetToMenu, gameState } from './stores.js';
 
   // Import all possible view components
   import Language from './lib/views/Language.svelte';
@@ -70,12 +70,22 @@
           document.body.setAttribute('data-app-hidden', 'true');
         } else {
           document.body.removeAttribute('data-app-hidden');
+          // When user returns to the tab, ensure socket session is connected
+          reconnectSocket();
         }
       }
     };
 
+    const handleOnline = () => {
+      console.log('Browser online event detected. Reconnecting...');
+      reconnectSocket();
+    };
+
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline);
     }
 
     // Check for a gameId in the URL, which happens when scanning the QR code or clicking a shared link.
@@ -90,6 +100,9 @@
     return () => {
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', handleOnline);
       }
     };
   });

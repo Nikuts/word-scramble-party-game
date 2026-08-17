@@ -48,19 +48,29 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
 - **Bilingual Support:** Fully playable and internationalized for both **English** and **Ukrainian**.
 - **Dynamic AI Content Generation & Background Pre-fetching:** Utilizes the Google Gemini API to generate unique game content for every match:
     - **Themes & Custom Party Theme Input:** Generates 3 distinct AI themes for the host to choose from, or allows entering a custom party theme (e.g. "Tech Startups", "Ukrainian Folklore", "90s Nostalgia") directly from either the phone controller or the TV display screen.
+    - **Topic Reload Button & Silly Theme Generation:** The lobby provides a dedicated **"🔄 Reload Topics"** button on both the Host TV display and the mobile Host controller to fetch 3 fresh themes at will. When **Silly Mode** is enabled, it automatically refreshes the lobby with wacky and absurd themes.
     - **Background Pre-fetching (Zero Loading Lag):** While players are actively typing answers in Phase 1 or voting in battles, the server pre-fetches the next round's questions, battle prompts, and final movie premise data in the background. Round transitions happen instantly without stalling on "Generating Round...".
-    - **Questions:** Generates a unique set of open-ended questions for each player in each round to encourage creative, multi-word answers.
-    - **Battle Prompts:** Generates themed, fill-in-the-blank style battle prompts.
-    - **Final Round:** For the grand finale, it creates a unique movie genre and a bizarre premise for the finalists to create a movie title and tagline for.
-- **Battle History & Export:** From the final results screen, players can review a complete history of every battle from the game. Each battle card—showing the prompt and answers—can be saved as a downloadable image in either a vertical (mobile-friendly) or landscape (desktop-style) orientation, perfect for sharing the funniest moments.
+    - **Simpler Conversational English (B1/B2):** All generated and fallback prompts are calibrated for accessible, conversational English.
+    - **Thematic Battle Prompt Keyword Anchoring:** Battle prompts explicitly weave concrete keywords from the chosen game topic directly into the prompt sentence, ensuring prompts are clearly contextualized and intuitive on their own.
+    - **Questions & Battle Prompts:** Generates open-ended questions for each player in each round and tailored battle prompts.
+    - **Final Round:** For the grand finale, it creates a unique movie genre and a punchy 8–12 word premise for finalists to create a movie title and tagline for.
+- **One-Time +30s Time Boost Bonus (1 Per Game):**
+    - Each player receives **1 strategic +30s Time Boost token per game** that can be activated during either the Question Phase or the Battle Answering Phase.
+    - Activating the boost extends the server phase countdown by 30 seconds (capped at 3 minutes) and broadcasts a room-wide alert and sound effect on the Host TV display. Tokens are strictly limited to one use per player across all 3 rounds and reset on game restart.
+- **Battle History & Native Mobile Share (iOS / Android / Desktop):**
+    - From the final results screen, players can review a complete history of every battle from the game, including 1-on-1 showdowns, 3-way brawls, and 4-way brawls.
+    - Each battle card can be exported in vertical (story/phone) or landscape orientation using the **Web Share API (`navigator.share`)** on iOS Safari and mobile devices, or downloaded directly on desktop browsers.
+- **Voting Anonymity on Host Display:** During battle voting, voter identities are kept completely secret. The Host display shows an anonymous live progress bar (`🗳️ X / Y Players Voted`) rather than voter name chips, preventing players from deducing who is competing in 1-on-1 matchups.
 - **Customizable Game Modes:**
     - **Themed UI Skins:** The host can choose from several neon color palettes (e.g., Arcade, Vaporwave, Outrun) to customize the visual theme of the game.
-    - **Silly Mode:** Toggles the AI to generate wacky, absurd, and humorous content.
+    - **Silly Mode:** Toggles the AI to generate wacky, absurd, and humorous content, and refreshes the lobby with silly topics.
     - **18+ Mode:** Toggles the AI to generate adult-oriented, edgy, or suggestive content.
     - **Slowpoke Mode:** Increases all game timers for a more relaxed and thoughtful pace.
     - **Flexible Ukrainian Prompts:** To address the grammatical complexity of the Ukrainian language, the AI can be configured to generate more open-ended battle prompts (e.g., "Describe your ideal day: ____") instead of strict fill-in-the-blanks, making it easier and more fun to form creative answers.
 - **Resilient & Fair Gameplay:**
-    - **Live Player Status Display:** The Host Display now shows a real-time grid of all players during the question and battle answering phases. This includes their current progress (e.g., "Answered 2/4") and a clear "DISCONNECTED" status, making it easy to track the game's flow.
+    - **Question Progress & Reconnection Hydration:** Mobile screens display clear progress indicators (`Question 1/2`, `Battle 1/2`) and automatically hydrate already submitted answers on reconnect without re-prompting.
+    - **Resilient Reconnection:** WebSocket client retries continuously with exponential backoff and automatically reconnects on `visibilitychange` (when mobile browser tab is re-opened) or when the device comes back online. A manual "Tap to Reconnect" option is available if connection stalls.
+    - **Live Player Status Display:** The Host Display shows a real-time grid of all players during the question and battle answering phases with individual progress counters.
     - **AI Fallback System:** If the Gemini API fails **3 consecutive times**, the game seamlessly switches to a large pool of high-quality, pre-written content, ensuring the game is always playable.
     - **Smart Reconnection:** Disconnected players have a **5-minute window** to rejoin a game in progress. Their score, state, and any partially completed answers are fully restored. If all players disconnect, the server timer automatically pauses and resumes when the first player returns.
     - **Host Display Reconnection:** If the Host Display's browser is refreshed, it will automatically and seamlessly reconnect to the game in progress. This works even if the lobby is empty, making host setup much more robust and preventing the host from getting stuck.
@@ -71,7 +81,6 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
 - **Instant Question Re-Roll:** Players can swap out one difficult question per round with a single tap. Spare questions are pre-generated up-front in the background, enabling $<10\text{ms}$ instantaneous swaps without network spinners.
 - **Smart "Undo" & Word Bank Shuffle:** Mobile answer workspaces feature an **"↩ Undo"** button with a dedicated action history stack that accurately pops the last placed word (even after drag-and-drop reordering) and a **"🔀 Shuffle"** button to shake up bank order and spark creativity.
 - **In-Voting Live Emoji Reactions:** While waiting for others to vote or when spectating, players can tap an arcade reaction toolbar (`🔥`, `😂`, `💀`, `👏`, `🤯`, `🌈`) to broadcast floating animated reactions to the main Host TV display in real-time.
-- **"Votes Locked In" Live Ticker:** During battle voting, the Host display shows an active voter gauge (`🗳️ X/Y Votes Locked In`) with glowing avatar chips checking in as eligible voters cast ballots, creating room suspense while strictly preserving secret voting.
 - **Post-Game Awards Ceremony (Superlatives & Accolades):** The final results screen crowns fun data-driven awards alongside 1st, 2nd, and 3rd place:
     - 🎯 **The Ammo Factory:** Player whose authored words were used in the most winning answers.
     - 🌈 **The Rainbow Alchemist:** Player who combined words from 3+ distinct players the most.
@@ -84,6 +93,7 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
     - **Emergency Memory Sweeps:** Pre-emptively sweeps abandoned rooms when process RSS reaches 85% capacity, shielding the application from container OOM crashes.
     - **Optional Environment Overrides:** `MAX_CONCURRENT_GAMES` and `MAX_MEMORY_THRESHOLD_MB` remain available for administrators who want to enforce strict custom limits.
 - **Data-Driven Round & Battle Format Architecture (`formatConfig`):** Decouples round formats (single-line prompt completion, multi-line titles & taglines, role-based matchups) into a structured schema, opening the door for new round types.
+- **Responsive Layout for Laptops & TVs:** Host views dynamically adjust column ratios (25% sidebar / 75% content) with compact padding, providing an optimal view on 13–15" laptop screens as well as 4K Smart TVs.
 - **Responsive Live Lobby:** Players can rapidly send their avatar from their phone, which animates and flies across the main Host Display. Game settings configured by the host, such as the Color Theme, Silly Mode, and 18+ Mode, are also clearly visible to all players on the main display.
 - **Reliable Dependencies:** All external libraries (like `canvas-confetti` and `html2canvas`) are bundled with the application, removing reliance on external CDNs and improving load times and offline availability.
 

@@ -147,7 +147,10 @@ export function resetGameForRestart(game) {
     });
 
     if (game.playerActionCooldowns) game.playerActionCooldowns.clear();
-    game.players.forEach(p => p.score = 0);
+    game.players.forEach(p => {
+        p.score = 0;
+        p.hasUsedTimeBoost = false;
+    });
     helpers.assignHostPlayer(game);
     
     return game;

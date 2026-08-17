@@ -12,7 +12,8 @@ import {
     handleSetSlowpokeMode,
     handleSet18PlusMode,
     handleStartGame,
-    handleSendLobbyEmoji
+    handleSendLobbyEmoji,
+    handleReloadThemes
 } from './handlers/lobbyHandlers.js';
 import {
     handleDisconnect,
@@ -27,7 +28,8 @@ import {
     handleUpdatePartialAnswer,
     handleSubmitBattleAnswer,
     handleVote,
-    handleRerollQuestion
+    handleRerollQuestion,
+    handleUseTimeBoost
 } from './handlers/gameplayHandlers.js';
 
 export { withValidation };
@@ -53,11 +55,13 @@ export function registerEventHandlers(io, socket) {
     socket.on('set-silly-mode', withValidation(schemas.setBooleanOptionSchema('sillyMode'), handleSetSillyMode.bind(socket)));
     socket.on('set-slowpoke-mode', withValidation(schemas.setBooleanOptionSchema('slowpokeMode'), handleSetSlowpokeMode.bind(socket)));
     socket.on('set-18plus-mode', withValidation(schemas.setBooleanOptionSchema('is18PlusMode'), handleSet18PlusMode.bind(socket)));
+    socket.on('reload-themes', withValidation(schemas.gameIdSchema, handleReloadThemes.bind(socket)));
     socket.on('start-game', withValidation(schemas.gameIdSchema, handleStartGame.bind(socket)));
     
     // In-game actions
     socket.on('submit-answer', withValidation(schemas.submitAnswerSchema, handleSubmitAnswer.bind(socket)));
     socket.on('reroll-question', withValidation(schemas.rerollQuestionSchema, handleRerollQuestion.bind(socket)));
+    socket.on('use-time-boost', withValidation(schemas.playerAndGameIdSchema, handleUseTimeBoost.bind(socket)));
     socket.on('update-partial-answer', withValidation(schemas.updatePartialAnswerSchema, handleUpdatePartialAnswer.bind(socket)));
     socket.on('submit-battle-answer', withValidation(schemas.submitBattleAnswerSchema, handleSubmitBattleAnswer.bind(socket)));
     socket.on('vote', withValidation(schemas.voteSchema, handleVote.bind(socket)));

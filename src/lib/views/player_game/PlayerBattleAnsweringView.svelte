@@ -1,7 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import Sortable from 'sortablejs';
-    import { t, sendMessage, getPartialAnswers, clearConsumedPartialAnswers } from '../../../stores.js';
+    import { t, sendMessage, getPartialAnswers, clearConsumedPartialAnswers, gameState, currentPlayer } from '../../../stores.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
 
     export let timer;
@@ -10,8 +10,39 @@
     export let playerId;
     
     let battleForms = {}; // Holds state for each battle a player is in
+    let showPromptTooltip = false;
     
     $: currentBattleToAnswer = battlesToAnswer[0]; // Always show the first unanswered battle
+
+    $: allAssignedBattles = $gameState?.battleSchedule?.filter(b => b.competitors.includes(playerId)) || [];
+    $: totalAssigned = allAssignedBattles.length || 1;
+    $: currentBattleIndex = allAssignedBattles.findIndex(b => b.id === currentBattleToAnswer?.id);
+    $: currentBattleNum = currentBattleIndex !== -1 ? currentBattleIndex + 1 : (totalAssigned - battlesToAnswer.length + 1);
+
+    $: currentPlayerObj = $gameState?.players?.find(p => p.id === playerId);
+    $: hasUsedTimeBoost = currentPlayerObj?.hasUsedTimeBoost || false;
+
+    onMount(() => {
+        if (typeof localStorage !== 'undefined') {
+            const seen = localStorage.getItem('seenPromptWordTooltip');
+            if (!seen) showPromptTooltip = true;
+        }
+    });
+
+    function dismissPromptTooltip() {
+        showPromptTooltip = false;
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('seenPromptWordTooltip', 'true');
+        }
+    }
+
+    function handleTimeBoost() {
+        if (hasUsedTimeBoost || !$gameState || !playerId) return;
+        sendMessage('use-time-boost', {
+            gameId: $gameState.id,
+            playerId: playerId,
+        });
+    }
     
     $: if (battlesToAnswer && battlesToAnswer.length > 0 && playerId) {
         ensureBattleFormsInitialized(battlesToAnswer, playerId);
@@ -298,6 +329,14 @@
 </style>
 
 <div class="w-full max-w-4xl mx-auto text-center px-2">
+    {#if $gameState?.theme}
+        <div class="flex justify-center mb-2">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-black/60 border border-primary/50 rounded-full text-xs font-bold text-primary max-w-[85%] truncate">
+                <span>🎭</span> <span class="truncate">{$gameState.theme}</span>
+            </div>
+        </div>
+    {/if}
+
     <SevenSegmentDisplay time={timer} />
     
     {#if currentBattleToAnswer}
@@ -305,7 +344,11 @@
         {@const battleForm = battleForms[battle.id]}
         
         <h1 class="text-2xl sm:text-3xl mb-1">{battle.isFinal ? $t.finalBattle : $t.battlePhase}</h1>
-        <h2 class="text-lg sm:text-xl text-primary mb-4">{$t.answering}</h2>
+        <div class="mb-3">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary text-primary font-bold text-sm tracking-wide">
+                ⚔️ {battle.competitors.length > 2 ? $t.brawlLabel : $t.battleStatusAnswering} {currentBattleNum}/{totalAssigned}
+            </span>
+        </div>
 
         <div class="panel-arcade" style="--neon-color: var(--color-primary);">
             {#if battleForm}
@@ -313,33 +356,81 @@
                 <div class="text-left mb-4">
                     {#if battleForm.isFinal}
                         <div class="text-neutral-200 mb-3 p-4 bg-neutral-900 border border-neutral-700 rounded-md">
-                            <p class="mb-1 text-primary font-bold text-lg">{battle.genre}</p>
-                            <p class="text-base sm:text-lg mb-3">{battle.premise}</p>
-                            <div class="pt-2 border-t border-neutral-800 flex flex-wrap gap-1.5 items-center">
-                                <span class="text-xs text-neutral-400 font-semibold uppercase tracking-wider mr-1">{$t.promptWordsLabel}</span>
+                            <div class="flex justify-between items-center mb-2">
+                                <p class="text-primary font-bold text-lg">{battle.genre}</p>
+                                <button 
+                                    type="button"
+                                    on:click={handleTimeBoost}
+                                    disabled={hasUsedTimeBoost}
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-display font-bold rounded-full border transition-all {hasUsedTimeBoost ? 'bg-neutral-800 border-neutral-700 text-neutral-500 opacity-50 cursor-not-allowed' : 'bg-yellow-950/80 border-yellow-400 text-yellow-300 shadow-[0_0_10px_rgba(250,204,21,0.4)] hover:scale-105 cursor-pointer'}"
+                                    title={hasUsedTimeBoost ? $t.timeBoostAlreadyUsed : $t.timeBoost}
+                                >
+                                    <span>⏱️</span> <span>{$t.timeBoost}</span>
+                                </button>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 items-baseline leading-relaxed text-base sm:text-lg mb-3">
                                 {#each battleForm.promptWords as word (word.id)}
                                     <button 
-                                        class="bg-neutral-800 hover:bg-primary hover:text-black text-white text-sm font-medium px-2 py-0.5 border border-neutral-600 rounded transition-colors"
+                                        type="button"
+                                        class="hover:text-primary hover:bg-primary/20 px-1 py-0.5 rounded transition-all cursor-pointer inline text-left font-medium"
                                         on:click={() => addWordToAnswer(word, battle.id)}
+                                        title={$t.promptWordsLabel}
                                     >
                                         {word.text}
                                     </button>
                                 {/each}
                             </div>
+                            {#if showPromptTooltip}
+                                <div class="mt-2 p-2 bg-neutral-800 border border-accent/50 rounded-md flex items-center justify-between text-xs text-accent gap-2">
+                                    <span>{$t.promptTooltip}</span>
+                                    <button 
+                                        type="button" 
+                                        class="px-2 py-0.5 bg-accent text-black font-bold rounded text-[11px] hover:scale-105 transition-all cursor-pointer flex-shrink-0"
+                                        on:click={dismissPromptTooltip}
+                                    >
+                                        {$t.gotIt}
+                                    </button>
+                                </div>
+                            {/if}
                         </div>
                     {:else}
-                        <div class="p-4 bg-neutral-900 border border-neutral-700 rounded-md mb-2">
-                            <span class="block text-xs text-neutral-400 font-semibold uppercase tracking-wider mb-2">{$t.promptWordsLabel}</span>
-                            <div class="flex flex-wrap gap-2 justify-center items-center">
+                        <div class="p-4 bg-neutral-900/90 border border-neutral-700 rounded-lg mb-2 shadow-md">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">❓ {$t.battlePrompt}</span>
+                                <button 
+                                    type="button"
+                                    on:click={handleTimeBoost}
+                                    disabled={hasUsedTimeBoost}
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-display font-bold rounded-full border transition-all {hasUsedTimeBoost ? 'bg-neutral-800 border-neutral-700 text-neutral-500 opacity-50 cursor-not-allowed' : 'bg-yellow-950/80 border-yellow-400 text-yellow-300 shadow-[0_0_10px_rgba(250,204,21,0.4)] hover:scale-105 cursor-pointer'}"
+                                    title={hasUsedTimeBoost ? $t.timeBoostAlreadyUsed : $t.timeBoost}
+                                >
+                                    <span>⏱️</span> <span>{$t.timeBoost}</span>
+                                </button>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 items-baseline leading-relaxed text-lg sm:text-xl font-medium text-neutral-100">
                                 {#each battleForm.promptWords as word (word.id)}
                                     <button 
-                                        class="bg-neutral-800 hover:bg-primary hover:text-black text-white text-base sm:text-lg font-bold px-3 py-1 border border-neutral-600 rounded-md transition-all hover:scale-105 shadow"
+                                        type="button"
+                                        class="hover:text-primary hover:bg-primary/20 px-1.5 py-0.5 rounded transition-all cursor-pointer inline text-left font-medium"
                                         on:click={() => addWordToAnswer(word, battle.id)}
+                                        title={$t.promptWordsLabel}
                                     >
                                         {word.text}
                                     </button>
                                 {/each}
                             </div>
+                            {#if showPromptTooltip}
+                                <div class="mt-3 p-2 bg-neutral-800 border border-accent/50 rounded-md flex items-center justify-between text-xs text-accent gap-2">
+                                    <span>{$t.promptTooltip}</span>
+                                    <button 
+                                        type="button" 
+                                        class="px-2 py-0.5 bg-accent text-black font-bold rounded text-[11px] hover:scale-105 transition-all cursor-pointer flex-shrink-0"
+                                        on:click={dismissPromptTooltip}
+                                    >
+                                        {$t.gotIt}
+                                    </button>
+                                </div>
+                            {/if}
                         </div>
                     {/if}
                 </div>

@@ -26,9 +26,10 @@ Follow these strict rules for each key:
 
 2. "battlePrompts" (Word Scramble Matchups):
    - Generate EXACTLY ${numBattlePrompts} unique battle prompts set in the world of "${theme}".
-   - Keep them short, punchy (5 to 10 words), and effortless to read quickly on mobile screens.
+   - Keep them short, punchy (5 to 10 words), using simple conversational English words that are effortless to read quickly on mobile screens.
    - Players must answer these battles using ONLY a limited word bank of scrambled words harvested from friends!
    - STRICT RULE: Do NOT use fill-in-the-blank blanks ("____") with prepositions.
+   - CRITICAL THEMATIC ANCHORING: Every battle prompt MUST explicitly include a thematic subject, role, character, or setting keyword from "${theme}" directly in the prompt text itself (e.g. "Warning sign on the spaceship airlock:", "The #1 secret rule of the Medieval Gym:", "The 1-star Yelp review for this Haunted Hotel:"). Avoid vague generic prompts like "A bad excuse:" or "Rule #1:".
    - Structure prompts as open situational setups ending with a colon (":") such as Slogans, Warning Labels, Rules, 1-Star Reviews, Sarcastic Advice, Customer Complaints, Bad Excuses, or Villain Quotes.
    - Battle Prompt Tone: ${battlePromptToneInstruction}
    - Battle Prompt Structure: ${battlePromptStructureInstruction}

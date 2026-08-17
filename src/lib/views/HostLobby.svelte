@@ -87,21 +87,26 @@
             handleSelectTheme(randomTheme);
         }
     }
+
+    function handleReloadTopics() {
+        if (!$gameState || $gameState.isGeneratingThemes) return;
+        sendMessage('reload-themes', { gameId: $gameState.id });
+    }
 </script>
 
-<div class="p-4 sm:p-6 lg:p-8 flex flex-col md:flex-row gap-6 min-h-screen relative overflow-hidden host-lobby-container">
+<div class="p-3 sm:p-6 flex flex-col md:flex-row gap-4 sm:gap-6 min-h-screen relative host-lobby-container">
     <!-- Left Side: How to Connect & Player List -->
-    <div class="w-full md:w-2/5 panel-arcade flex flex-col" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
-        <h2 class="text-2xl mb-4 text-primary" style="text-shadow: 0 0 5px var(--color-primary);">{$t.howToConnect}</h2>
-        <div class="text-center bg-black/50 p-4 border-2 border-neutral-700 rounded-md mb-6">
-            <p class="text-base mb-2">{$t.openBrowserTo}</p>
-            <p class="text-lg font-mono font-bold text-accent break-words">{connectURL || '...'}</p>
-            <p class="text-base my-3">{$t.orEnterId}</p>
-            <p class="font-display text-4xl sm:text-5xl tracking-widest text-white" style="text-shadow: 0 0 10px #fff;" data-testid="game-id">{$gameState.id}</p>
-            <div class="mt-3 flex justify-center">
+    <div class="w-full md:w-1/3 lg:w-1/4 panel-arcade flex flex-col" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
+        <h2 class="text-xl sm:text-2xl mb-3 text-primary" style="text-shadow: 0 0 5px var(--color-primary);">{$t.howToConnect}</h2>
+        <div class="text-center bg-black/50 p-3 border-2 border-neutral-700 rounded-md mb-4">
+            <p class="text-sm mb-1">{$t.openBrowserTo}</p>
+            <p class="text-base font-mono font-bold text-accent break-words">{connectURL || '...'}</p>
+            <p class="text-sm my-2">{$t.orEnterId}</p>
+            <p class="font-display text-3xl sm:text-4xl tracking-widest text-white" style="text-shadow: 0 0 10px #fff;" data-testid="game-id">{$gameState.id}</p>
+            <div class="mt-2 flex justify-center">
                 <button 
                     type="button"
-                    class="px-3 py-1.5 bg-neutral-800 hover:bg-primary hover:text-black border border-primary/60 rounded text-xs font-display transition-all cursor-pointer"
+                    class="px-2.5 py-1 bg-neutral-800 hover:bg-primary hover:text-black border border-primary/60 rounded text-xs font-display transition-all cursor-pointer"
                     on:click={() => {
                         const shareUrl = $gameState?.id ? `${connectURL}/?gameId=${$gameState.id}` : connectURL;
                         if (navigator.clipboard) {
@@ -118,22 +123,22 @@
                     📋 Copy Game Link
                 </button>
             </div>
-            <div bind:this={qrElement} class="mt-4 flex justify-center items-center bg-white p-2 border-4 w-full max-w-[240px] h-auto aspect-square mx-auto shadow-xl rounded-lg" style="border-color: var(--color-primary); box-shadow: 0 0 15px var(--color-primary);"></div>
+            <div bind:this={qrElement} class="mt-3 flex justify-center items-center bg-white p-2 border-2 w-full max-w-[180px] h-auto aspect-square mx-auto shadow-xl rounded-lg" style="border-color: var(--color-primary); box-shadow: 0 0 15px var(--color-primary);"></div>
         </div>
-        <h2 class="text-2xl mb-4 text-primary" style="text-shadow: 0 0 5px var(--color-primary);">{$t.players} ({$gameState.players.length})</h2>
-        <div class="flex-grow overflow-y-auto pr-2">
-            <ul class="space-y-3">
+        <h2 class="text-xl sm:text-2xl mb-3 text-primary" style="text-shadow: 0 0 5px var(--color-primary);">{$t.players} ({$gameState.players.length})</h2>
+        <div class="flex-grow overflow-y-auto pr-1">
+            <ul class="space-y-2">
                 {#each $gameState.players as p (p.id)}
-                    <li class="flex items-center gap-4 bg-neutral-900/80 p-3 border border-neutral-700 rounded-md transition-opacity {p.socketId ? 'opacity-100' : 'opacity-60'}">
-                        <div class="w-12 h-12 flex-shrink-0">
+                    <li class="flex items-center gap-3 bg-neutral-900/80 p-2.5 border border-neutral-700 rounded-md transition-opacity {p.socketId ? 'opacity-100' : 'opacity-60'}">
+                        <div class="w-9 h-9 flex-shrink-0">
                             <PixelAvatar avatar={p.avatar} />
                         </div>
-                        <span class="text-lg font-medium flex-grow truncate">{p.name}</span>
+                        <span class="text-base font-medium flex-grow truncate">{p.name}</span>
                         {#if p.isHost}
-                            <span class="px-2 py-1 bg-warning text-black text-xs font-display rounded-sm">{$t.host}</span>
+                            <span class="px-1.5 py-0.5 bg-warning text-black text-[11px] font-display rounded-sm">{$t.host}</span>
                         {/if}
                          {#if !p.socketId}
-                            <span class="px-2 py-1 bg-danger text-white text-xs font-display rounded-sm animate-pulse">{$t.disconnected}</span>
+                            <span class="px-1.5 py-0.5 bg-danger text-white text-[11px] font-display rounded-sm animate-pulse">{$t.disconnected}</span>
                         {/if}
                     </li>
                 {/each}
@@ -142,8 +147,8 @@
     </div>
 
     <!-- Right Side: Game Status & Theme Configuration -->
-    <div class="w-full md:w-3/5 panel-arcade flex flex-col items-center text-center py-6 sm:py-8" style="--neon-color: var(--color-secondary); --neon-color-rgb: var(--color-secondary-rgb);">
-        <h1 class="text-3xl sm:text-4xl text-center mb-6 text-primary" style="text-shadow: 0 0 10px var(--color-primary), 0 0 20px var(--color-primary);">{$t.appName}</h1>
+    <div class="w-full md:w-2/3 lg:w-3/4 panel-arcade flex flex-col items-center text-center py-4 sm:py-6" style="--neon-color: var(--color-secondary); --neon-color-rgb: var(--color-secondary-rgb);">
+        <h1 class="text-2xl sm:text-4xl text-center mb-4 text-primary" style="text-shadow: 0 0 10px var(--color-primary), 0 0 20px var(--color-primary);">{$t.appName}</h1>
         <div class="w-full max-w-xl">
              {#if $gameState.isGeneratingThemes}
                 <div class="p-4 bg-black/50 border-2 border-warning rounded-md mb-6">
@@ -151,15 +156,25 @@
                 </div>
              {:else}
                 <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-xl text-primary font-display">{$t.theme}</h3>
-                    <button 
-                        type="button" 
-                        on:click={handlePickRandomTheme}
-                        class="px-2.5 py-1 text-xs bg-neutral-800 hover:bg-accent hover:text-black border border-accent/60 rounded text-accent transition-all font-display cursor-pointer flex items-center gap-1"
-                        title="Pick random suggested theme"
-                    >
-                        <span>🎲</span> {$language === 'uk' ? 'Випадкова тема' : 'Random Theme'}
-                    </button>
+                    <h3 class="text-lg sm:text-xl text-primary font-display">{$t.theme}</h3>
+                    <div class="flex items-center gap-2">
+                        <button 
+                            type="button" 
+                            on:click={handleReloadTopics}
+                            class="px-2.5 py-1 text-xs bg-neutral-800 hover:bg-primary hover:text-black border border-primary/60 rounded text-primary transition-all font-display cursor-pointer flex items-center gap-1"
+                            title="Generate 3 fresh themes"
+                        >
+                            <span>🔄</span> {$t.reloadTopics}
+                        </button>
+                        <button 
+                            type="button" 
+                            on:click={handlePickRandomTheme}
+                            class="px-2.5 py-1 text-xs bg-neutral-800 hover:bg-accent hover:text-black border border-accent/60 rounded text-accent transition-all font-display cursor-pointer flex items-center gap-1"
+                            title="Pick random suggested theme"
+                        >
+                            <span>🎲</span> {$language === 'uk' ? 'Випадкова' : 'Random'}
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Theme Active Display -->

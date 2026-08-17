@@ -117,3 +117,22 @@ export function resumeTimer(io, game) {
     console.log(`[Game ${game.id}] Timer resumed.`);
     startPhaseTimer(io, game, game.phase, remainingSeconds, nextFn);
 }
+
+export function extendPhaseTimer(io, game, extraSeconds = 30) {
+    if (!game || !game.phaseEndTime || game.isPaused) return;
+
+    const MAX_ALLOWED_REMAINING = 180; // Cap to 3 minutes max
+    const currentRemaining = Math.max(0, Math.round((game.phaseEndTime - Date.now()) / 1000));
+    const newRemaining = Math.min(MAX_ALLOWED_REMAINING, currentRemaining + extraSeconds);
+    
+    let nextFn;
+    switch(game.phase) {
+        case 'question': nextFn = battleService.prepareBattlePhase; break;
+        case 'battle_answering': nextFn = battleService.startVotingGetReadyPhase; break;
+        default:
+            return;
+    }
+    
+    console.log(`[Game ${game.id}] Extended phase timer for '${game.phase}' by ${extraSeconds}s (new total: ${newRemaining}s).`);
+    startPhaseTimer(io, game, game.phase, newRemaining, nextFn);
+}

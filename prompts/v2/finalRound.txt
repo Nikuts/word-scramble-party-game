@@ -14,8 +14,8 @@ Your response MUST be a single valid JSON object following this exact structure:
 }
 
 Follow these strict rules:
-- The `genre` must be short and recognizable (2-3 words).
-- The `premise` MUST be exactly ONE clear, funny, high-concept sentence (maximum 15-20 words). Do NOT write multi-sentence backstories or complicated lore.
+- The `genre` must be short and recognizable (2 words).
+- The `premise` MUST be exactly ONE clear, funny, high-concept sentence using simple English (between 8 and 12 words, maximum 15 words). Example: "Two rival grandmas compete in an underground street racing tournament." Do NOT write multi-sentence backstories or complicated lore.
 - Tone: ${toneInstruction}
 
 CRITICAL: Do not include any extra text, comments, or markdown outside of the main JSON object. The response must be parsable as-is.
