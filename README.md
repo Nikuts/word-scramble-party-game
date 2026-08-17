@@ -271,10 +271,11 @@ This application is fully compatible with Google AI Studio's built-in hosting an
 - **Gemini API (`geminiService.js`):** Encapsulates communication with the Google Gemini API using the modern `@google/genai` SDK.
 - **Multi-Model Fallback Chain:** To protect against temporary API traffic spikes or regional 503 "High Demand" errors, requests automatically cascade across a resilient model fallback chain (`gemini-3.7-flash` → `gemini-flash-latest` → `gemini-3.1-flash-lite`).
 - **Exponential Backoff & Jitter:** Transient errors (503 Service Unavailable, 429 Resource Exhausted, 500) trigger intelligent backoff retries before switching candidate models.
-- **Prompt Engine Versioning & Feature Flag (`PROMPT_VERSION`):**
-  - Switchable via Render environment variables (`PROMPT_VERSION="v2"` or `PROMPT_VERSION="v1"`).
-  - **`v2` (Default - Streamlined & Situational):** Engineered specifically for casual party play with limited word banks (30–50 words). Features fast micro-scenario questions (bad advice, weird excuses, secrets), open colon-terminated battle prompts (slogans, rules, warnings, reviews) that accommodate any random word combination, strictly bans case-governing prepositions in Ukrainian, and enriches fallback words with essential connector words (`and`, `but`, `because` / `і`, `але`, `бо`, `щоб`).
-  - **`v1` (Classic):** Preserves the original prompt templates and instructions.
+- **Language-Dedicated Prompt Architecture (`prompts/en/` & `prompts/ua/`):**
+  - Dedicated prompt files per language (`prompts/en/` and `prompts/ua/`, with backward-compatible `uk` alias support) eliminate cross-language instruction bleed and prime the AI with native cultural and comedic archetypes.
+  - **Ukrainian Grammar & Case Safeguards:** Strictly enforces open situational colon-terminated prompt setups (`Слоган на білборді:`, `Попереджувальний напис на дверях:`, `1-зірковий відгук відвідувача:`) and bans case-governing prepositions (`для ____`, `проти ____`, `через ____`), eliminating grammatical mismatches when players assemble scrambled word tiles.
+  - **Expanded Universal Connectors (`ESSENTIAL_CONNECTORS`):** Generates guaranteed case-independent "linguistic glue" for Ukrainian (`і`, `та`, `але`, `бо`, `щоб`, `дуже`, `завжди`, `ніколи`, `просто`, `раптом`, `навіть`, `це`, `було`, `треба`, `можна`, `ось`, `тільки`) and English (`and`, `but`, `because`, `with`, `just`, `even`, `if`, etc.).
+  - **Typographic Apostrophe Tokenization:** Full regex tokenization support for ASCII `'`, Unicode curly `’`, and official Ukrainian typographic modifier apostrophe `ʼ` (U+02BC, e.g. `мʼясо`, `звʼязок`, `імʼя`).
 - **Zero-Stall Fallback Packs:** If all AI models are unreachable or the error threshold is reached, the server seamlessly falls back to rich, human-authored bilingual content packs (`game/fallbackContent.js`), guaranteeing smooth gameplay without game interruptions.
 
 ### Smart TV & Low Power Display Optimization
@@ -314,11 +315,9 @@ The game features two distinct algorithms for generating word banks, which can b
 
 ## ⚙️ Configuration (`src/lib/config.js`)
 
-- **`PROMPT_VERSION`**: A string (`'v2'` or `'v1'`) controlling the active prompt engine. Configurable via `PROMPT_VERSION` environment variable on Render.com or in `.env`. Defaults to `'v2'`.
-- **`MIN_PLAYERS`, `MAX_PLAYERS`**: Player count limits.
+- **`MIN_PLAYERS`, `MAX_PLAYERS`**: Player count limits (3 to 14 players).
 - **`POINTS_PER_VOTE`, `VICTORY_BONUS_PER_ROUND`, `CLEAN_SWEEP_BONUS_PER_ROUND`, `FLAT_ROYALTY_PER_ROUND`, `RAINBOW_BONUS_PER_ROUND`**: Configurable scaled scoring matrix per round.
 - **`USE_PRIORITIZED_WORD_BANK_ALGO`**: A boolean (`true`/`false`) to select the word bank algorithm. `true` uses the new, prioritized algorithm; `false` uses the current one.
-- **`USE_FLEXIBLE_UKRAINIAN_PROMPTS`**: A boolean (`true`/`false`) that, when enabled, prompts the AI to generate more open-ended battle prompts for the Ukrainian language to reduce grammatical complexity. Defaults to `true`.
 - **`WORD_BANK_SIZES`**: A new object that defines tiered minimum and maximum word bank sizes for each of the three game rounds, allowing for a better sense of progression as the game continues.
 - **`SOUNDS_ON_HOST_ONLY`**: A boolean (`true`/`false`) to control where sounds are played. If `true`, all sounds (including timer ticks) will only play on the Host Display. Defaults to `false` to play on all devices.
 - **Timers:** All phase timings are defined for both normal and "Slowpoke" modes. This includes fixed timers for transitions and voting, and per-item timers for the Question phase (based on number of questions) and Battle Answering phase (based on number of battles).

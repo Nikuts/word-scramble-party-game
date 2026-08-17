@@ -181,7 +181,7 @@ export function tokenizeText(text) {
     if (!text) return [];
     // This Unicode-aware regex captures sequences of letters (including numbers and apostrophes/hyphens),
     // sequences of 3 or more underscores, or any standalone punctuation. The 'u' flag is for Unicode.
-    const tokenizerRegex = /[\p{L}\p{N}'’`-]+|_{3,}|[.,!?;:()"]/gu;
+    const tokenizerRegex = /[\p{L}\p{N}'’`ʼ-]+|_{3,}|[.,!?;:()"]/gu;
     return text.match(tokenizerRegex) || [];
 }
 

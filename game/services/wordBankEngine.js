@@ -4,8 +4,9 @@ import { WORD_BANK_SIZES, USE_PRIORITIZED_WORD_BANK_ALGO } from '../../src/lib/c
 import { shuffleArray, tokenizeText, getChunksFromText } from '../helpers.js';
 
 export const ESSENTIAL_CONNECTORS = {
-    en: ['and', 'but', 'because', 'with', 'never', 'always', 'secretly', 'very', 'without', 'our', 'their', 'is', 'was', 'only', 'or', 'so'],
-    uk: ['і', 'але', 'бо', 'щоб', 'з', 'або', 'ніколи', 'завжди', 'дуже', 'таємно', 'без', 'наш', 'їхній', 'це', 'був', 'тільки']
+    en: ['and', 'but', 'because', 'with', 'never', 'always', 'secretly', 'very', 'without', 'our', 'their', 'is', 'was', 'only', 'or', 'so', 'just', 'even', 'suddenly', 'if', 'this'],
+    ua: ['і', 'та', 'але', 'бо', 'щоб', 'з', 'або', 'якщо', 'ніколи', 'завжди', 'дуже', 'таємно', 'просто', 'раптом', 'навіть', 'без', 'наш', 'їхній', 'це', 'було', 'треба', 'можна', 'ось', 'тільки'],
+    uk: ['і', 'та', 'але', 'бо', 'щоб', 'з', 'або', 'якщо', 'ніколи', 'завжди', 'дуже', 'таємно', 'просто', 'раптом', 'навіть', 'без', 'наш', 'їхній', 'це', 'було', 'треба', 'можна', 'ось', 'тільки']
 };
 
 export const MIN_CONNECTOR_COUNT = 4;
@@ -212,7 +213,7 @@ export function generateWordBanksDirectly({
             });
 
             // 🛡️ Smart Word Bank Balance Guard: Guarantee minimum essential connectors
-            const langKey = language === 'uk' ? 'uk' : 'en';
+            const langKey = (language === 'ua' || language === 'uk') ? 'ua' : 'en';
             const connectorSet = new Set((ESSENTIAL_CONNECTORS[langKey] || ESSENTIAL_CONNECTORS.en).map(w => w.toLowerCase()));
             const currentConnectors = finalWordBank.filter(tok => connectorSet.has(tok.text.toLowerCase()));
             

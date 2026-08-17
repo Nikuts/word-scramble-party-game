@@ -4,7 +4,8 @@ import {
     distributeChunksToPlayers_New,
     distributeChunksToPlayers_Current,
     splitPlayerChunksIntoBattleSets,
-    generateWordBanksDirectly
+    generateWordBanksDirectly,
+    ESSENTIAL_CONNECTORS
 } from '../game/services/wordBankEngine.js';
 
 describe('Word Bank Engine Optimization & Distribution', () => {
@@ -133,7 +134,7 @@ describe('Word Bank Engine Optimization & Distribution', () => {
             battle.competitors.forEach(cId => {
                 const bank = battle.wordBanks[cId];
                 const connectors = bank.filter(tok => 
-                    ['and', 'but', 'because', 'with', 'never', 'always', 'secretly', 'very', 'without', 'our', 'their', 'is', 'was', 'only', 'or', 'so'].includes(tok.text.toLowerCase())
+                    ESSENTIAL_CONNECTORS.en.includes(tok.text.toLowerCase())
                 );
                 expect(connectors.length).toBeGreaterThanOrEqual(4);
             });
@@ -175,10 +176,17 @@ describe('Word Bank Engine Optimization & Distribution', () => {
         expect(result.battleScheduleWithBanks[0].wordBanks.p1.length).toBeGreaterThanOrEqual(30);
         expect(result.battleScheduleWithBanks[0].wordBanks.p2.length).toBeGreaterThanOrEqual(30);
 
-        // Check Ukrainian connectors
+        // Check Ukrainian connectors from expanded essential connector set
         const ukConnectors = result.battleScheduleWithBanks[0].wordBanks.p1.filter(tok =>
-            ['і', 'але', 'бо', 'щоб', 'з', 'або', 'ніколи', 'завжди', 'дуже', 'таємно', 'без', 'наш', 'їхній', 'це', 'був', 'тільки'].includes(tok.text.toLowerCase())
+            ESSENTIAL_CONNECTORS.uk.includes(tok.text.toLowerCase())
         );
         expect(ukConnectors.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('correctly tokenizes Ukrainian words with different apostrophe formats (ASCII, curly, typographic modifier ʼ)', async () => {
+        const { tokenizeText } = await import('../game/helpers.js');
+        const textWithApostrophes = "мʼясо зв’язок ім'я п'ять сімʼї";
+        const tokens = tokenizeText(textWithApostrophes);
+        expect(tokens).toEqual(['мʼясо', 'зв’язок', "ім'я", "п'ять", 'сімʼї']);
     });
 });

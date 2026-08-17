@@ -15,13 +15,13 @@ export const playerAndGameIdSchema = z.object({
 });
 
 export const createGameSchema = z.object({
-    language: z.enum(['en', 'uk'])
+    language: z.enum(['en', 'ua', 'uk'])
 });
 
 export const joinGameSchema = z.object({
     gameId: gameIdSchemaBase,
     playerName: z.string().trim().min(1, { message: "Name required." }).max(25),
-    language: z.enum(['en', 'uk']),
+    language: z.enum(['en', 'ua', 'uk']),
     avatar: z.enum(AVATARS).optional()
 });
 

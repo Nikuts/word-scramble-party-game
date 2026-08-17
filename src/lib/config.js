@@ -39,19 +39,6 @@ export const RAINBOW_BONUS_PER_ROUND = [100, 200, 400]; // Bonus for combining w
 // false = Classic algorithm (shuffles all content together before distributing).
 export const USE_PRIORITIZED_WORD_BANK_ALGO = true;
 
-// When true, prompts the AI to generate more open-ended battle prompts for Ukrainian
-// to reduce grammatical complexity for players.
-export const USE_FLEXIBLE_UKRAINIAN_PROMPTS = true;
-
-// When true, the server uses a new, more advanced prompt to generate higher-quality
-// questions that encourage storytelling and the use of more creative words.
-export const USE_ENHANCED_QUESTION_PROMPTS = true;
-
-// --- Prompt Engine Version ---
-// 'v2' = New streamlined, situational prompts with Ukrainian case safeguards
-// 'v1' = Original classic prompts
-export const PROMPT_VERSION = (typeof process !== 'undefined' && process.env?.PROMPT_VERSION) ? process.env.PROMPT_VERSION : 'v2';
-
 // Tiered min/max word counts for each battle's word bank, per round.
 export const WORD_BANK_SIZES = {
     1: { min: 30, max: 50 },    // Round 1

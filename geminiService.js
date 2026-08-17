@@ -5,7 +5,6 @@ import { GoogleGenAI } from "@google/genai";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { USE_FLEXIBLE_UKRAINIAN_PROMPTS, USE_ENHANCED_QUESTION_PROMPTS, PROMPT_VERSION } from './src/lib/config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -116,21 +115,20 @@ async function generateContentWithFallback(prompt, customConfig = {}) {
 
 /**
  * Reads a prompt template from the /prompts directory and injects variables.
- * Supports versioned prompt directories (e.g. /prompts/v2/ or /prompts/v1/) with fallback.
+ * Automatically resolves language-specific prompt files (e.g. /prompts/uk/ or /prompts/en/).
  * @param {string} promptName - The name of the prompt file (e.g., 'themes').
  * @param {object} replacements - Key/value pairs to replace placeholders in the prompt.
- * @param {string} [version] - Optional prompt version ('v1' or 'v2'). Defaults to PROMPT_VERSION.
+ * @param {string} [language] - Language code ('en' or 'uk'). Defaults to 'en'.
  * @returns {Promise<string>} The processed prompt string.
  */
-export async function getPrompt(promptName, replacements = {}, version = null) {
-    const v = version || (typeof process !== 'undefined' && process.env?.PROMPT_VERSION) || PROMPT_VERSION || 'v2';
-    let promptPath = path.join(__dirname, 'prompts', v, `${promptName}.txt`);
+export async function getPrompt(promptName, replacements = {}, language = 'en') {
+    const lang = (language === 'ua' || language === 'uk' || language === 'Ukrainian') ? 'ua' : 'en';
+    let promptPath = path.join(__dirname, 'prompts', lang, `${promptName}.txt`);
 
     try {
         await fs.access(promptPath);
     } catch {
-        const fallbackVersion = v === 'v1' ? 'v2' : 'v1';
-        promptPath = path.join(__dirname, 'prompts', fallbackVersion, `${promptName}.txt`);
+        promptPath = path.join(__dirname, 'prompts', 'en', `${promptName}.txt`);
     }
 
     let template = await fs.readFile(promptPath, 'utf-8');
@@ -184,65 +182,78 @@ function parseJsonResponse(jsonString) {
 }
 
 /**
- * Generates 3 game themes in both English and Ukrainian.
+ * Generates 3 game themes in both English and Ukrainian natively.
  * @param {boolean} is18PlusMode Whether to generate adult-oriented themes.
  * @param {boolean} sillyMode Whether to generate silly/absurd themes.
- * @param {string} [promptVersion] Optional prompt version ('v1' or 'v2').
  * @returns {Promise<object | null>} A promise that resolves to an object like { en: [], uk: [] } or null.
  */
-export async function generateThemes(is18PlusMode = false, sillyMode = false, promptVersion = null) {
+export async function generateThemes(is18PlusMode = false, sillyMode = false) {
   const client = getAiClient();
   if (!client) {
     console.warn("AI client not available. Using fallback themes.");
     return null;
   }
-  const v = promptVersion || (typeof process !== 'undefined' && process.env?.PROMPT_VERSION) || PROMPT_VERSION || 'v2';
-  console.log(`Generating new themes from Gemini (Engine: ${v}, 18+ Mode: ${is18PlusMode}, Silly Mode: ${sillyMode})...`);
+  console.log(`Generating new themes from Gemini (18+ Mode: ${is18PlusMode}, Silly Mode: ${sillyMode})...`);
 
-  let themeTypeInstruction;
-  if (is18PlusMode) {
-    themeTypeInstruction = "adult-oriented, potentially edgy or suggestive party game themes suitable for an 18+ audience";
-  } else if (sillyMode) {
-    themeTypeInstruction = "wildly absurd, silly, surreal, and laugh-out-loud funny party game themes (e.g. Secret Cult of Pigeon Worshippers, Vikings at an IKEA, Alien Abduction Support Group)";
-  } else {
-    themeTypeInstruction = "fun, broad, and imaginative party game themes that allow for many creative answers";
-  }
-  
-  const prompt = await getPrompt('themes', { themeTypeInstruction }, v);
-  
-  const rawText = await generateContentWithFallback(prompt);
-  if (!rawText) return null;
+  const enThemeInstruction = is18PlusMode
+    ? "adult-oriented, potentially edgy or suggestive party game themes suitable for an 18+ audience"
+    : sillyMode
+    ? "wildly absurd, silly, surreal, and laugh-out-loud funny party game themes (e.g. Secret Cult of Pigeon Worshippers, Vikings at an IKEA, Alien Abduction Support Group)"
+    : "fun, broad, and imaginative party game themes that allow for many creative answers";
 
-  const themes = parseJsonResponse(rawText);
-  if (themes && Array.isArray(themes.en) && Array.isArray(themes.uk) && themes.en.length > 0 && themes.uk.length > 0) {
-      console.log("Successfully generated themes:", themes);
-      return themes;
+  const uaThemeInstruction = is18PlusMode
+    ? "теми для дорослих (18+), дотепні, пікантні, зухвалі та провокаційні"
+    : sillyMode
+    ? "абсурдні, шалені, сюрреалістичні та дуже смішні теми для вечірки (наприклад: Таємне товариство ледачих котів, Вікінги в ІКЕА, Курси підвищення кваліфікації прибульців)"
+    : "веселі, яскраві та цікаві теми для вечірки, які надихають на творчі відповіді";
+
+  try {
+    const [promptEn, promptUa] = await Promise.all([
+      getPrompt('themes', { themeTypeInstruction: enThemeInstruction }, 'en'),
+      getPrompt('themes', { themeTypeInstruction: uaThemeInstruction }, 'ua')
+    ]);
+
+    const [rawTextEn, rawTextUa] = await Promise.all([
+      generateContentWithFallback(promptEn),
+      generateContentWithFallback(promptUa)
+    ]);
+
+    const parsedEn = rawTextEn ? parseJsonResponse(rawTextEn) : null;
+    const parsedUa = rawTextUa ? parseJsonResponse(rawTextUa) : null;
+
+    const enThemes = (parsedEn && Array.isArray(parsedEn.themes)) ? parsedEn.themes : (parsedEn && Array.isArray(parsedEn.en) ? parsedEn.en : null);
+    const uaThemes = (parsedUa && Array.isArray(parsedUa.themes)) ? parsedUa.themes : (parsedUa && (Array.isArray(parsedUa.uk) ? parsedUa.uk : (Array.isArray(parsedUa.ua) ? parsedUa.ua : null)));
+
+    if (enThemes && uaThemes && enThemes.length > 0 && uaThemes.length > 0) {
+      const result = { en: enThemes, uk: uaThemes, ua: uaThemes };
+      console.log("Successfully generated themes:", result);
+      return result;
+    }
+  } catch (err) {
+    console.error("Failed to generate parallel themes:", err);
   }
-  console.error("Failed to get valid themes JSON from Gemini. Response:", rawText);
+
   return null;
 }
 
 /**
  * Generates all necessary text data for a single game round in one API call.
  * @param {string} theme The game theme for battle prompts.
- * @param {'en' | 'uk'} language The language for all content.
+ * @param {'en' | 'ua' | 'uk'} language The language for all content.
  * @param {number} numPlayers The number of players in the game.
  * @param {number} numQuestionsPerPlayer The number of questions to generate for each player.
  * @param {boolean} sillyMode Whether to generate silly questions.
  * @param {boolean} is18PlusMode Whether to generate adult-oriented content.
- * @param {string} [promptVersion] Optional prompt version ('v1' or 'v2').
  * @returns {Promise<{playerQuestions: string[][], battlePrompts: string[], fallbackWords: string[]} | null>}
  */
-export async function generateRoundData(theme, language, numPlayers, numQuestionsPerPlayer, sillyMode, is18PlusMode, promptVersion = null) {
+export async function generateRoundData(theme, language, numPlayers, numQuestionsPerPlayer, sillyMode, is18PlusMode) {
   const client = getAiClient();
   if (!client) {
     console.warn("AI client not available. Using fallback round data.");
     return null;
   }
-  const v = promptVersion || (typeof process !== 'undefined' && process.env?.PROMPT_VERSION) || PROMPT_VERSION || 'v2';
-  console.log(`Generating round data (Engine: ${v}) for ${numPlayers} players. Theme: '${theme}', Language: ${language}, Silly: ${sillyMode}, 18+: ${is18PlusMode}`);
+  console.log(`Generating round data for ${numPlayers} players. Theme: '${theme}', Language: ${language}, Silly: ${sillyMode}, 18+: ${is18PlusMode}`);
   
-  const languageFullName = language === 'uk' ? 'Ukrainian' : 'English';
   const numBattlePrompts = numPlayers;
   const numQuestionSetsToGenerate = numPlayers + 2;
 
@@ -250,8 +261,30 @@ export async function generateRoundData(theme, language, numPlayers, numQuestion
   let battlePromptToneInstruction;
   let battlePromptStructureInstruction;
 
-  if (v === 'v2') {
-    // --- V2: Streamlined Situational & Ukrainian Case-Safe Engine ---
+  const isUkrainian = (language === 'ua' || language === 'uk' || language === 'Ukrainian');
+
+  if (isUkrainian) {
+    const baseGoal = "Головна мета: генерувати запитання, які провокують швидкі, дотепні та смішні відповіді (5–10 слів). Ці запитання мають спонукати гравців писати активні дієслова, повсякденні предмети та кумедні прикметники, якими друзям буде зручно грати в битвах.";
+    const rules = "Суворі правила:\n1. УНИКАЙТЕ однослівних відповідей.\n2. УНИКАЙТЕ простих запитань 'так/ні'.\n3. УНИКАЙТЕ занадто складних чи філософських есе.\n4. Тримайте запитання живими та близькими (погані поради, безглузді виправдання, таємниці, дивні реакції).";
+
+    let modeInstruction = '';
+    if (is18PlusMode) {
+      modeInstruction = "Тон запитань: Режим 18+ УВІМКНЕНО. Запитання мають бути дотепними, пікантними, зухвалими та провокаційними.";
+    } else if (sillyMode) {
+      modeInstruction = "Тон запитань: Кумедний режим (Silly Mode) УВІМКНЕНО. Запитання мають бути максимально абсурдними, дивними та смішними.";
+    }
+
+    const examples = `Якісні приклади (UA):\n- "Яка найгірша порада людині, яка вперше сіла за кермо?" (провокує активні дієслова та предмети).\n- "Що ви кричите, коли босою ногою наступаєте на деталь лего в темряві?" (провокує хаотичні реакції).\n- "Яку таємницю приховує ваш холодильник пізно вночі?" (провокує кумедні слова).\n- "Найдивніше виправдання, чому ви запізнилися на роботу на дві години:" (провокує творчі історії).\n\nАнти-приклади (УНИКАТИ): "Яка ваша улюблена їжа?" (занадто коротко).`;
+
+    playerQuestionInstructions = `${baseGoal}\n\n${rules}\n\n${modeInstruction}\n\n${examples}`;
+
+    battlePromptToneInstruction = is18PlusMode
+      ? 'Режим 18+ УВІМКНЕНО, тому завдання для битв МАЮТЬ бути дорослими, пікантними, зухвалими та прив\'язаними до теми.'
+      : 'Завдання для битв МАЮТЬ бути прив\'язані до теми гри, бути смішними, ситуативними та динамічними.';
+
+    battlePromptStructureInstruction = 'Критично для української граматики: Оформлюйте завдання як відкриті ситуативні конструкції, що закінчуються двокрапкою (:) або прямим запитанням. НЕ використовуйте пропуски з прийменниками (уникайте "для ____", "через ____", "проти ____", "керувати ____") тому що гравці мають слова лише у фіксованих відмінках. Гарні приклади: "Головне правило виживання тут:", "Попереджувальний напис на дверях:", "Слоган на білборді у центрі міста:", "Скарга відвідувача адміністратору:", "Що прошепотів шеф-кухар перед втечею:", "Порада від підозрілого лікаря:".';
+
+  } else {
     const baseGoal = "Your primary goal is to generate questions that prompt fast, vivid, and hilarious answers (5 to 10 words). These questions must elicit descriptive nouns, active verbs, and funny adjectives that are easy to remix in word scrambles.";
     const rules = "Strict Rules to follow:\n1. AVOID single-word answers (e.g., 'What is your favorite color?').\n2. AVOID simple yes/no questions.\n3. AVOID abstract, overly complex, or philosophical questions that take long to read.\n4. Keep questions relatable, playful, and instant to answer (bad advice, weird excuses, secrets, funny reactions).";
 
@@ -262,12 +295,7 @@ export async function generateRoundData(theme, language, numPlayers, numQuestion
       modeInstruction = "Question Tone: Silly mode is ON. Questions should be wildly absurd, bizarre, and laugh-out-loud funny.";
     }
 
-    let examples;
-    if (language === 'uk') {
-        examples = `High-Quality Examples (UK):\n- "Яка найгірша порада людині, яка вперше сіла за кермо?" (elicits funny active verbs and objects).\n- "Що ви кричите, коли босою ногою наступаєте на деталь лего в темряві?" (elicits chaotic reactions and punchy words).\n- "Яку таємницю приховує ваш холодильник пізно вночі?" (elicits fun food/action words).\n- "Найдивніше виправдання, чому ви запізнилися на роботу на дві години:" (elicits creative storytelling).\n\nAnti-Examples to AVOID: "Яка ваша улюблена їжа?" (too short) or complex philosophical essays.`;
-    } else {
-        examples = `High-Quality Examples (EN):\n- "What is the absolute worst advice you could give to someone learning to drive?" (elicits funny active verbs and objects).\n- "What embarrassing secret is your dog hiding from you?" (elicits funny narrative words).\n- "What do you scream when you accidentally drop your phone in the toilet?" (elicits chaotic reactions).\n- "What is the most suspicious excuse for arriving 2 hours late to a party?" (elicits creative excuses).\n\nAnti-Examples to AVOID: "What is your favorite food?" (too short) or complex philosophical essays.`;
-    }
+    const examples = `High-Quality Examples (EN):\n- "What is the absolute worst advice you could give to someone learning to drive?" (elicits funny active verbs and objects).\n- "What embarrassing secret is your dog hiding from you?" (elicits funny narrative words).\n- "What do you scream when you accidentally drop your phone in the toilet?" (elicits chaotic reactions).\n- "What is the most suspicious excuse for arriving 2 hours late to a party?" (elicits creative excuses).\n\nAnti-Examples to AVOID: "What is your favorite food?" (too short) or complex philosophical essays.`;
 
     playerQuestionInstructions = `${baseGoal}\n\n${rules}\n\n${modeInstruction}\n\n${examples}`;
 
@@ -275,64 +303,12 @@ export async function generateRoundData(theme, language, numPlayers, numQuestion
       ? 'The 18+ mode is ON, so battle prompts MUST be adult-oriented, cheeky, edgy, provocative, and set in the game theme.'
       : 'These battle prompts MUST be set in the game theme and be funny, situational, and punchy.';
 
-    if (language === 'uk') {
-      battlePromptStructureInstruction = 'Critical for Ukrainian Grammar: Phrase prompts as open situational setups ending with a colon (:) or direct questions. DO NOT use fill-in-the-blanks with prepositions (avoid "для ____", "через ____", "проти ____", "керувати ____") because players have limited words with fixed cases. Good examples: "Головне правило виживання тут:", "Попереджувальний напис на дверях:", "Слоган на білборді у центрі міста:", "Скаррга відвідувача адміністратору:", "Що прошепотів шеф-кухар перед втечею:", "Порада від підозрілого лікаря:".';
-    } else {
-      battlePromptStructureInstruction = 'Critical for Gameplay: Phrase prompts as open situational setups ending with a colon (:) or direct questions. DO NOT use fill-in-the-blanks with prepositions (avoid "In order to ____ one must ____"). Good examples: "Slogan on the billboard for this place:", "Warning sign on the front door:", "The #1 rule of this secret club:", "A 1-star review on Yelp:", "What the villain whispered before escaping:", "The worst excuse when caught red-handed:", "Customer complaint to the manager:".';
-    }
-
-  } else {
-    // --- V1: Classic Legacy Engine ---
-    if (USE_ENHANCED_QUESTION_PROMPTS) {
-      const baseGoal = "Your primary goal is to generate questions that prompt storytelling, description, or hypothetical scenarios. These questions must be designed to elicit answers containing vivid adjectives, strong verbs, and imaginative nouns.";
-      const rules = "Strict Rules to follow:\n1. AVOID questions that can be answered with a single word (e.g., 'What is your favorite color?').\n2. AVOID simple 'yes/no' questions.\n3. The questions MUST inspire funny and creative answers.";
-      
-      let modeInstruction = '';
-      if (is18PlusMode) {
-        modeInstruction = "Question Tone: The 18+ mode is ON. The questions should be witty, clever, and creative, while also being adult-oriented, edgy, or provocative.";
-      } else if (sillyMode) {
-        modeInstruction = "Question Tone: The Silly mode is ON. The questions must be EXTREMELY silly, absurd, and bizarre.";
-      }
-
-      let examples;
-      if (language === 'uk') {
-          examples = `High-Quality Examples (UK):\n- "Ви — екскурсовод у музеї найгірших винаходів людства. Опишіть свій улюблений експонат." (This forces descriptive and funny words).\n- "Яку таємницю приховує ваш домашній улюбленець, про яку ви навіть не здогадуєтесь?" (This encourages a narrative).\n- "Якби ви могли додати одне безглузде правило до будь-якого виду спорту, що б це було і чому?" (This prompts a hypothetical scenario).\n\nAnti-Example to AVOID: "Яка ваша улюблена їжа?" (The answer is too short and simple).`;
-      } else {
-          examples = `High-Quality Examples (EN):\n- "You are a lawyer defending a cat that knocked over a priceless vase. What is your closing argument?" (This forces a narrative and fun words).\n- "Describe the secret life of a garden gnome." (This prompts creative description).\n- "What would be the most surprising thing to find at the bottom of the ocean?" (This encourages imagination).\n\nAnti-Example to AVOID: "What is your favorite food?" (The answer is too short and simple).`;
-      }
-
-      playerQuestionInstructions = `${baseGoal}\n\n${rules}\n\n${modeInstruction}\n\n${examples}`;
-    } else {
-        let contentToneInstruction;
-        if (is18PlusMode) {
-          contentToneInstruction = sillyMode 
-            ? "Generate EXTREMELY silly, absurd, and bizarre questions that are ALSO adult-oriented, edgy, or provocative. They MUST NOT relate to the game's theme. Example: 'What is the worst possible thing to yell during a moment of passion?'"
-            : "Generate witty, clever, and creative questions that are adult-oriented, edgy, or provocative. They MUST NOT relate to the game's theme. Example: 'What's a terrible pet name to call your partner in public?'";
-        } else {
-          contentToneInstruction = sillyMode 
-            ? "Generate EXTREMELY silly, absurd, and bizarre questions. They must inspire funny answers and MUST NOT relate to the game's theme. Example: 'If you had to replace your teeth with something, what would you choose and why?'"
-            : "Generate general, creative, and quirky questions. They must inspire funny answers and MUST NOT relate to the game's theme. Example: 'Describe the secret life of a garden gnome.'";
-        }
-        const exampleQuestionArray = Array(numQuestionsPerPlayer).fill(null).map((_, i) => `"Question ${i + 1}"`).join(', ');
-        const examplePlayerQuestions = Array(2).fill(`[${exampleQuestionArray}]`).join(',\n    ');
-        playerQuestionInstructions = `- Question Tone: ${contentToneInstruction}\n- Example for a single player's questions: [${examplePlayerQuestions}]`;
-    }
-
-    battlePromptToneInstruction = is18PlusMode
-      ? 'The 18+ mode is ON, so the battle prompts MUST be adult-oriented, edgy, suggestive, or provocative, AND be related to the game theme. Do not generate tame prompts.'
-      : 'These prompts MUST be related to the theme and should be silly, funny, or quirky.';
-      
-    if (language === 'uk' && USE_FLEXIBLE_UKRAINIAN_PROMPTS) {
-        battlePromptStructureInstruction = 'Critical for Ukrainian: Phrase prompts to be open-ended questions or statements ending with a colon. This avoids strict grammatical requirements for the user\'s answer. Good examples: "Опишіть ідеальний вихідний день:", "Що б ви зробили, якби знайшли чарівну паличку?", "Найгірший подарунок на день народження — це...". Bad examples (avoid): "Найкраща річ у зимі це ____." because it forces a specific grammatical case.';
-    } else {
-        battlePromptStructureInstruction = 'They MUST be phrased as questions to be answered or as fill-in-the-blank statements. Good examples: "What is a terrible pickup line to use at a funeral?" or "A new rule for Monopoly should be ____."';
-    }
+    battlePromptStructureInstruction = 'Critical for Gameplay: Phrase prompts as open situational setups ending with a colon (:) or direct questions. DO NOT use fill-in-the-blanks with prepositions (avoid "In order to ____ one must ____"). Good examples: "Slogan on the billboard for this place:", "Warning sign on the front door:", "The #1 rule of this secret club:", "A 1-star review on Yelp:", "What the villain whispered before escaping:", "The worst excuse when caught red-handed:", "Customer complaint to the manager:".';
   }
 
   const prompt = await getPrompt('roundData', {
       numPlayers,
       theme,
-      languageFullName,
       is18PlusMode: is18PlusMode ? 'ON' : 'OFF',
       sillyMode: sillyMode ? 'ON' : 'OFF',
       numQuestionSetsToGenerate,
@@ -341,7 +317,7 @@ export async function generateRoundData(theme, language, numPlayers, numQuestion
       battlePromptToneInstruction,
       battlePromptStructureInstruction,
       numBattlePrompts
-  }, v);
+  }, language);
 
   const rawText = await generateContentWithFallback(prompt);
   if (!rawText) return null;
@@ -364,33 +340,37 @@ export async function generateRoundData(theme, language, numPlayers, numQuestion
 /**
  * Generates the "Movie Poster" prompts (genre and premise) for the final round battles.
  * @param {string} theme The game theme.
- * @param {'en' | 'uk'} language The language for the content.
+ * @param {'en' | 'ua' | 'uk'} language The language for the content.
  * @param {number} numPrompts The number of prompts to generate.
  * @param {boolean} is18PlusMode Whether to generate adult-oriented content.
- * @param {string} [promptVersion] Optional prompt version ('v1' or 'v2').
  * @returns {Promise<Array<{genre: string, premise: string}> | null>}
  */
-export async function generateFinalRoundData(theme, language, numPrompts, is18PlusMode, promptVersion = null) {
+export async function generateFinalRoundData(theme, language, numPrompts, is18PlusMode) {
   const client = getAiClient();
   if (!client) {
     console.warn("AI client not available. Using fallback final round data.");
     return null;
   }
-  const v = promptVersion || (typeof process !== 'undefined' && process.env?.PROMPT_VERSION) || PROMPT_VERSION || 'v2';
-  console.log(`Generating ${numPrompts} final round movie prompts (Engine: ${v}). Theme: '${theme}', Language: ${language}, 18+: ${is18PlusMode}`);
+  console.log(`Generating ${numPrompts} final round movie prompts. Theme: '${theme}', Language: ${language}, 18+: ${is18PlusMode}`);
 
-  const languageFullName = language === 'uk' ? 'Ukrainian' : 'English';
-  
-  const toneInstruction = is18PlusMode
-    ? "The genre and premise MUST be adult-oriented, edgy, or provocative."
-    : "The genre and premise should be funny, epic, or absurd.";
+  const isUkrainian = (language === 'ua' || language === 'uk' || language === 'Ukrainian');
+
+  let toneInstruction;
+  if (isUkrainian) {
+    toneInstruction = is18PlusMode
+      ? "Жанр і зав'язка мають бути дорослими (18+), зухвалими або провокаційними."
+      : "Жанр і зав'язка мають бути смішними, епічними або абсурдними.";
+  } else {
+    toneInstruction = is18PlusMode
+      ? "The genre and premise MUST be adult-oriented, edgy, or provocative."
+      : "The genre and premise should be funny, epic, or absurd.";
+  }
 
   const prompt = await getPrompt('finalRound', {
       theme,
-      languageFullName,
       toneInstruction,
       numPrompts
-  }, v);
+  }, language);
 
   const rawText = await generateContentWithFallback(prompt);
   if (!rawText) return null;
