@@ -13,11 +13,13 @@
   // Import shared components
   import LoadingSpinner from './lib/shared/LoadingSpinner.svelte';
   import ErrorDisplay from './lib/shared/ErrorDisplay.svelte';
+  import DevHarness from './lib/dev/DevHarness.svelte';
   import { get } from 'svelte/store';
 
   let currentView = $view;
   let mainContentElement;
   let isTransitioning = false;
+  let isDevHarness = false;
 
   function transitionToView(targetView) {
       if (!mainContentElement) {
@@ -88,8 +90,14 @@
       window.addEventListener('online', handleOnline);
     }
 
-    // Check for a gameId in the URL, which happens when scanning the QR code or clicking a shared link.
+    // Check for debug / dev harness query params
     const urlParams = new URLSearchParams(window.location.search);
+    if (import.meta.env.DEV && (urlParams.has('debug') || urlParams.has('dev') || urlParams.has('harness'))) {
+        isDevHarness = true;
+        return;
+    }
+
+    // Check for a gameId in the URL, which happens when scanning the QR code or clicking a shared link.
     const gameId = urlParams.get('gameId');
     if (gameId) {
         // If a gameId is found, pre-populate the join form and jump directly to join prompt.
@@ -117,14 +125,18 @@
   };
 </script>
 
-<main class="min-h-screen" style="transform: translateZ(0);">
-    <div bind:this={mainContentElement}>
-        {#if $isLoading}
-            <LoadingSpinner message={$error.message || $t.connecting} />
-        {:else if $error.fatal}
-            <ErrorDisplay message={$error.message} on:reset={resetToMenu} />
-        {:else}
-            <svelte:component this={views[currentView] || MainMenu} />
-        {/if}
-    </div>
-</main>
+{#if isDevHarness}
+    <DevHarness />
+{:else}
+    <main class="min-h-screen" style="transform: translateZ(0);">
+        <div bind:this={mainContentElement}>
+            {#if $isLoading}
+                <LoadingSpinner message={$error.message || $t.connecting} />
+            {:else if $error.fatal}
+                <ErrorDisplay message={$error.message} on:reset={resetToMenu} />
+            {:else}
+                <svelte:component this={views[currentView] || MainMenu} />
+            {/if}
+        </div>
+    </main>
+{/if}

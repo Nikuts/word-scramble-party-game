@@ -25,6 +25,17 @@
         <button on:click={() => changeView('language')} class="px-3 py-1 bg-neutral-900 border border-neutral-600 text-sm hover:bg-primary hover:text-black hover:border-white transition-all">{$t.selectLanguage}</button>
     </div>
 
+    {#if import.meta.env.DEV}
+        <a 
+            href="/?debug=1" 
+            class="absolute bottom-4 left-4 px-3 py-1.5 bg-fuchsia-950/80 border border-fuchsia-500/60 rounded text-xs text-fuchsia-300 hover:bg-fuchsia-800 hover:text-white transition-all flex items-center gap-1.5 shadow-lg"
+            title="Open UI Component Dev Harness"
+        >
+            <span>🧪</span>
+            <span class="font-bold">UI Dev Harness</span>
+        </a>
+    {/if}
+
     <button 
         on:click={toggleTvMode} 
         class="absolute bottom-4 right-4 px-3 py-1.5 bg-neutral-900 border rounded text-xs transition-all flex items-center gap-1.5 {$tvMode ? 'border-primary text-primary' : 'border-neutral-700 text-neutral-400 hover:text-white'}"

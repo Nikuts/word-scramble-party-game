@@ -52,7 +52,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const distPath = path.join(__dirname, 'dist');
 const distExists = fs.existsSync(distPath);
 
-if (!isProduction && !distExists) {
+if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
         server: { middlewareMode: true },
@@ -74,6 +74,7 @@ if (!isProduction && !distExists) {
         res.sendFile(path.join(distPath, 'index.html'));
     });
 } else {
+    console.warn("[Server] Production mode requested but dist/ not found. Falling back to Vite dev middleware.");
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
         server: { middlewareMode: true },

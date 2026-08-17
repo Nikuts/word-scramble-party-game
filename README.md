@@ -325,6 +325,20 @@ The game features two distinct algorithms for generating word banks, which can b
 - **`AVATARS`**: The full list of available emoji characters for avatars.
 - **`AVATAR_MAP`**: A map linking emoji characters to their corresponding image file names (e.g., `'🐸': 'frog'`).
 
+## 🧪 UI Component Dev Harness & Testing
+
+### 🎨 Instant UI Dev Harness (`?debug=1`)
+For rapid front-end iteration with Vite Hot Module Replacement (HMR) without needing a full multi-player game setup:
+- **Direct Harness URL:** `http://localhost:3000/?debug=1`
+- **Direct Screen Previews:**
+  - `http://localhost:3000/?debug=player_battle_single` (Single-line word scramble battle)
+  - `http://localhost:3000/?debug=player_battle_movie` (Final round 2-part movie poster battle)
+  - `http://localhost:3000/?debug=player_voting` (3-way brawl mobile voting)
+  - `http://localhost:3000/?debug=host_voting` (Host TV 3-way brawl screen with live vote bars)
+  - `http://localhost:3000/?debug=host_podium` (Host TV winner podium & confetti)
+  - `http://localhost:3000/?debug=avatar_gallery` (All 14 pixel avatars in multiple sizes)
+- **Features:** Floating dev toolbar, device frame presets (Mobile 375px, Tablet 768px, TV 1920px), tile quantity slider (10–60 tiles), EN/UA language toggle, theme switcher, and instant confetti trigger.
+
 ---
 
 ## 🧪 Testing
