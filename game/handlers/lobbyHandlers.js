@@ -287,13 +287,13 @@ export function handleStartGame(io, socket, { gameId }) {
     }
 }
 
-export function handleSendLobbyEmoji(io, socket, { gameId }) {
+export function handleSendLobbyEmoji(io, socket, { gameId, emoji }) {
     const game = manager.getGame(gameId);
-    if (!game || game.phase !== 'lobby') return;
+    if (!game) return;
     const player = game.players.find(p => p.socketId === socket.id);
     if (!player) return;
 
-    const COOLDOWN_MS = 500;
+    const COOLDOWN_MS = 350;
     const cooldownKey = `emoji-${player.id}`;
     const now = Date.now();
     const lastSent = game.playerActionCooldowns.get(cooldownKey) || 0;
@@ -301,7 +301,11 @@ export function handleSendLobbyEmoji(io, socket, { gameId }) {
     if (now - lastSent >= COOLDOWN_MS) {
         game.playerActionCooldowns.set(cooldownKey, now);
         if (game.hostDisplaySocketId) {
-            io.to(game.hostDisplaySocketId).emit('lobby-emoji-sent', { avatar: player.avatar });
+            io.to(game.hostDisplaySocketId).emit('lobby-emoji-sent', {
+                avatar: player.avatar,
+                emoji: emoji || null,
+                playerName: player.name
+            });
         }
     }
 }

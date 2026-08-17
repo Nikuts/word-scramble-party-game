@@ -32,6 +32,20 @@
         {/if}
     {/if}
 
+    <div class="my-4 p-3 bg-neutral-900/60 border border-neutral-700 rounded-lg max-w-sm w-full mx-auto">
+        <p class="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">{$t.sendReaction}</p>
+        <div class="flex justify-center gap-2 sm:gap-3">
+            {#each ['🔥', '😂', '💀', '👏', '🤯', '🌈'] as emoji}
+                <button 
+                    class="text-2xl p-1.5 bg-neutral-800 hover:bg-neutral-700 active:scale-125 border border-neutral-600 rounded-full transition-transform shadow-md cursor-pointer"
+                    on:click={() => sendMessage('send-lobby-emoji', { gameId: game.id, emoji })}
+                >
+                    {emoji}
+                </button>
+            {/each}
+        </div>
+    </div>
+
     <div class="mt-4 flex flex-col sm:flex-row gap-4">
         <button on:click={resetToMenu} class="btn-arcade btn-neutral">{$t.mainMenu}</button>
         {#if player?.isHost}
@@ -40,7 +54,7 @@
     </div>
     
     {#if game?.battleHistory && game.battleHistory.length > 0}
-    <div class="mt-8 border-t-2 border-neutral-700 pt-6 w-full max-w-sm">
+    <div class="mt-6 border-t-2 border-neutral-700 pt-6 w-full max-w-sm">
          <button on:click={() => showBattleHistory.set(true)} class="btn-arcade text-lg w-full" style="--btn-color: var(--color-primary);">{$t.viewBattleHistory}</button>
     </div>
     {/if}

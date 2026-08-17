@@ -236,7 +236,7 @@
     </div>
 
      <!-- Avatar Container -->
-    <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
+    <div class="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-30">
         {#each $flyingEmojis as emoji (emoji.id)}
             {@const startX = Math.random() * 80 + 10}
             {@const endX = Math.random() * 80 + 10}
@@ -247,7 +247,18 @@
                 style="--start-x: {startX}%; --end-x: {endX}%; --start-rotate: {startRotate}deg; --end-rotate: {endRotate}deg;"
                 on:animationend={() => removeEmoji(emoji.id)}
             >
-                <PixelAvatar avatar={emoji.avatar} />
+                {#if emoji.emoji}
+                    <div class="flex flex-col items-center select-none pointer-events-none">
+                        <span class="text-5xl sm:text-6xl filter drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] leading-none">{emoji.emoji}</span>
+                        {#if emoji.avatar}
+                            <div class="w-6 h-6 -mt-1.5 opacity-90 scale-90 rounded-full bg-black/60 p-0.5 border border-white/40 shadow-sm">
+                                <PixelAvatar avatar={emoji.avatar} />
+                            </div>
+                        {/if}
+                    </div>
+                {:else}
+                    <PixelAvatar avatar={emoji.avatar} />
+                {/if}
             </div>
         {/each}
     </div>

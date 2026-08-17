@@ -111,3 +111,8 @@ export const rerollQuestionSchema = z.object({
     playerId: playerIdSchemaBase,
     questionId: z.string().min(1)
 });
+
+export const sendReactionSchema = z.object({
+    gameId: gameIdSchemaBase,
+    emoji: z.string().max(20).optional()
+});

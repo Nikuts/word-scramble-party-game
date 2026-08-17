@@ -328,13 +328,15 @@ export function initializeSocket() {
         });
     });
 
-    socket.on('lobby-emoji-sent', ({ avatar }) => {
+    socket.on('lobby-emoji-sent', ({ avatar, emoji, playerName }) => {
         flyingEmojis.update(emojis => {
             const next = [...emojis, {
                 id: Date.now() + Math.random(),
-                avatar: avatar
+                avatar: avatar,
+                emoji: emoji || null,
+                playerName: playerName || '',
             }];
-            return next.length > 20 ? next.slice(next.length - 20) : next;
+            return next.length > 25 ? next.slice(next.length - 25) : next;
         });
     });
 

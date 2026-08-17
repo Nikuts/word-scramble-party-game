@@ -72,5 +72,5 @@ export function registerEventHandlers(io, socket) {
     socket.on('force-end-game', withValidation(schemas.gameIdSchema, handleForceEndGame.bind(socket)));
     
     // Interactive / Fun
-    socket.on('send-lobby-emoji', withValidation(schemas.gameIdSchema, handleSendLobbyEmoji.bind(socket)));
+    socket.on('send-lobby-emoji', withValidation(schemas.sendReactionSchema, handleSendLobbyEmoji.bind(socket)));
 }
