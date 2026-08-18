@@ -1,7 +1,7 @@
 // src/lib/dev/mockData.js
 import { AVATARS } from '../config.js';
 
-export const MOCK_PLAYERS = [
+export const MOCK_PLAYERS_6 = [
     { id: 'p1', name: 'Alice', avatar: '🦊', isHost: true, isReady: true, isConnected: true, socketId: 'sock_p1', score: 2800 },
     { id: 'p2', name: 'Bob', avatar: '🐸', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p2', score: 2400 },
     { id: 'p3', name: 'Charlie', avatar: '🤖', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p3', score: 1950 },
@@ -9,6 +9,25 @@ export const MOCK_PLAYERS = [
     { id: 'p5', name: 'Evan', avatar: '🦁', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p5', score: 1800 },
     { id: 'p6', name: 'Fiona', avatar: '🐱', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p6', score: 2100 }
 ];
+
+export const MOCK_PLAYERS_14 = [
+    { id: 'p1', name: 'Alice', avatar: '🦊', isHost: true, isReady: true, isConnected: true, socketId: 'sock_p1', score: 2800 },
+    { id: 'p2', name: 'Bob', avatar: '🐸', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p2', score: 2400 },
+    { id: 'p3', name: 'Charlie', avatar: '🤖', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p3', score: 1950 },
+    { id: 'p4', name: 'Diana', avatar: '🧙', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p4', score: 2200 },
+    { id: 'p5', name: 'Evan', avatar: '🦁', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p5', score: 1800 },
+    { id: 'p6', name: 'Fiona', avatar: '🐱', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p6', score: 2100 },
+    { id: 'p7', name: 'George', avatar: '🐵', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p7', score: 1650 },
+    { id: 'p8', name: 'Hannah', avatar: '🐼', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p8', score: 2300 },
+    { id: 'p9', name: 'Ivan', avatar: '🐯', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p9', score: 1900 },
+    { id: 'p10', name: 'Julia', avatar: '🦄', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p10', score: 2750 },
+    { id: 'p11', name: 'Kevin', avatar: '🐲', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p11', score: 1400 },
+    { id: 'p12', name: 'Luna', avatar: '👾', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p12', score: 2150 },
+    { id: 'p13', name: 'Max', avatar: '👻', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p13', score: 1750 },
+    { id: 'p14', name: 'Nora', avatar: '🐧', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p14', score: 2050 }
+];
+
+export const MOCK_PLAYERS = MOCK_PLAYERS_6;
 
 export const MOCK_WORD_BANK_EN = [
     { word: 'giant', authorId: 'p2', isBonus: false },
@@ -118,6 +137,72 @@ export const MOCK_SUPERLATIVES = [
     }
 ];
 
+export const MOCK_ACTIVE_BATTLE_TRIO = {
+    id: 'b-1-0',
+    prompt: 'Warning sign on the office coffee mug:',
+    competitors: ['p1', 'p2', 'p3'],
+    formatConfig: { type: 'single_line' },
+    answers: {
+        p1: 'giant laser potato under cheese',
+        p2: 'screaming fluffy badger disco champion',
+        p3: 'never apologize with hot pizzas'
+    },
+    votes: { p4: 'p2', p5: 'p2', p6: 'p1' }
+};
+
+export const MOCK_ACTIVE_BATTLE_REVEAL = {
+    id: 'b-1-0',
+    prompt: 'Warning sign on the office coffee mug:',
+    competitors: ['p1', 'p2', 'p3'],
+    formatConfig: { type: 'single_line' },
+    answers: {
+        p1: 'giant laser potato under cheese',
+        p2: 'screaming fluffy badger disco champion',
+        p3: 'never apologize with hot pizzas'
+    },
+    annotatedAnswers: {
+        p1: {
+            words: [
+                { text: 'giant', authorIndex: 1 },
+                { text: 'laser', authorIndex: 2 },
+                { text: 'potato', authorIndex: 3 },
+                { text: 'under', authorIndex: 4 },
+                { text: 'cheese', authorIndex: 1 }
+            ]
+        },
+        p2: {
+            words: [
+                { text: 'screaming', authorIndex: 0 },
+                { text: 'fluffy', authorIndex: 2 },
+                { text: 'badger', authorIndex: 3 },
+                { text: 'disco', authorIndex: 0 },
+                { text: 'champion', authorIndex: 2 }
+            ]
+        },
+        p3: {
+            words: [
+                { text: 'never', authorIndex: 0 },
+                { text: 'apologize', authorIndex: 1 },
+                { text: 'with', authorIndex: 3 },
+                { text: 'hot', authorIndex: 1 },
+                { text: 'pizzas', authorIndex: 4 }
+            ]
+        }
+    },
+    votes: { p4: 'p2', p5: 'p2', p6: 'p1' },
+    winnerId: 'p2',
+    pointsAwarded: {
+        p1: 250,
+        p2: 1450,
+        p3: 100
+    },
+    scoreBreakdown: {
+        p1: { votes: 1, votePoints: 250, winBonus: 0, sweepBonus: 0, rainbowBonus: 0 },
+        p2: { votes: 2, votePoints: 500, winBonus: 500, sweepBonus: 0, rainbowBonus: 450 },
+        p3: { votes: 0, votePoints: 0, winBonus: 0, sweepBonus: 0, rainbowBonus: 100 }
+    }
+};
+
 export function createMockGameState(overrides = {}) {
     return {
         id: 'TEST',
@@ -137,24 +222,8 @@ export function createMockGameState(overrides = {}) {
             p1: { questions: [{ text: "What is your secret weapon?", answer: "giant laser potato" }] },
             p2: { questions: [{ text: "What is your secret weapon?", answer: "screaming fluffy badger" }] }
         },
-        battleSchedule: [
-            {
-                id: 'b-1-0',
-                prompt: 'Warning sign on the office coffee mug:',
-                competitors: [
-                    { id: 'p1', name: 'Alice', avatar: '🦊', score: 2800 },
-                    { id: 'p2', name: 'Bob', avatar: '🐸', score: 3400 },
-                    { id: 'p3', name: 'Charlie', avatar: '🤖', score: 2100 }
-                ],
-                formatConfig: { type: 'single_line' },
-                answers: {
-                    p1: 'giant laser potato under cheese',
-                    p2: 'screaming fluffy badger disco champion',
-                    p3: 'never apologize with hot pizzas'
-                },
-                votes: { p1: ['p4'], p2: ['p5', 'p6'], p3: [] }
-            }
-        ],
+        battleSchedule: [MOCK_ACTIVE_BATTLE_TRIO],
+        currentVotingBattleIndex: 0,
         currentBattleIndex: 0,
         ...overrides
     };

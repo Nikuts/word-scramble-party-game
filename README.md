@@ -279,6 +279,15 @@ This application is fully compatible with Google AI Studio's built-in hosting an
 - **Lightweight Timer Tick Broadcasting:** Server phase timers broadcast lightweight countdown ticks (`timer-tick`) across the 1-second interval, avoiding deep game state serialization on non-state-changing seconds.
 - **CSS Paint & Layout Containment:** CSS `contain: layout style;` is applied to active answer dropzones, word bank grids, and arcade panels, isolating browser style calculations and layout reflows.
 
+### Full-Width Host Arena Harmonization (100% Screen Width, Zero-Scroll)
+- **Unified Screen Architecture:** Replaced legacy 25% sidebars across all host screens with a cohesive 100% full-width arena layout that scales seamlessly from laptops (1366x768) to 4K Smart TVs (1920x1080+).
+- **Top Glowing Theme Marquee:** A centered neon marquee (`bg-black/80 border-2 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]`) anchors the chosen game topic prominently at the top of every phase.
+- **Hero Get Ready Splashes:** Energetic arcade splash screens for round starts, battle introductions, and voting countdowns with 7-segment digital displays.
+- **100% Width Battle Voting Arena:** Option cards dynamically expand across the entire screen width (Option A Cyan, Option B Fuchsia, Option C Amber, Option D Emerald), providing generous typography and whitespace for 1v1, 3-way, and 4-way battles without vertical scrollbars.
+- **Anonymous Live Voter Gauge:** Displays live real-time voter progress (`🗳️ X / Y Voters`) while maintaining complete voting anonymity on the TV screen.
+- **High-Impact Reveal Arena:** Features floating `👑 WINNER!` banners, author color-coded word highlights, centered `🌈 RAINBOW VARIETY` bonus badges, breakdown pills (`🗳️ Votes`, `🏆 Win Bonus`, `🧹 Sweep Bonus`), and voter avatar attribution chips.
+- **Adaptive Bottom Score Ribbon:** A compact, responsive bottom ribbon renders real-time scores, avatars, and winner crowns for 3 to 14 players without early text truncation.
+
 ### Sequential Battle & Voting State Machine
 - The game flow is managed by a phase-based state machine on the server. The battle phase is now a loop: `battle_voting` -> `battle_result_reveal`. The server advances an index (`currentVotingBattleIndex`) and transitions between these two phases until all battles are complete, at which point it moves to the next round. This creates the sequential "vote-reveal-next" experience.
 

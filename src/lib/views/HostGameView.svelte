@@ -37,7 +37,7 @@
     }
     
     $: if ($gamePhase === 'battle_result_reveal') {
-        const currentBattle = $gameState.battleSchedule[$gameState.currentVotingBattleIndex];
+        const currentBattle = $gameState.battleSchedule?.[$gameState.currentVotingBattleIndex];
         if (currentBattle && currentBattle.id !== lastRevealedBattleId && currentBattle.winnerId) {
             lastRevealedBattleId = currentBattle.id;
             setTimeout(() => triggerConfetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } }), 200);
@@ -118,62 +118,101 @@
 
     function renderAnswer(answer) {
         if (typeof answer === 'string') {
-            if (answer === '::TIMEOUT::') return `(${$t.noAnswerSubmitted})`;
+            if (answer === '::TIMEOUT::') return `(${$t.noAnswerSubmitted || 'No answer submitted'})`;
             return answer;
         }
         if (typeof answer === 'object' && answer !== null && (answer.title || answer.tagline)) {
             let title = (answer.title || '...').trim();
             let tagline = (answer.tagline || '...').trim();
-            if (title === '::TIMEOUT::') title = `(${$t.noAnswerSubmitted})`;
+            if (title === '::TIMEOUT::') title = `(${$t.noAnswerSubmitted || 'No answer submitted'})`;
             if (tagline === '::TIMEOUT::' || tagline === '') tagline = '...';
             return `Title: ${title}\nTagline: ${tagline}`;
         }
-        return `(${$t.noAnswerSubmitted})`;
+        return `(${$t.noAnswerSubmitted || 'No answer submitted'})`;
     }
 
     function getWordColorClass(authorIndex) {
-        if (authorIndex === 0) return 'text-cyan-300 border-b border-cyan-400/80 bg-cyan-950/40 px-1 py-0.5 rounded-sm inline-block';
-        if (authorIndex === 1) return 'text-pink-300 border-b border-pink-400/80 bg-pink-950/40 px-1 py-0.5 rounded-sm inline-block';
-        if (authorIndex === 2) return 'text-emerald-300 border-b border-emerald-400/80 bg-emerald-950/40 px-1 py-0.5 rounded-sm inline-block';
-        if (authorIndex === 3) return 'text-amber-300 border-b border-amber-400/80 bg-amber-950/40 px-1 py-0.5 rounded-sm inline-block';
-        if (authorIndex === 4) return 'text-purple-300 border-b border-purple-400/80 bg-purple-950/40 px-1 py-0.5 rounded-sm inline-block';
+        if (authorIndex === 0) return 'text-cyan-300 font-bold';
+        if (authorIndex === 1) return 'text-pink-300 font-bold';
+        if (authorIndex === 2) return 'text-emerald-300 font-bold';
+        if (authorIndex === 3) return 'text-amber-300 font-bold';
+        if (authorIndex === 4) return 'text-purple-300 font-bold';
         return 'text-neutral-300';
     }
+
+    const cardStyles = [
+        { border: 'border-cyan-400', text: 'text-cyan-400', bg: 'bg-cyan-950/30' },
+        { border: 'border-fuchsia-400', text: 'text-fuchsia-400', bg: 'bg-fuchsia-950/30' },
+        { border: 'border-amber-400', text: 'text-amber-400', bg: 'bg-amber-950/30' },
+        { border: 'border-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-950/30' }
+    ];
 </script>
 
-{#if $gamePhase === 'question' || $gamePhase === 'battle_answering'}
-    <!-- Full-Width Host Arena Phase 2 Redesign (Zero Scroll 14P Adaptive Grid) -->
-    <div class="w-full min-h-screen flex flex-col justify-between p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto safe-top safe-bottom relative select-none font-sans host-game-container">
-        {#if $activeTimeBoostNotice}
-            <div class="fixed top-6 right-6 z-50 animate-bounce bg-yellow-400 text-black px-4 py-2 rounded-lg font-display font-extrabold shadow-[0_0_20px_rgba(250,204,21,0.8)] border-2 border-white flex items-center gap-2">
-                <span class="text-xl">⏱️</span>
-                <span>{$t.timeBoostUsed.replace('{name}', $activeTimeBoostNotice.playerName)}</span>
-            </div>
-        {/if}
+<!-- Full-Width Host Game Arena Layout (Zero Scroll 100% Width Harmonization) -->
+<div class="w-full min-h-screen flex flex-col justify-between p-2.5 sm:p-4 lg:p-6 max-w-7xl mx-auto safe-top safe-bottom relative select-none font-sans host-game-container">
+    {#if $activeTimeBoostNotice}
+        <div class="fixed top-6 right-6 z-50 animate-bounce bg-yellow-400 text-black px-4 py-2 rounded-lg font-display font-extrabold shadow-[0_0_20px_rgba(250,204,21,0.8)] border-2 border-white flex items-center gap-2">
+            <span class="text-xl">⏱️</span>
+            <span>{$t.timeBoostUsed.replace('{name}', $activeTimeBoostNotice.playerName)}</span>
+        </div>
+    {/if}
 
-        <!-- Top Prominent Neon Theme Marquee -->
-        <header class="flex-shrink-0 mb-3 text-center">
-            <div class="panel-arcade px-4 py-2 sm:py-2.5 inline-block max-w-4xl mx-auto rounded-lg shadow-[0_0_15px_rgba(var(--color-primary-rgb),0.3)]" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
-                <span class="text-[10px] sm:text-xs font-display uppercase tracking-widest text-primary/80 block mb-0.5">
-                    {$t.chosenTheme || 'THEME'}
-                </span>
-                <span class="font-bold text-amber-300 font-display text-sm sm:text-lg lg:text-xl tracking-wide drop-shadow-[0_0_10px_rgba(252,211,77,0.5)]">
-                    {$gameState.theme || '...'}
-                </span>
-            </div>
-        </header>
+    <!-- Top Prominent Neon Theme Marquee (Shown across all active phases) -->
+    <header class="flex-shrink-0 mb-1.5 sm:mb-2 text-center">
+        <div class="px-5 py-1.5 sm:py-2 inline-block max-w-4xl mx-auto rounded-lg bg-black/80 border-2 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+            <span class="text-[9px] sm:text-[10px] font-display uppercase tracking-widest text-cyan-400/80 font-bold block mb-0.5">
+                {$t.chosenTheme || 'CHOSEN THEME'}
+            </span>
+            <span class="font-bold text-amber-300 font-display text-sm sm:text-base lg:text-lg tracking-wide drop-shadow-[0_0_10px_rgba(252,211,77,0.5)]">
+                {$gameState.theme || '...'}
+            </span>
+        </div>
+    </header>
 
-        <!-- Stage Center: Timer & Phase Status -->
-        <div class="flex-shrink-0 text-center mb-3 sm:mb-4">
-            <div class="scale-90 sm:scale-100 mb-2">
+    {#if $gamePhase === 'generating_round'}
+        <!-- Phase: Generating Round -->
+        <main class="flex-1 flex items-center justify-center my-auto">
+            <LoadingSpinner message={loadingMessage} />
+        </main>
+
+    {:else if $gamePhase === 'get_ready' || $gamePhase === 'battle_get_ready' || $gamePhase === 'voting_get_ready'}
+        <!-- Phase: Get Ready Splashes -->
+        {@const isBattleGetReady = $gamePhase === 'battle_get_ready'}
+        {@const isVotingGetReady = $gamePhase === 'voting_get_ready'}
+        {@const titleText = isBattleGetReady 
+            ? ($t.battleGetReadyTitle || 'BATTLE INCOMING!') 
+            : (isVotingGetReady ? ($t.votingGetReadyTitle || 'GET READY TO VOTE!') : ($t.getReadyTitle || 'GET READY!'))}
+        {@const subtitleText = isBattleGetReady 
+            ? ($t.battlePhase || 'BATTLE PHASE') 
+            : (isVotingGetReady ? ($t.votingPhase || 'VOTING PHASE') : ($t.getReadySubtitle?.replace('{currentRound}', $currentRound) || `ROUND ${$currentRound} IS COMING UP!`))}
+        {@const phaseIcon = isBattleGetReady ? '⚔️' : (isVotingGetReady ? '🗳️' : '⚡')}
+        {@const themeBorderColor = isBattleGetReady ? 'border-fuchsia-500 text-fuchsia-400' : (isVotingGetReady ? 'border-emerald-500 text-emerald-400' : 'border-cyan-400 text-cyan-400')}
+
+        <main class="flex-1 flex flex-col items-center justify-center my-auto py-2">
+            <div class="w-full max-w-xl bg-neutral-950/80 border-2 {themeBorderColor} rounded-2xl p-6 md:p-8 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-md flex flex-col items-center text-center my-auto">
+                <div class="text-4xl md:text-5xl mb-2 animate-bounce">{phaseIcon}</div>
+                <h1 class="text-2xl md:text-4xl font-display font-black tracking-wider uppercase mb-1 text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">{titleText}</h1>
+                <h2 class="text-base md:text-xl font-display font-bold text-cyan-300 tracking-widest uppercase mb-4">{subtitleText}</h2>
+                <div class="scale-100 mb-2">
+                    <SevenSegmentDisplay time={$phaseTimer} />
+                </div>
+                <p class="text-[10px] md:text-xs font-mono text-slate-400 uppercase tracking-widest mt-1 animate-pulse">
+                    {$t.prepareControllers || 'Prepare your controllers'}
+                </p>
+            </div>
+        </main>
+
+    {:else if $gamePhase === 'question' || $gamePhase === 'battle_answering'}
+        <!-- Phase: Question & Battle Answering (Option 1 Adaptive Grid) -->
+        <div class="flex-shrink-0 text-center mb-2 sm:mb-3">
+            <div class="scale-75 sm:scale-90 -my-1">
                 <SevenSegmentDisplay time={$phaseTimer} />
             </div>
-            <h1 class="text-xl sm:text-2xl lg:text-3xl font-display font-black tracking-wider text-primary drop-shadow-[0_0_12px_rgba(var(--color-primary-rgb),0.6)]">
+            <h1 class="text-lg sm:text-xl lg:text-2xl font-display font-black tracking-wider text-primary drop-shadow-[0_0_12px_rgba(var(--color-primary-rgb),0.6)] mt-1">
                 {$t.roundStatus ? $t.roundStatus.replace('{currentRound}', $currentRound) : `ROUND ${$currentRound}`} · {$gamePhase === 'question' ? ($t.questionPhase || 'QUESTION').toUpperCase() : ($currentRound === 3 ? ($t.finalRound || 'FINAL BATTLE').toUpperCase() : ($t.battlePhase || 'BATTLE').toUpperCase())}
             </h1>
         </div>
 
-        <!-- Adaptive Arena Grid for 3 to 14 Players (Option 1 Dark Arcade Frames) -->
         <main class="flex-1 flex items-center justify-center min-h-0 py-1">
             <div class="w-full grid gap-2.5 sm:gap-3.5 {$gamePlayers.length <= 6 ? 'grid-cols-2 md:grid-cols-3 max-w-4xl' : 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 max-w-6xl'} mx-auto">
                 {#each $gamePlayers as p (p.id)}
@@ -190,14 +229,13 @@
                     {@const progressPct = totalItems > 0 ? Math.round((answeredItems / totalItems) * 100) : 0}
 
                     <div class="panel-arcade p-2.5 sm:p-3 rounded-lg flex flex-col justify-between border-neutral-700/90 bg-black/85 shadow-md transition-all duration-300">
-                        <!-- Card Header: Avatar, Name, Host & Score -->
                         <div class="flex items-center gap-2 mb-1.5">
                             <div class="{$gamePlayers.length > 8 ? 'w-8 h-8 sm:w-10 sm:h-10' : 'w-10 h-10 sm:w-12 sm:h-12'} flex-shrink-0">
                                 <PixelAvatar avatar={p.avatar} />
                             </div>
                             <div class="min-w-0 flex-1 text-left">
                                 <div class="flex items-center gap-1">
-                                    <p class="font-bold text-xs sm:text-sm text-slate-100 truncate">{p.name}</p>
+                                    <p class="font-bold text-xs sm:text-sm text-slate-100 whitespace-nowrap">{p.name}</p>
                                     {#if p.isHost}
                                         <span class="px-1 py-0.2 bg-warning text-black text-[8px] font-display rounded font-bold flex-shrink-0">{$t.host || 'HOST'}</span>
                                     {/if}
@@ -208,7 +246,6 @@
                             </div>
                         </div>
 
-                        <!-- Progress Bar & Dynamic Status Indicator -->
                         <div class="w-full mt-auto pt-1">
                             <div class="flex items-center justify-between text-[9px] sm:text-[10px] font-display font-bold mb-1">
                                 {#if !isConnected}
@@ -229,7 +266,6 @@
                                 <span class="font-mono text-slate-400">{answeredItems}/{totalItems}</span>
                             </div>
 
-                            <!-- Sleek Progress Track -->
                             <div class="w-full h-1.5 bg-neutral-900 rounded-full overflow-hidden border border-neutral-700/60">
                                 <div 
                                     class="h-full transition-all duration-500 {
@@ -243,371 +279,372 @@
                 {/each}
             </div>
         </main>
-    </div>
-{:else}
-<div class="p-3 sm:p-6 flex flex-col md:flex-row gap-4 sm:gap-6 min-h-screen relative host-game-container">
-    {#if $activeTimeBoostNotice}
-        <div class="fixed top-6 right-6 z-50 animate-bounce bg-yellow-400 text-black px-4 py-2 rounded-lg font-display font-extrabold shadow-[0_0_20px_rgba(250,204,21,0.8)] border-2 border-white flex items-center gap-2">
-            <span class="text-xl">⏱️</span>
-            <span>{$t.timeBoostUsed.replace('{name}', $activeTimeBoostNotice.playerName)}</span>
-        </div>
-    {/if}
 
-    <!-- Player List Sidebar -->
-    <aside class="w-full md:w-1/3 lg:w-1/4 panel-arcade flex flex-col" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
-        <!-- Lifted Theme Display -->
-        <div class="mb-4 p-2.5 bg-black/60 border border-primary/60 rounded-md text-left">
-            <span class="text-xs uppercase tracking-wider text-neutral-400 font-semibold block mb-0.5">🎭 {$t.chosenTheme}</span>
-            <span class="font-bold text-primary text-base sm:text-lg break-words block leading-snug">{$gameState.theme || '...'}</span>
-        </div>
+    {:else if $gamePhase === 'battle_voting'}
+        <!-- Phase: Battle Voting Arena -->
+        {@const battle = $gameState.battleSchedule?.[$gameState.currentVotingBattleIndex]}
+        {#if battle}
+            {@const isQuad = battle.competitors?.length === 4}
+            {@const isTrio = battle.competitors?.length === 3}
+            {@const isFinal = !!battle.genre}
+            {@const formatBadgeText = isQuad ? ($t.quadLabel || '🔥 4-WAY BRAWL') : (isTrio ? ($t.brawlLabel || '💥 3-WAY BRAWL') : ($t.showdownLabel || '⚡ 1-ON-1 SHOWDOWN'))}
+            {@const formatBadgeColor = isQuad ? 'bg-orange-950/90 border-orange-400 text-orange-200' : (isTrio ? 'bg-purple-950/90 border-purple-400 text-purple-200' : 'bg-cyan-950/90 border-cyan-400 text-cyan-200')}
 
-        <h2 class="text-xl mb-3 text-primary" style="text-shadow: 0 0 5px var(--color-primary);">{$t.players} ({$gamePlayers.length})</h2>
-        <div class="flex-grow overflow-y-auto pr-1 space-y-2">
-            {#each $gamePlayers as p (p.id)}
-                <div class="flex items-center gap-3 bg-neutral-900/80 p-2.5 border border-neutral-700 rounded-md" data-player-id={p.id}>
-                    <div class="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0">
-                        <PixelAvatar avatar={p.avatar} />
-                    </div>
-                    <div class="flex-grow min-w-0">
-                        <p class="text-base font-medium flex items-center gap-1.5">
-                            <span class="truncate">{p.name}</span>
-                            {#if p.isHost}
-                                <span class="px-1.5 py-0.5 bg-warning text-black text-[10px] font-display rounded-sm flex-shrink-0">{$t.host}</span>
-                            {/if}
-                        </p>
-                        <p class="text-primary font-bold text-lg leading-none mt-1">
-                            {$gamePhase === 'results' 
-                                ? (displayedScores[p.id] !== undefined ? displayedScores[p.id] : p.score) 
-                                : Math.round($animatedScores[p.id] || p.score)}
-                            {$t.score}
-                        </p>
-                    </div>
-                    {#if !p.socketId}
-                        <span class="px-1.5 py-0.5 bg-danger text-white text-[10px] font-display rounded-sm animate-pulse flex-shrink-0">{$t.disconnected.toUpperCase()}</span>
-                    {/if}
+            <!-- Stage Header: Timer & Format Badge -->
+            <div class="flex flex-col items-center mb-1.5 flex-shrink-0">
+                <div class="scale-75 -my-1">
+                    <SevenSegmentDisplay time={$phaseTimer} />
                 </div>
-            {/each}
-        </div>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main class="w-full md:w-2/3 lg:w-3/4 flex flex-col items-center py-4 sm:py-6" class:flex-grow={$gamePhase === 'generating_round'}>
-        {#if $gamePhase === 'generating_round'}
-             <LoadingSpinner message={loadingMessage} />
-        {:else if $gamePhase === 'get_ready'}
-            <div class="text-center">
-                <h1 class="text-3xl sm:text-4xl my-4 text-primary animate-pulse">{$t.getReadyTitle}</h1>
-                <h2 class="text-xl sm:text-2xl text-accent">{$t.getReadySubtitle.replace('{currentRound}', $currentRound)}</h2>
-                 <SevenSegmentDisplay time={$phaseTimer} />
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-display font-black tracking-wider uppercase border shadow-md {formatBadgeColor}">
+                        {formatBadgeText}
+                    </span>
+                    <span class="text-[11px] font-display font-bold text-slate-300 tracking-widest uppercase">
+                        {$t.voteForBestAnswer || 'VOTE FOR THE FUNNIEST ANSWER'}
+                    </span>
+                </div>
             </div>
-        {:else if $gamePhase === 'question' || $gamePhase === 'battle_answering'}
-            <div class="text-center w-full">
-                <SevenSegmentDisplay time={$phaseTimer} />
-                {#if $gamePhase === 'question'}
-                    <h1 class="text-3xl sm:text-4xl my-4">{$t.questionPhase}</h1>
-                    <h2 class="text-xl sm:text-2xl text-primary">{$t.roundStatus.replace('{currentRound}', $currentRound)}</h2>
+
+            <!-- Prompt Banner Card -->
+            <div class="w-full max-w-5xl bg-neutral-950/80 border-2 border-cyan-400/60 rounded-xl px-4 py-2 mb-2 shadow-[0_0_20px_rgba(6,182,212,0.15)] text-center backdrop-blur-md flex-shrink-0">
+                <span class="text-[9px] font-display font-bold text-cyan-400 uppercase tracking-widest block">
+                    {isFinal ? ($t.finalBattleTheme || 'FINAL BATTLE PREMISE') : ($t.battlePrompt || 'BATTLE PROMPT')}
+                </span>
+                {#if isFinal}
+                    <p class="text-sm font-bold text-amber-300 mb-0.5">{battle.genre}</p>
+                    <p class="text-base md:text-lg font-sans font-bold text-white leading-snug">{battle.premise}</p>
                 {:else}
-                    <h1 class="text-3xl sm:text-4xl my-4">{$currentRound === 3 ? $t.finalRound : $t.battlePhase}</h1>
-                    <h2 class="text-xl sm:text-2xl text-primary">{$t.answering}</h2>
+                    <p class="text-base md:text-lg font-sans font-bold text-white leading-snug">{battle.prompt}</p>
                 {/if}
+            </div>
 
-                <div class="mt-6 w-full max-w-4xl mx-auto">
-                    <p class="text-xl font-bold mb-3 text-slate-200">{$t.waitingFor}:</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        {#each $gamePlayers as p (p.id)}
-                            {@const isConnected = !!p.socketId}
-                            <div class="p-3.5 bg-neutral-900/90 border border-neutral-600 flex items-center gap-3 rounded-lg transition-opacity shadow-sm {isConnected ? 'opacity-100' : 'opacity-50'}">
-                                <div class="w-11 h-11 flex-shrink-0">
-                                    <PixelAvatar avatar={p.avatar} />
-                                </div>
-                                <div class="flex-grow text-left min-w-0">
-                                    <p class="font-bold text-base text-slate-100 truncate">{p.name}</p>
-                                    {#if !isConnected}
-                                        <p class="text-xs font-display text-danger animate-pulse font-bold">{$t.disconnected}</p>
-                                    {:else if $gamePhase === 'question'}
-                                        {@const totalQs = $gameState.playerAnswers[p.id]?.questions.length || 0}
-                                        {@const answeredQs = $gameState.playerAnswers[p.id]?.questions.filter(q => !!q.answer).length || 0}
-                                        <p class="text-xs font-display font-bold {answeredQs === totalQs ? 'text-emerald-400' : 'text-amber-300 animate-pulse'}">{answeredQs}/{totalQs} {$t.answered}</p>
-                                    {:else if $gamePhase === 'battle_answering'}
-                                         {@const totalBattles = $gameState.battleSchedule.filter(b => b.competitors.includes(p.id)).length}
-                                         {@const answeredBattles = $gameState.battleSchedule.filter(b => b.competitors.includes(p.id) && !!b.answers[p.id]).length}
-                                         <p class="text-xs font-display font-bold {answeredBattles === totalBattles ? 'text-emerald-400' : 'text-amber-300 animate-pulse'}">{answeredBattles}/{totalBattles} {$t.answered}</p>
-                                    {/if}
-                                </div>
+            <!-- Full-Width Wider Answer Arena Cards -->
+            <main class="w-full max-w-7xl grid grid-cols-1 {isQuad ? 'md:grid-cols-4 gap-3' : (isTrio ? 'md:grid-cols-3 gap-4' : 'md:grid-cols-2 gap-6')} mb-2 flex-1 items-stretch px-2">
+                {#each battle.competitors as c_id, i (c_id)}
+                    {@const style = cardStyles[i] || cardStyles[0]}
+                    {@const answerLabel = i === 0 ? ($t.answerA || 'OPTION A') : (i === 1 ? ($t.answerB || 'OPTION B') : (i === 2 ? ($t.answerC || 'OPTION C') : ($t.answerD || 'OPTION D')))}
+                    {@const answer = renderAnswer(battle.answers?.[c_id])}
+                    <div class="bg-neutral-950/80 border-2 {style.border} {style.bg} rounded-xl p-3.5 md:p-4 shadow-[0_0_15px_rgba(0,0,0,0.5)] flex flex-col justify-between backdrop-blur-sm">
+                        <div>
+                            <div class="flex items-center justify-between border-b border-neutral-800 pb-1.5 mb-2">
+                                <span class="font-display font-black text-xs md:text-sm {style.text} tracking-wider">{answerLabel}</span>
+                                <span class="text-[9px] font-mono text-slate-400 uppercase tracking-widest">{$t.anonymous || 'ANONYMOUS'}</span>
                             </div>
-                        {/each}
+                            <p class="text-sm md:text-base font-sans font-medium text-slate-100 leading-relaxed text-center py-2 whitespace-pre-wrap">
+                                "{answer}"
+                            </p>
+                        </div>
+                        <div class="pt-2 border-t border-neutral-800/80 mt-1 flex justify-center">
+                            <span class="text-[10px] font-display font-bold {style.text} uppercase tracking-wider">
+                                {$t.tapOptionOnPhone ? $t.tapOptionOnPhone.replace('{label}', answerLabel) : `Tap ${answerLabel} on Phone`}
+                            </span>
+                        </div>
                     </div>
+                {/each}
+            </main>
+
+            <!-- Anonymous Live Voter Gauge -->
+            {@const eligibleVoters = $gamePlayers.filter(p => !battle.competitors.includes(p.id))}
+            {@const votedCount = Object.keys(battle.votes || {}).length}
+            {@const totalVoters = eligibleVoters.length}
+            {@const percentage = totalVoters > 0 ? Math.round((votedCount / totalVoters) * 100) : 0}
+            <div class="w-full max-w-sm bg-neutral-950/80 border border-neutral-700/80 rounded-xl px-4 py-1.5 mb-1.5 shadow-sm flex flex-col gap-1 flex-shrink-0 mx-auto">
+                <div class="flex items-center justify-between text-[10px]">
+                    <span class="font-display font-bold text-cyan-400">🗳️ {$t.votesLockedIn || 'VOTES LOCKED IN'}:</span>
+                    <span class="font-mono font-bold text-white">{votedCount} / {totalVoters} {$t.voters || 'VOTERS'}</span>
                 </div>
-            </div>
-        {:else if $gamePhase === 'battle_get_ready'}
-            <div class="text-center">
-                 <SevenSegmentDisplay time={$phaseTimer} />
-                 <h1 class="text-3xl sm:text-4xl my-4 text-secondary animate-pulse">{$t.battleGetReadyTitle}</h1>
-                 <h2 class="text-xl sm:text-2xl text-primary">{$t.battlePhase}</h2>
-            </div>
-        {:else if $gamePhase === 'voting_get_ready'}
-            <div class="text-center">
-                 <SevenSegmentDisplay time={$phaseTimer} />
-                 <h1 class="text-3xl sm:text-4xl my-4 text-primary animate-pulse">{$t.votingGetReadyTitle}</h1>
-                 <h2 class="text-xl sm:text-2xl text-accent">{$t.votingPhase}</h2>
-            </div>
-        {:else if $gamePhase === 'battle_voting'}
-            {@const battle = $gameState.battleSchedule[$gameState.currentVotingBattleIndex]}
-            <div class="text-center w-full max-w-5xl">
-                <SevenSegmentDisplay time={$phaseTimer} />
-                <h1 class="text-2xl sm:text-3xl my-4">{$t.voteForBestAnswer}</h1>
-                {#if battle}
-                    {@const isQuad = battle.competitors.length === 4}
-                    {@const isTrio = battle.competitors.length === 3}
-                    {@const isFinal = !!battle.genre}
-                    <div class="mb-4">
-                        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-base font-bold tracking-wider border shadow-md {isQuad ? 'bg-orange-950/80 border-orange-400 text-orange-200' : (isTrio ? 'bg-purple-950/80 border-purple-400 text-purple-200' : 'bg-cyan-950/80 border-cyan-400 text-cyan-200')}">
-                            {isQuad ? $t.quadLabel : (isTrio ? $t.brawlLabel : $t.showdownLabel)}
-                        </span>
-                    </div>
-                    <div class="text-neutral-300 text-lg sm:text-xl leading-relaxed mb-6 p-4 bg-black/50 border border-neutral-700 rounded-md max-w-4xl mx-auto">
-                        {#if isFinal}
-                            <p class="mb-2 text-primary font-bold">{battle.genre}</p>
-                            <p class="text-base sm:text-lg">{battle.premise}</p>
-                        {:else}
-                            {battle.prompt}
-                        {/if}
-                    </div>
-                    <div class="grid grid-cols-1 {isQuad ? 'md:grid-cols-2 lg:grid-cols-4' : (isTrio ? 'md:grid-cols-3' : 'md:grid-cols-2')} gap-6 mt-6">
-                        {#each battle.competitors as c_id, i (c_id)}
-                            {@const answer = renderAnswer(battle.answers[c_id])}
-                            {@const answerLabel = i === 0 ? $t.answerA : (i === 1 ? $t.answerB : (i === 2 ? $t.answerC : $t.answerD))}
-                            {@const cardColor = i === 0 ? 'var(--color-primary)' : (i === 1 ? 'var(--color-secondary)' : (i === 2 ? 'var(--color-accent)' : '#a855f7'))}
-                            {@const cardRgb = i === 0 ? 'var(--color-primary-rgb)' : (i === 1 ? 'var(--color-secondary-rgb)' : (i === 2 ? 'var(--color-accent-rgb)' : '168, 85, 247'))}
-                            <div class="panel-arcade flex-grow" style="--neon-color: {cardColor}; --neon-color-rgb: {cardRgb};">
-                                <h3 class="text-xl sm:text-2xl mb-3" style="color: {cardColor};">{answerLabel}</h3>
-                                <div class="text-left text-lg sm:text-xl min-h-[8rem] bg-black/50 p-3 border border-neutral-700 rounded-md whitespace-pre-wrap">{answer}</div>
-                            </div>
-                        {/each}
-                    </div>
-
-                    <!-- Anonymous Live Voter Gauge -->
-                    {@const eligibleVoters = $gamePlayers.filter(p => !battle.competitors.includes(p.id))}
-                    {@const votedCount = Object.keys(battle.votes || {}).length}
-                    {@const totalVoters = eligibleVoters.length}
-                    {@const percentage = totalVoters > 0 ? Math.round((votedCount / totalVoters) * 100) : 0}
-                    <div class="mt-8 pt-4 border-t border-neutral-800 flex flex-col items-center justify-center gap-3 bg-neutral-950/70 p-4 rounded-lg border border-neutral-700 max-w-md mx-auto w-full">
-                        <div class="flex items-center justify-between w-full">
-                            <span class="text-sm sm:text-base font-bold text-accent">🗳️ {$t.votesLockedIn}:</span>
-                            <span class="text-base sm:text-lg font-extrabold text-white">{votedCount} / {totalVoters}</span>
-                        </div>
-                        <div class="w-full bg-neutral-800 rounded-full h-3 overflow-hidden border border-neutral-600">
-                            <div class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full transition-all duration-300 rounded-full" style="width: {percentage}%;"></div>
-                        </div>
-                    </div>
-                {/if}
-            </div>
-        {:else if $gamePhase === 'battle_result_reveal'}
-            {@const battle = $gameState.battleSchedule[$gameState.currentVotingBattleIndex]}
-            <div class="w-full text-center">
-                <SevenSegmentDisplay time={$phaseTimer} />
-                <h1 class="text-3xl sm:text-4xl mb-4">{$t.battleReveal}</h1>
-                 {#if battle}
-                    {@const isQuad = battle.competitors.length === 4}
-                    {@const isTrio = battle.competitors.length === 3}
-                    {@const winner = $gamePlayers.find(p => p.id === battle.winnerId)}
-                    {@const isFinal = !!battle.genre}
-                    <div class="mb-4">
-                        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-base font-bold tracking-wider border shadow-md {isQuad ? 'bg-orange-950/80 border-orange-400 text-orange-200' : (isTrio ? 'bg-purple-950/80 border-purple-400 text-purple-200' : 'bg-cyan-950/80 border-cyan-400 text-cyan-200')}">
-                            {isQuad ? $t.quadLabel : (isTrio ? $t.brawlLabel : $t.showdownLabel)}
-                        </span>
-                    </div>
-                    <div class="panel-arcade w-full max-w-5xl mx-auto" style="--neon-color: var(--color-accent); --neon-color-rgb: var(--color-accent-rgb);">
-                         <div class="text-neutral-300 text-lg sm:text-xl leading-relaxed mb-4 p-4 bg-black/50 border border-neutral-700 rounded-md max-w-4xl mx-auto">
-                            {#if isFinal}
-                                <p class="mb-2 text-primary font-bold">{battle.genre}</p>
-                                <p class="text-base sm:text-lg">{battle.premise}</p>
-                            {:else}
-                                {battle.prompt}
-                            {/if}
-                        </div>
-                         <div class="grid grid-cols-1 {isQuad ? 'md:grid-cols-2 lg:grid-cols-4 gap-3' : (isTrio ? 'md:grid-cols-3 gap-4' : 'md:grid-cols-2 gap-6')}">
-                            {#each battle.competitors as c_id (c_id)}
-                                {@const c = $gamePlayers.find(p => p.id === c_id)}
-                                {@const answer = battle.answers[c_id]}
-                                {@const isWinner = battle.winnerId === c_id}
-                                {@const isTie = !battle.winnerId && battle.pointsAwarded?.[c_id] > 0}
-                                {@const bdown = battle.scoreBreakdown?.[c_id]}
-                                {@const hasRainbow = bdown?.rainbowBonus > 0}
-                                <div class="bg-neutral-900 {isQuad ? 'p-3' : (isTrio ? 'p-3.5' : 'p-4')} border-2 rounded-md relative flex flex-col justify-between {isWinner ? 'winner-card' : ''} {isTie ? 'ring-2 ring-yellow-500' : 'border-neutral-700'} {hasRainbow && !isWinner ? 'shadow-[0_0_12px_rgba(236,72,153,0.3)]' : ''}">
-                                    <div>
-                                        <div class="relative flex items-center {isQuad ? 'gap-2 mb-2 text-base sm:text-lg' : 'gap-3 mb-3 text-xl sm:text-2xl'} font-bold">
-                                            <div class="{isQuad ? 'w-8 h-8' : 'w-11 h-11'} flex-shrink-0">
-                                                <PixelAvatar avatar={c?.avatar || '❓'} />
-                                            </div>
-                                            <span class="truncate">{c?.name || $t.disconnected}</span>
-                                        </div>
-                                        <div class="text-left {isQuad ? 'text-xs sm:text-sm min-h-[5.5rem] p-2' : (isTrio ? 'text-sm sm:text-base min-h-[6.5rem] p-2.5' : 'text-base sm:text-lg min-h-[7.5rem] p-3')} bg-black/75 border border-neutral-600 rounded-md mt-1 leading-relaxed">
-                                            {#if battle.annotatedAnswers?.[c_id]}
-                                                {@const annotated = battle.annotatedAnswers[c_id]}
-                                                {#if annotated.isFinal}
-                                                    <div class="mb-1"><span class="font-bold text-primary mr-1">Title:</span>{#each annotated.title as tok}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}{/each}</div>
-                                                    <div><span class="font-bold text-primary mr-1">Tagline:</span>{#each annotated.tagline as tok}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}{/each}</div>
-                                                {:else}
-                                                    {#each annotated.words as tok}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}{/each}
-                                                {/if}
-                                            {:else}
-                                                <span class="whitespace-pre-wrap">{renderAnswer(answer)}</span>
-                                            {/if}
-                                        </div>
-                                        {#if hasRainbow}
-                                            <div class="mt-2 flex justify-center"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold tracking-wide bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-cyan-500/20 border border-pink-400 text-pink-300 shadow-[0_0_8px_rgba(236,72,153,0.3)] animate-pulse">{$t.rainbowBadge} (+{bdown.rainbowBonus})</span></div>
-                                        {/if}
-                                        {#if battle.pointsAwarded?.[c_id] > 0}
-                                            <div class="points-reveal-animation my-1 {isQuad ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-extrabold text-accent">+{battle.pointsAwarded[c_id]}</div>
-                                            {#if bdown}
-                                                <div class="flex flex-wrap items-center justify-center gap-1 mt-1 text-[11px] font-semibold">
-                                                    {#if bdown.votePoints > 0}<span class="px-1.5 py-0.5 rounded bg-neutral-800 border border-neutral-600 text-neutral-300">🗳️ {bdown.votes} {$t.votesBreakdown} (+{bdown.votePoints})</span>{/if}
-                                                    {#if bdown.winBonus > 0}<span class="px-1.5 py-0.5 rounded bg-yellow-950/80 border border-yellow-500/80 text-yellow-300">🏆 {$t.winBonusBreakdown} (+{bdown.winBonus})</span>{/if}
-                                                    {#if bdown.sweepBonus > 0}<span class="px-1.5 py-0.5 rounded bg-purple-950/80 border border-purple-500/80 text-purple-300">🧹 {$t.sweepBonusBreakdown} (+{bdown.sweepBonus})</span>{/if}
-                                                </div>
-                                            {/if}
-                                        {/if}
-                                    </div>
-                                    <div class="mt-3 text-left">
-                                        <p class="{isQuad ? 'text-[11px]' : 'text-xs sm:text-sm'} font-bold text-neutral-400 mb-1">{$t.votedForYou}:</p>
-                                        <div class="flex flex-wrap gap-1">
-                                            {#each Object.entries(battle.votes) as [voterId, votedFor]}
-                                                {#if votedFor === c_id}
-                                                    {@const voter = $gamePlayers.find(p => p.id === voterId)}
-                                                    <span class="{isQuad ? 'px-1 py-0.5 text-[11px] gap-1' : 'px-2 py-0.5 text-xs gap-1.5'} bg-neutral-800 border border-neutral-600 flex items-center rounded-md" title={voter?.name}>
-                                                        <div class="{isQuad ? 'w-5 h-5' : 'w-6 h-6'} flex-shrink-0"><PixelAvatar avatar={voter?.avatar} /></div>
-                                                        <span class="truncate max-w-[65px]">{voter?.name}</span>
-                                                    </span>
-                                                {/if}
-                                            {/each}
-                                        </div>
-                                    </div>
-                                </div>
-                            {/each}
-                         </div>
-                         {#if winner}
-                            <p class="text-center text-3xl text-accent mt-6 animate-pulse">{$t.winner}: {winner.name}!</p>
-                         {:else if Object.values(battle.pointsAwarded || {}).every(v => v > 0)}
-                            <p class="text-center text-3xl text-warning mt-6 animate-pulse">{$t.tie}!</p>
-                         {:else}
-                             <p class="text-center text-2xl text-neutral-400 mt-6">{$t.noWinner}</p>
-                         {/if}
-
-                         {#if battle.royalties && battle.royalties.length > 0}
-                            <div class="mt-4 p-3 bg-neutral-900/90 border border-secondary/40 rounded-md text-sm text-neutral-300 flex flex-wrap items-center justify-center gap-2">
-                                <span class="text-secondary font-bold">✨ {$t.wordRoyalties}:</span>
-                                {#each battle.royalties as roy}
-                                    <span class="bg-neutral-800 px-2.5 py-1 rounded border border-neutral-700">
-                                        <span class="text-primary font-medium">{roy.authorName}</span> (+{roy.points} pts)
-                                    </span>
-                                {/each}
-                            </div>
-                         {/if}
-                    </div>
-                 {/if}
-            </div>
-        {:else if $gamePhase === 'results'}
-            <div class="w-full text-center">
-                <h1 class="text-4xl mb-4 text-warning" style="text-shadow: 0 0 10px #facc15;">{$t.finalScores}</h1>
-                <div class="max-w-xl mx-auto mt-8 space-y-4">
-                    {#each $gamePlayers as p, i (p.id)}
-                        {@const isWinner = p.score > 0 && p.score === topScore}
-                        <div class="panel-arcade flex items-center gap-4 text-left {isWinner ? 'final-winner-card' : ''}" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb); animation-delay: {i * 0.1}s;">
-                            <span class="font-display text-3xl w-12 text-center">{['🥇','🥈','🥉'][i] || i + 1}</span>
-                             <div class="w-12 h-12 flex-shrink-0">
-                                <PixelAvatar avatar={p.avatar} />
-                            </div>
-                            <span class="text-2xl font-bold flex-grow">{p.name}</span>
-                            <span class="font-display text-3xl text-primary">{displayedScores[p.id] ?? p.score}</span>
-                        </div>
-                    {/each}
-                </div>
-
-                {#if $gameState.superlatives && Object.keys($gameState.superlatives).length > 0}
-                    {@const sups = $gameState.superlatives}
-                    <div class="max-w-3xl mx-auto mt-10 p-4 sm:p-6 bg-neutral-950/80 border border-secondary/50 rounded-xl shadow-lg">
-                        <h2 class="text-2xl font-bold text-secondary mb-4 flex items-center justify-center gap-2">
-                            <span>🏆</span> {$t.superlativesTitle}
-                        </h2>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-left">
-                            {#if sups.ammoFactory}
-                                {@const p = $gamePlayers.find(pl => pl.id === sups.ammoFactory.playerId)}
-                                <div class="bg-neutral-900 border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
-                                    <div>
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <div class="w-7 h-7"><PixelAvatar avatar={p?.avatar || '🎯'} /></div>
-                                            <span class="font-bold text-primary truncate">{p?.name}</span>
-                                        </div>
-                                        <p class="font-bold text-sm text-yellow-300">{$t.ammoFactoryTitle}</p>
-                                        <p class="text-xs text-neutral-400 mt-1">{$t.ammoFactoryDesc} (+{sups.ammoFactory.value} pts)</p>
-                                    </div>
-                                </div>
-                            {/if}
-                            {#if sups.rainbowAlchemist}
-                                {@const p = $gamePlayers.find(pl => pl.id === sups.rainbowAlchemist.playerId)}
-                                <div class="bg-neutral-900 border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
-                                    <div>
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <div class="w-7 h-7"><PixelAvatar avatar={p?.avatar || '🌈'} /></div>
-                                            <span class="font-bold text-pink-300 truncate">{p?.name}</span>
-                                        </div>
-                                        <p class="font-bold text-sm text-pink-400">{$t.rainbowAlchemistTitle}</p>
-                                        <p class="text-xs text-neutral-400 mt-1">{$t.rainbowAlchemistDesc} ({sups.rainbowAlchemist.value}x)</p>
-                                    </div>
-                                </div>
-                            {/if}
-                            {#if sups.cleanSweeper}
-                                {@const p = $gamePlayers.find(pl => pl.id === sups.cleanSweeper.playerId)}
-                                <div class="bg-neutral-900 border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
-                                    <div>
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <div class="w-7 h-7"><PixelAvatar avatar={p?.avatar || '🧹'} /></div>
-                                            <span class="font-bold text-purple-300 truncate">{p?.name}</span>
-                                        </div>
-                                        <p class="font-bold text-sm text-purple-400">{$t.cleanSweeperTitle}</p>
-                                        <p class="text-xs text-neutral-400 mt-1">{$t.cleanSweeperDesc} ({sups.cleanSweeper.value}x)</p>
-                                    </div>
-                                </div>
-                            {/if}
-                            {#if sups.minimalist}
-                                {@const p = $gamePlayers.find(pl => pl.id === sups.minimalist.playerId)}
-                                <div class="bg-neutral-900 border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
-                                    <div>
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <div class="w-7 h-7"><PixelAvatar avatar={p?.avatar || '🪶'} /></div>
-                                            <span class="font-bold text-emerald-300 truncate">{p?.name}</span>
-                                        </div>
-                                        <p class="font-bold text-sm text-emerald-400">{$t.minimalistTitle}</p>
-                                        <p class="text-xs text-neutral-400 mt-1">{$t.minimalistDesc} ({sups.minimalist.count} words)</p>
-                                    </div>
-                                </div>
-                            {/if}
-                            {#if sups.shakespeare}
-                                {@const p = $gamePlayers.find(pl => pl.id === sups.shakespeare.playerId)}
-                                <div class="bg-neutral-900 border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
-                                    <div>
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <div class="w-7 h-7"><PixelAvatar avatar={p?.avatar || '💬'} /></div>
-                                            <span class="font-bold text-cyan-300 truncate">{p?.name}</span>
-                                        </div>
-                                        <p class="font-bold text-sm text-cyan-400">{$t.shakespeareTitle}</p>
-                                        <p class="text-xs text-neutral-400 mt-1">{$t.shakespeareDesc} ({sups.shakespeare.count} words)</p>
-                                    </div>
-                                </div>
-                            {/if}
-                        </div>
-                    </div>
-                {/if}
-
-                <div class="mt-12">
-                    <button class="btn-arcade" style="--btn-color: var(--color-accent);" on:click={() => sendMessage('play-again', { gameId: $gameState.id, loading: true })}>{$t.playAgain}</button>
+                <div class="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden border border-neutral-700">
+                    <div class="bg-gradient-to-r from-cyan-400 to-emerald-400 h-full rounded-full transition-all duration-300" style="width: {percentage}%;"></div>
                 </div>
             </div>
         {/if}
-    </main>
 
-     <!-- Flying Avatar & Emoji Container -->
+    {:else if $gamePhase === 'battle_result_reveal'}
+        <!-- Phase: Battle Result Reveal Arena -->
+        {@const battle = $gameState.battleSchedule?.[$gameState.currentVotingBattleIndex]}
+        {#if battle}
+            {@const isQuad = battle.competitors?.length === 4}
+            {@const isTrio = battle.competitors?.length === 3}
+            {@const isFinal = !!battle.genre}
+            {@const formatBadgeText = isQuad ? `${$t.quadLabel || '4-WAY BRAWL'} ${$t.results || 'RESULTS'}` : (isTrio ? `${$t.brawlLabel || '3-WAY BRAWL'} ${$t.results || 'RESULTS'}` : `${$t.showdownLabel || '1-ON-1 SHOWDOWN'} ${$t.results || 'RESULTS'}`)}
+
+            <!-- Stage Header: Timer & Battle Reveal Banner -->
+            <div class="flex flex-col items-center mb-1.5 flex-shrink-0">
+                <div class="scale-75 -my-1">
+                    <SevenSegmentDisplay time={$phaseTimer} />
+                </div>
+                <div class="flex items-center gap-2 mt-0.5">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] md:text-[11px] font-display font-black tracking-wider uppercase bg-fuchsia-950/90 border border-fuchsia-400 text-fuchsia-300 shadow-md">
+                        {formatBadgeText}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Prompt Banner Card -->
+            <div class="w-full max-w-5xl bg-neutral-950/80 border-2 border-cyan-400/60 rounded-xl px-4 py-1.5 mb-2 shadow-[0_0_20px_rgba(6,182,212,0.15)] text-center backdrop-blur-md flex-shrink-0">
+                <span class="text-[8px] font-display font-bold text-cyan-400 uppercase tracking-widest block">
+                    {isFinal ? ($t.finalBattleTheme || 'FINAL BATTLE PREMISE') : ($t.battlePrompt || 'BATTLE PROMPT')}
+                </span>
+                {#if isFinal}
+                    <p class="text-xs font-bold text-amber-300 mb-0.5">{battle.genre}</p>
+                    <p class="text-sm md:text-base font-sans font-bold text-white leading-snug">{battle.premise}</p>
+                {:else}
+                    <p class="text-sm md:text-base font-sans font-bold text-white leading-snug">{battle.prompt}</p>
+                {/if}
+            </div>
+
+            <!-- Full-Width Wider Reveal Cards -->
+            <main class="w-full max-w-7xl grid grid-cols-1 {isQuad ? 'md:grid-cols-4 gap-3' : (isTrio ? 'md:grid-cols-3 gap-4' : 'md:grid-cols-2 gap-6')} mb-2 flex-1 items-stretch px-2">
+                {#each battle.competitors as c_id (c_id)}
+                    {@const p = $gamePlayers.find(x => x.id === c_id)}
+                    {@const isWinner = battle.winnerId === c_id}
+                    {@const isTie = !battle.winnerId && battle.pointsAwarded?.[c_id] > 0}
+                    {@const bdown = battle.scoreBreakdown?.[c_id]}
+                    {@const hasRainbow = bdown?.rainbowBonus > 0}
+                    {@const answer = battle.answers?.[c_id]}
+
+                    <div class="bg-neutral-950/90 border-2 {isWinner ? 'border-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)] ring-2 ring-yellow-400/30' : (isTie ? 'ring-2 ring-yellow-500 border-neutral-700/80' : 'border-neutral-700/80 shadow-[0_0_12px_rgba(0,0,0,0.5)]')} rounded-xl p-3.5 md:p-4 flex flex-col justify-between backdrop-blur-sm relative transition-all">
+                        {#if isWinner}
+                            <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-black px-2.5 py-0.2 rounded-full font-display font-black text-[10px] tracking-wider shadow-lg flex items-center gap-1 border border-yellow-200">
+                                <span>👑</span> <span>{$t.winner || 'WINNER!'}</span>
+                            </div>
+                        {/if}
+
+                        <div>
+                            <!-- Card Header: Avatar & Name -->
+                            <div class="flex items-center gap-2.5 pb-2 mb-2 border-b border-neutral-800">
+                                <div class="{isQuad ? 'w-8 h-8' : 'w-10 h-10'} flex-shrink-0">
+                                    <PixelAvatar avatar={p?.avatar || '❓'} />
+                                </div>
+                                <div class="min-w-0 flex-grow text-left">
+                                    <span class="font-display font-bold {isQuad ? 'text-sm md:text-base' : 'text-base md:text-lg'} text-white block leading-tight whitespace-nowrap">{p?.name || $t.disconnected}</span>
+                                    <span class="text-[10px] md:text-xs font-mono text-slate-400 font-semibold">{Math.round($animatedScores[c_id] || p?.score || 0)} PTS</span>
+                                </div>
+                            </div>
+
+                            <!-- Word Highlight Sentence -->
+                            <div class="bg-black/75 border border-neutral-700/80 rounded-lg p-2.5 text-xs md:text-sm text-center leading-relaxed min-h-[4rem] flex items-center justify-center">
+                                {#if battle.annotatedAnswers?.[c_id]}
+                                    {@const annotated = battle.annotatedAnswers[c_id]}
+                                    {#if annotated.isFinal}
+                                        <div class="text-left w-full">
+                                            <div class="mb-1"><span class="font-bold text-primary mr-1">Title:</span>{#each annotated.title as tok}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}{/each}</div>
+                                            <div><span class="font-bold text-primary mr-1">Tagline:</span>{#each annotated.tagline as tok}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}{/each}</div>
+                                        </div>
+                                    {:else}
+                                        <p class="text-center w-full">
+                                            {#each annotated.words as tok}
+                                                <span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}
+                                            {/each}
+                                        </p>
+                                    {/if}
+                                {:else}
+                                    <span class="whitespace-pre-wrap">{renderAnswer(answer)}</span>
+                                {/if}
+                            </div>
+
+                            <!-- Points & Badges Section (Centered) -->
+                            <div class="flex flex-col items-center justify-center my-2 text-center w-full">
+                                {#if hasRainbow}
+                                    <div class="w-full flex justify-center mb-1.5">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] md:text-[11px] font-display font-extrabold tracking-wide bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-cyan-500/20 border border-pink-400 text-pink-300 shadow-[0_0_10px_rgba(236,72,153,0.4)] animate-pulse">
+                                            🌈 {$t.rainbowBadge || 'RAINBOW VARIETY'} (+{bdown.rainbowBonus})
+                                        </span>
+                                    </div>
+                                {/if}
+                                {#if battle.pointsAwarded?.[c_id] > 0}
+                                    <span class="font-display font-black text-2xl md:text-3xl text-amber-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">
+                                        +{battle.pointsAwarded[c_id]} PTS
+                                    </span>
+                                    {#if bdown}
+                                        <div class="flex flex-wrap items-center justify-center gap-1.5 mt-1.5 text-[10px] md:text-[11px] font-mono">
+                                            {#if bdown.votePoints > 0}
+                                                <span class="px-2 py-0.5 rounded bg-neutral-800 border border-neutral-700 text-neutral-300 font-medium">
+                                                    🗳️ {bdown.votes} {$t.votesBreakdown || 'Votes'} (+{bdown.votePoints})
+                                                </span>
+                                            {/if}
+                                            {#if bdown.winBonus > 0}
+                                                <span class="px-2 py-0.5 rounded bg-yellow-950/80 border border-yellow-500 text-yellow-300 font-bold">
+                                                    🏆 {$t.winBonusBreakdown || 'Win Bonus'} (+{bdown.winBonus})
+                                                </span>
+                                            {/if}
+                                            {#if bdown.sweepBonus > 0}
+                                                <span class="px-2 py-0.5 rounded bg-purple-950/80 border border-purple-500 text-purple-300 font-bold">
+                                                    🧹 {$t.sweepBonusBreakdown || 'Sweep Bonus'} (+{bdown.sweepBonus})
+                                                </span>
+                                            {/if}
+                                        </div>
+                                    {/if}
+                                {/if}
+                            </div>
+                        </div>
+
+                        <!-- Voter Chips -->
+                        <div class="pt-2 border-t border-neutral-800/80 text-left">
+                            <span class="text-[10px] font-display font-bold text-slate-400 uppercase block mb-1">
+                                {$t.votedForYou || 'VOTED FOR THIS'}:
+                            </span>
+                            <div class="flex flex-wrap gap-1.5">
+                                {#each Object.entries(battle.votes || {}) as [voterId, votedFor]}
+                                    {#if votedFor === c_id}
+                                        {@const voter = $gamePlayers.find(p => p.id === voterId)}
+                                        <div class="flex items-center gap-1.5 bg-neutral-900 border border-neutral-700 px-2 py-0.5 rounded-md text-[11px] font-display text-slate-200 shadow-sm" title={voter?.name}>
+                                            <div class="w-4 h-4 flex-shrink-0">
+                                                <PixelAvatar avatar={voter?.avatar || '❓'} />
+                                            </div>
+                                            <span class="font-medium whitespace-nowrap">{voter?.name}</span>
+                                        </div>
+                                    {/if}
+                                {/each}
+                                {#if !Object.values(battle.votes || {}).includes(c_id)}
+                                    <span class="text-[10px] font-mono text-slate-500 italic">{$t.noVotes || 'No votes'}</span>
+                                {/if}
+                            </div>
+                        </div>
+                    </div>
+                {/each}
+            </main>
+
+            {#if battle.royalties && battle.royalties.length > 0}
+                <div class="my-1 p-2 bg-neutral-900/90 border border-secondary/40 rounded-lg text-xs text-neutral-300 flex flex-wrap items-center justify-center gap-2 max-w-2xl mx-auto flex-shrink-0">
+                    <span class="text-secondary font-bold">✨ {$t.wordRoyalties || 'Word Royalties'}:</span>
+                    {#each battle.royalties as roy}
+                        <span class="bg-neutral-800 px-2 py-0.5 rounded border border-neutral-700 font-mono text-xs">
+                            <span class="text-primary font-medium">{roy.authorName}</span> (+{roy.points} pts)
+                        </span>
+                    {/each}
+                </div>
+            {/if}
+        {/if}
+
+    {:else if $gamePhase === 'results'}
+        <!-- Phase: Final Results Podium & Accolades -->
+        <main class="w-full text-center flex-1 flex flex-col justify-center py-4 my-auto">
+            <h1 class="text-3xl sm:text-4xl mb-4 text-warning font-display font-black tracking-wider" style="text-shadow: 0 0 12px #facc15;">
+                {$t.finalScores || 'FINAL RESULTS'}
+            </h1>
+            <div class="max-w-xl mx-auto w-full space-y-2.5">
+                {#each $gamePlayers as p, i (p.id)}
+                    {@const isWinner = p.score > 0 && p.score === topScore}
+                    <div class="panel-arcade flex items-center gap-4 text-left p-3 rounded-lg {isWinner ? 'final-winner-card border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.8)]' : 'border-neutral-700'}" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb); animation-delay: {i * 0.1}s;">
+                        <span class="font-display text-2xl w-10 text-center">{['🥇','🥈','🥉'][i] || i + 1}</span>
+                        <div class="w-10 h-10 flex-shrink-0">
+                            <PixelAvatar avatar={p.avatar} />
+                        </div>
+                        <span class="text-lg font-bold flex-grow truncate">{p.name}</span>
+                        <span class="font-display text-2xl text-primary font-mono">{displayedScores[p.id] ?? p.score}</span>
+                    </div>
+                {/each}
+            </div>
+
+            {#if $gameState.superlatives && Object.keys($gameState.superlatives).length > 0}
+                {@const sups = $gameState.superlatives}
+                <div class="max-w-3xl mx-auto mt-6 p-4 sm:p-5 bg-neutral-950/80 border border-secondary/50 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-bold text-secondary mb-3 flex items-center justify-center gap-2 font-display">
+                        <span>🏆</span> {$t.superlativesTitle || 'SPECIAL ACCOLADES'}
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-left">
+                        {#if sups.ammoFactory}
+                            {@const p = $gamePlayers.find(pl => pl.id === sups.ammoFactory.playerId)}
+                            <div class="bg-neutral-900 border border-neutral-700 p-2.5 rounded-lg flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <div class="w-6 h-6"><PixelAvatar avatar={p?.avatar || '🎯'} /></div>
+                                        <span class="font-bold text-primary truncate text-sm">{p?.name}</span>
+                                    </div>
+                                    <p class="font-bold text-xs text-yellow-300">{$t.ammoFactoryTitle || 'Ammo Factory'}</p>
+                                    <p class="text-[11px] text-neutral-400 mt-0.5">{$t.ammoFactoryDesc || 'Most words contributed'} (+{sups.ammoFactory.value} pts)</p>
+                                </div>
+                            </div>
+                        {/if}
+                        {#if sups.rainbowAlchemist}
+                            {@const p = $gamePlayers.find(pl => pl.id === sups.rainbowAlchemist.playerId)}
+                            <div class="bg-neutral-900 border border-neutral-700 p-2.5 rounded-lg flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <div class="w-6 h-6"><PixelAvatar avatar={p?.avatar || '🌈'} /></div>
+                                        <span class="font-bold text-pink-300 truncate text-sm">{p?.name}</span>
+                                    </div>
+                                    <p class="font-bold text-xs text-pink-400">{$t.rainbowAlchemistTitle || 'Rainbow Alchemist'}</p>
+                                    <p class="text-[11px] text-neutral-400 mt-0.5">{$t.rainbowAlchemistDesc || 'Most rainbow answers'} ({sups.rainbowAlchemist.value}x)</p>
+                                </div>
+                            </div>
+                        {/if}
+                        {#if sups.cleanSweeper}
+                            {@const p = $gamePlayers.find(pl => pl.id === sups.cleanSweeper.playerId)}
+                            <div class="bg-neutral-900 border border-neutral-700 p-2.5 rounded-lg flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <div class="w-6 h-6"><PixelAvatar avatar={p?.avatar || '🧹'} /></div>
+                                        <span class="font-bold text-purple-300 truncate text-sm">{p?.name}</span>
+                                    </div>
+                                    <p class="font-bold text-xs text-purple-400">{$t.cleanSweeperTitle || 'Clean Sweeper'}</p>
+                                    <p class="text-[11px] text-neutral-400 mt-0.5">{$t.cleanSweeperDesc || 'Unanimous vote victories'} ({sups.cleanSweeper.value}x)</p>
+                                </div>
+                            </div>
+                        {/if}
+                        {#if sups.minimalist}
+                            {@const p = $gamePlayers.find(pl => pl.id === sups.minimalist.playerId)}
+                            <div class="bg-neutral-900 border border-neutral-700 p-2.5 rounded-lg flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <div class="w-6 h-6"><PixelAvatar avatar={p?.avatar || '🪶'} /></div>
+                                        <span class="font-bold text-emerald-300 truncate text-sm">{p?.name}</span>
+                                    </div>
+                                    <p class="font-bold text-xs text-emerald-400">{$t.minimalistTitle || 'Minimalist'}</p>
+                                    <p class="text-[11px] text-neutral-400 mt-0.5">{$t.minimalistDesc || 'Shortest punchlines'} ({sups.minimalist.count} words)</p>
+                                </div>
+                            </div>
+                        {/if}
+                        {#if sups.shakespeare}
+                            {@const p = $gamePlayers.find(pl => pl.id === sups.shakespeare.playerId)}
+                            <div class="bg-neutral-900 border border-neutral-700 p-2.5 rounded-lg flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <div class="w-6 h-6"><PixelAvatar avatar={p?.avatar || '💬'} /></div>
+                                        <span class="font-bold text-cyan-300 truncate text-sm">{p?.name}</span>
+                                    </div>
+                                    <p class="font-bold text-xs text-cyan-400">{$t.shakespeareTitle || 'Shakespeare'}</p>
+                                    <p class="text-[11px] text-neutral-400 mt-0.5">{$t.shakespeareDesc || 'Longest elaborate stories'} ({sups.shakespeare.count} words)</p>
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+                </div>
+            {/if}
+
+            <div class="mt-6">
+                <button class="btn-arcade" style="--btn-color: var(--color-accent);" on:click={() => sendMessage('play-again', { gameId: $gameState.id, loading: true })}>
+                    {$t.playAgain || 'PLAY AGAIN'}
+                </button>
+            </div>
+        </main>
+    {/if}
+
+    <!-- Bottom Live Players Score Ribbon (Rendered for Get Ready, Voting, Reveal) -->
+    {#if $gamePhase !== 'question' && $gamePhase !== 'battle_answering' && $gamePhase !== 'generating_round' && $gamePhase !== 'results'}
+        {@const isReveal = $gamePhase === 'battle_result_reveal'}
+        {@const currentBattle = $gameState.battleSchedule?.[$gameState.currentVotingBattleIndex]}
+        <footer class="w-full flex items-center justify-center gap-2 flex-wrap pt-1 flex-shrink-0 max-w-6xl mx-auto">
+            {#each $gamePlayers as p (p.id)}
+                {@const isWinner = isReveal && currentBattle?.winnerId === p.id}
+                <div class="flex items-center gap-1.5 bg-neutral-900/90 border {isWinner ? 'border-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]' : 'border-neutral-700/80'} px-2.5 py-1 rounded-lg shadow-sm" data-player-id={p.id}>
+                    <div class="w-5 h-5 flex-shrink-0">
+                        <PixelAvatar avatar={p.avatar} />
+                    </div>
+                    <span class="font-display text-xs text-slate-100 font-bold whitespace-nowrap">{p.name}</span>
+                    {#if isWinner}
+                        <span class="text-[10px]">👑</span>
+                    {/if}
+                    <span class="font-mono text-xs text-cyan-400 font-bold ml-0.5">
+                        {Math.round($animatedScores[p.id] || p.score)}
+                    </span>
+                </div>
+            {/each}
+        </footer>
+    {/if}
+
+    <!-- Flying Avatar & Emoji Container -->
     <div class="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-30">
         {#each $flyingEmojis as emoji (emoji.id)}
             {@const startX = Math.random() * 80 + 10}
@@ -635,23 +672,23 @@
         {/each}
     </div>
 
-    <div class="fixed bottom-4 left-4 z-50 flex items-center gap-2">
+    <!-- Host TV Controls -->
+    <div class="fixed bottom-3 left-3 z-50 flex items-center gap-2">
         <button 
             on:click={toggleTvMode}
-            class="px-3 py-1.5 bg-black/90 text-xs rounded border transition-all font-display flex items-center gap-2 {$tvMode ? 'border-primary text-primary shadow-sm shadow-primary/50' : 'border-neutral-700 text-neutral-400 hover:text-white'}"
+            class="px-2.5 py-1 bg-black/90 text-[11px] rounded border transition-all font-display flex items-center gap-1.5 {$tvMode ? 'border-primary text-primary shadow-sm shadow-primary/50' : 'border-neutral-700 text-neutral-400 hover:text-white'}"
             title={$t.tvModeDesc}
         >
             <span>📺</span>
-            <span>{$t.tvMode}: {$tvMode ? 'ON' : 'OFF'}</span>
+            <span>{$t.tvMode || 'TV MODE'}: {$tvMode ? 'ON' : 'OFF'}</span>
         </button>
     </div>
 
     <button 
         on:click={handleForceEndGame}
-        class="fixed bottom-4 right-4 z-50 px-3 py-1 bg-black text-neutral-300 text-xs rounded border border-neutral-600 hover:bg-danger hover:text-white transition-colors font-display"
+        class="fixed bottom-3 right-3 z-50 px-2.5 py-1 bg-black text-neutral-300 text-[11px] rounded border border-neutral-600 hover:bg-danger hover:text-white transition-colors font-display"
         title={$t.endGame}
     >
-        {$t.endGame}
+        {$t.endGame || 'END GAME'}
     </button>
 </div>
-{/if}
