@@ -3,7 +3,6 @@
     import { t, sendMessage, getPartialAnswers, gameState, currentPlayer } from '../../../stores.js';
     import { MIN_ANSWER_WORDS } from '../../config.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
-    import PixelAvatar from '../../shared/PixelAvatar.svelte';
 
     export let timer;
     export let questions = [];
@@ -132,7 +131,7 @@
     }
 </script>
 
-<div class="w-full max-w-xl mx-auto h-full flex flex-col justify-between px-2 pb-2 relative select-none font-sans">
+<div class="w-full max-w-md mx-auto h-full max-h-screen flex flex-col justify-between p-3 select-none font-sans overflow-hidden box-border">
     {#if allQuestionsAnswered}
         <div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
             <SevenSegmentDisplay time={timer} />
@@ -143,60 +142,70 @@
         {@const totalQuestions = questions.length}
         {@const answeredCount = totalQuestions - unansweredQuestions.length}
 
-        <!-- Stage Center Header: Timer & Centered Question Badge -->
-        <div class="flex flex-col items-center justify-center mb-2.5 flex-shrink-0 relative z-10">
-            <div class="scale-95 mb-1.5">
+        <!-- Top Header & Timer -->
+        <header class="flex flex-col items-center justify-center mb-1 flex-shrink-0 pt-0.5">
+            <div class="scale-90 mb-1">
                 <SevenSegmentDisplay time={timer} />
             </div>
-            <!-- Centered Standardized Badge -->
-            <div class="px-3 py-1 bg-black/80 border border-primary text-primary rounded font-display text-xs tracking-wider font-bold shadow-[0_0_10px_rgba(var(--color-primary-rgb),0.25)]">
-                {$t.answeringQuestion ? $t.answeringQuestion.replace('{currentQ}', answeredCount + 1).replace('{totalQ}', totalQuestions) : `QUESTION ${answeredCount + 1}/${totalQuestions}`}
+            
+            <!-- Question Pill Indicator -->
+            <div class="px-3.5 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/50 shadow-[0_0_12px_rgba(6,182,212,0.3)]">
+                <span class="text-xs font-display font-bold text-cyan-300 uppercase tracking-wider">
+                    {$t.answeringQuestion ? $t.answeringQuestion.replace('{currentQ}', answeredCount + 1).replace('{totalQ}', totalQuestions) : `QUESTION ${answeredCount + 1}/${totalQuestions}`}
+                </span>
             </div>
-        </div>
+        </header>
 
-        <!-- Question Prompt Card with Re-Roll and +30s Boost (Single Line Micro-Badges) -->
-        <div class="panel-arcade p-3 sm:p-3.5 rounded-lg mb-3 flex-shrink-0 relative z-10 transition-all duration-300 {isFlipping ? 'scale-95 opacity-40' : 'scale-100 opacity-100'}" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
-            <div class="flex items-center justify-between text-[10px] font-display uppercase tracking-wider text-primary/80 mb-2 whitespace-nowrap">
-                <span>{$t.prompt || 'Prompt'}</span>
-                <div class="flex items-center gap-1.5 whitespace-nowrap">
-                    <button 
+        <!-- Question Prompt Card with Re-Roll and +30s Boost Buttons -->
+        <div class="bg-neutral-950/90 border border-neutral-800 rounded-2xl p-3.5 my-1.5 shadow-lg flex-shrink-0 transition-all duration-300 {isFlipping ? 'scale-95 opacity-40' : 'scale-100 opacity-100'}">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-display font-bold text-cyan-400 uppercase tracking-widest">
+                    {$t.prompt || 'PROMPT'}
+                </span>
+                
+                <!-- Micro-Action Powerup Badges (No confusing emojis) -->
+                <div class="flex items-center gap-1.5">
+                    <button
+                        type="button"
                         on:click={handleRerollQuestion}
                         disabled={rerollsLeft === 0}
-                        class="px-2 py-0.5 rounded font-mono text-[10px] font-bold transition-all whitespace-nowrap leading-none {
+                        class="px-2 py-0.5 rounded-lg border font-mono text-[10px] font-bold uppercase transition-all {
                             rerollsLeft === 0 
-                            ? 'bg-neutral-900 border border-neutral-700 text-neutral-500 opacity-35 cursor-not-allowed' 
-                            : 'bg-purple-950/70 border border-purple-400 text-purple-200 hover:bg-purple-900 shadow-sm cursor-pointer'
+                            ? 'bg-neutral-900 border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed' 
+                            : 'bg-purple-950/80 border-purple-500/60 text-purple-200 hover:bg-purple-900 shadow-sm cursor-pointer'
                         }"
-                        title={$t.rerollQuestion || 'Re-Roll Question'}
                     >
                         {$t.reroll || 'Re-Roll'} ({rerollsLeft})
                     </button>
-                    <button 
+                    
+                    <button
+                        type="button"
                         on:click={handleTimeBoost}
                         disabled={hasUsedTimeBoost}
-                        class="px-2 py-0.5 rounded font-mono text-[10px] font-bold transition-all whitespace-nowrap leading-none {
+                        class="px-2 py-0.5 rounded-lg border font-mono text-[10px] font-bold uppercase transition-all {
                             hasUsedTimeBoost 
-                            ? 'bg-neutral-900 border border-neutral-700 text-neutral-500 opacity-35 cursor-not-allowed' 
-                            : 'bg-amber-950/70 border border-amber-400 text-amber-200 hover:bg-amber-900 shadow-sm cursor-pointer'
+                            ? 'bg-neutral-900 border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed' 
+                            : 'bg-amber-950/80 border-amber-500/60 text-amber-200 hover:bg-amber-900 shadow-sm cursor-pointer'
                         }"
-                        title={hasUsedTimeBoost ? $t.timeBoostAlreadyUsed : $t.timeBoost}
                     >
                         +30s ({hasUsedTimeBoost ? '0' : '1'})
                     </button>
                 </div>
             </div>
-            <p class="text-xs sm:text-sm font-medium text-slate-100 leading-snug text-center py-0.5">
+
+            <!-- Question Prompt Text -->
+            <p class="text-sm font-sans font-semibold text-slate-100 text-center leading-snug">
                 {currentQuestion.text}
             </p>
         </div>
 
-        <!-- Textarea with Clean Word Count Counter -->
-        <div class="flex-1 flex flex-col justify-between mb-3 min-h-0 relative z-10">
-            <div class="relative flex-1 flex flex-col">
+        <!-- Answer Input Textarea & Status Bar -->
+        <div class="flex-1 flex flex-col justify-between my-1 min-h-0">
+            <div class="relative flex-1 flex flex-col min-h-0">
                 <textarea
-                    rows="4"
-                    class="w-full flex-1 p-3 bg-black/80 border-2 rounded-lg text-slate-100 font-mono text-sm sm:text-base resize-none focus:outline-none transition-all duration-200 {
-                        isAnswerValid ? 'border-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.3)]' : 'border-neutral-600 focus:border-primary'
+                    rows="3"
+                    class="w-full flex-1 p-3 bg-neutral-950/90 border-2 rounded-2xl text-slate-100 font-mono text-sm sm:text-base resize-none focus:outline-none transition-all duration-200 {
+                        isAnswerValid ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-neutral-800 focus:border-cyan-500'
                     }"
                     placeholder={$t.minWordsWarning || 'Type your funny answer here...'}
                     value={currentAnswerText}
@@ -204,32 +213,38 @@
                 ></textarea>
             </div>
 
-            <!-- Clean Word Counter (No redundant labels) -->
-            <div class="flex items-center justify-between mt-2 px-1">
-                <span class="text-xs font-mono font-semibold transition-colors duration-200 {
-                    isAnswerValid ? 'text-emerald-400 font-bold' : 'text-amber-300'
-                }">
-                    {$t.words || 'Word count'}: {currentWordCount} (Min {MIN_ANSWER_WORDS})
+            <!-- Unified Single Status Badge (No duplicate alert banners) -->
+            <div class="flex items-center justify-between px-1.5 mt-1.5 flex-shrink-0">
+                <span class="text-xs font-mono font-bold {isAnswerValid ? 'text-emerald-400' : 'text-amber-400'}">
+                    ✍️ {$t.words || 'Words'}: {currentWordCount} ({$t.minWordsRequirement || 'min 5'})
                 </span>
-                <span class="text-[10px] font-display {isAnswerValid ? 'text-emerald-400' : 'text-slate-500'}">
-                    {isAnswerValid ? 'VALID' : 'INCOMPLETE'}
-                </span>
+                {#if isAnswerValid}
+                    <span class="text-[11px] font-sans font-bold text-emerald-400 animate-pulse">
+                        ✓ {$t.readyToSubmit || 'READY'}
+                    </span>
+                {:else}
+                    <span class="text-[11px] font-sans font-bold text-amber-400">
+                        {MIN_ANSWER_WORDS - currentWordCount} {$t.wordsNeeded || 'more words needed'}
+                    </span>
+                {/if}
             </div>
         </div>
 
-        <!-- Bottom Fixed Submit Button -->
-        <div class="pt-1 flex-shrink-0 relative z-10">
-            <button 
+        <!-- Submit Button with Tactile Padding -->
+        <footer class="pt-1.5 flex-shrink-0">
+            <button
+                type="button"
                 disabled={!isAnswerValid}
-                class="btn-arcade w-full py-2.5 text-sm sm:text-base font-display uppercase tracking-widest rounded-lg transition-all {
-                    isAnswerValid ? 'shadow-[0_0_20px_rgba(57,255,20,0.5)] border-emerald-400 text-emerald-200' : 'opacity-40 cursor-not-allowed'
-                }"
-                style="--btn-color: {isAnswerValid ? 'var(--color-accent)' : '#4b5563'};"
                 on:click={submitCurrentAnswer}
+                class="btn-arcade w-full py-3.5 px-4 rounded-xl font-display font-black text-sm sm:text-base uppercase tracking-wider transition-all cursor-pointer {
+                    isAnswerValid 
+                    ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-black shadow-[0_0_25px_rgba(16,185,129,0.5)] active:scale-98' 
+                    : 'bg-neutral-900 border border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed'
+                }"
             >
-                {$t.submit || 'SUBMIT ANSWER'}
+                🚀 {$t.submit || 'SUBMIT ANSWER'}
             </button>
-        </div>
+        </footer>
     {:else}
         <div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
             <SevenSegmentDisplay time={timer} />

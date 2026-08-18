@@ -123,9 +123,14 @@ test.describe('Full Multi-Round Lifecycle, Voting & Final Round Showdown', () =>
         const playerFinalScores = p1Page.locator('text=/Final Scores|Підсумковий рахунок|Game Over/i');
         await expect(playerFinalScores.first()).toBeVisible();
 
-        // Verify "Play Again" or "Battle History" controls exist on Host / Player screens
+        // Verify "Play Again" or "Battle History" controls exist on Host Player mobile screen
         await expect(
-            hostPage.locator('button:has-text("Play Again"), button:has-text("Грати знову"), button:has-text("Battle History"), button:has-text("Історія")').first()
+            p1Page.locator('button.btn-arcade:has-text("Play Again"), button.btn-arcade:has-text("Грати знову"), button.btn-arcade:has-text("View Battle History"), button.btn-arcade:has-text("Історія")').first()
+        ).toBeVisible({ timeout: 15000 });
+
+        // Verify Champion podium and accolades exist on Host TV screen
+        await expect(
+            hostPage.locator('text=/Champion|Runner Up|Podium|Accolades|Чемпіон|Фіналіст/i').first()
         ).toBeVisible({ timeout: 15000 });
 
         // Cleanup contexts

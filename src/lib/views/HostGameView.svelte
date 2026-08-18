@@ -518,107 +518,229 @@
         {/if}
 
     {:else if $gamePhase === 'results'}
-        <!-- Phase: Final Results Podium & Accolades -->
-        <main class="w-full text-center flex-1 flex flex-col justify-center py-4 my-auto">
-            <h1 class="text-3xl sm:text-4xl mb-4 text-warning font-display font-black tracking-wider" style="text-shadow: 0 0 12px #facc15;">
-                {$t.finalScores || 'FINAL RESULTS'}
-            </h1>
-            <div class="max-w-xl mx-auto w-full space-y-2.5">
-                {#each $gamePlayers as p, i (p.id)}
-                    {@const isWinner = p.score > 0 && p.score === topScore}
-                    <div class="panel-arcade flex items-center gap-4 text-left p-3 rounded-lg {isWinner ? 'final-winner-card border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.8)]' : 'border-neutral-700'}" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb); animation-delay: {i * 0.1}s;">
-                        <span class="font-display text-2xl w-10 text-center">{['🥇','🥈','🥉'][i] || i + 1}</span>
-                        <div class="w-10 h-10 flex-shrink-0">
-                            <PixelAvatar avatar={p.avatar} />
+        {@const sortedPlayers = [...$gamePlayers].sort((a, b) => (displayedScores[b.id] ?? b.score) - (displayedScores[a.id] ?? a.score))}
+        {@const firstPlace = sortedPlayers[0]}
+        {@const secondPlace = sortedPlayers[1]}
+        {@const thirdPlace = sortedPlayers[2]}
+        {@const restOfPlayers = sortedPlayers.slice(3)}
+        {@const maxScore = Math.max(1, (displayedScores[firstPlace?.id] ?? firstPlace?.score) || 1)}
+        {@const getDynamicPodiumHeight = (score) => {
+            const ratio = Math.max(0.1, Math.min(1, (score || 0) / maxScore));
+            return Math.round(55 + (ratio * 105));
+        }}
+        {@const sups = $gameState?.superlatives}
+
+        <!-- Phase: Final Results Split-Stage Olympic Podium & Adaptive Roster -->
+        <div class="w-full h-full max-h-screen flex flex-col justify-between p-2.5 sm:p-4 select-none font-sans overflow-hidden box-border max-w-6xl mx-auto flex-1">
+            
+            <!-- 1. Stage Header: Glowing Trophy & Title -->
+            <header class="text-center flex-shrink-0 pt-1 pb-1">
+                <h1 class="text-xl sm:text-2xl lg:text-3xl font-display font-black text-amber-300 uppercase tracking-widest drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]">
+                    🏆 {$t.finalScores || 'FINAL SCORES & CHAMPIONS'}
+                </h1>
+            </header>
+
+            <!-- 2. Main Stage: Split Screen or Grand Centered Podium -->
+            <div class="flex-1 flex {restOfPlayers.length > 0 ? 'flex-col lg:flex-row items-center justify-between' : 'items-center justify-center'} gap-4 sm:gap-6 min-h-0 my-auto w-full px-1">
+                
+                <!-- Podium Column (Centered when 3P, Left side when 4P+) -->
+                <div class="{restOfPlayers.length > 0 ? 'w-full lg:w-1/2' : 'max-w-2xl w-full mx-auto'} flex items-end justify-center gap-2 sm:gap-4 px-1 pb-1">
+                    
+                    <!-- 🥈 2nd Place Podium (Left - Dynamic Height) -->
+                    {#if secondPlace}
+                        {@const pScore = displayedScores[secondPlace.id] ?? secondPlace.score}
+                        <div class="flex-1 max-w-[150px] sm:max-w-[180px] flex flex-col items-center">
+                            <div class="w-13 h-13 sm:w-16 sm:h-16 mb-1 relative">
+                                <PixelAvatar avatar={secondPlace.avatar} className="w-full h-full" />
+                            </div>
+                            <span class="font-display font-black text-xs sm:text-sm text-slate-200 truncate max-w-full text-center block">
+                                {secondPlace.name}
+                            </span>
+                            <span class="font-mono text-xs sm:text-sm font-black text-slate-300 block mb-1">
+                                {pScore.toLocaleString()} <span class="text-[9px] text-slate-500 font-sans">PTS</span>
+                            </span>
+
+                            <!-- Silver Podium Block with Dynamic Score Height -->
+                            <div
+                                style="height: {getDynamicPodiumHeight(pScore)}px"
+                                class="w-full rounded-t-2xl bg-gradient-to-b from-slate-300 to-slate-600 border-2 border-slate-200 flex flex-col items-center justify-start pt-2 pb-1.5 shadow-[0_0_20px_rgba(203,213,225,0.4)] transition-all duration-700 ease-out"
+                            >
+                                <span class="font-display font-black text-2xl sm:text-3xl text-black drop-shadow-sm leading-none">2</span>
+                                <span class="font-sans font-bold text-[9px] sm:text-[10px] text-slate-900 uppercase tracking-wider mt-1">{$t.runnerUp || 'RUNNER UP'}</span>
+                            </div>
                         </div>
-                        <span class="text-lg font-bold flex-grow truncate">{p.name}</span>
-                        <span class="font-display text-2xl text-primary font-mono">{displayedScores[p.id] ?? p.score}</span>
+                    {/if}
+
+                    <!-- 🥇 1st Place Champion Podium (Center - Tallest Dynamic Height) -->
+                    {#if firstPlace}
+                        {@const pScore = displayedScores[firstPlace.id] ?? firstPlace.score}
+                        <div class="flex-1 max-w-[170px] sm:max-w-[210px] flex flex-col items-center z-10">
+                            <div class="w-16 h-16 sm:w-22 sm:h-22 mb-1 relative">
+                                <PixelAvatar avatar={firstPlace.avatar} className="w-full h-full" />
+                                <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xl sm:text-2xl animate-bounce drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]">
+                                    👑
+                                </div>
+                            </div>
+                            <span class="font-display font-black text-sm sm:text-base text-amber-300 truncate max-w-full text-center block drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]">
+                                {firstPlace.name}
+                            </span>
+                            <span class="font-mono text-sm sm:text-base font-black text-amber-400 block mb-1 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]">
+                                {pScore.toLocaleString()} <span class="text-[10px] text-amber-200 font-sans">PTS</span>
+                            </span>
+
+                            <!-- Gold Champion Podium Block with Dynamic Max Score Height -->
+                            <div
+                                style="height: {getDynamicPodiumHeight(pScore)}px"
+                                class="w-full rounded-t-2xl bg-gradient-to-b from-amber-300 via-amber-400 to-yellow-600 border-2 border-amber-200 flex flex-col items-center justify-start pt-2.5 pb-2 shadow-[0_0_35px_rgba(251,191,36,0.7)] transition-all duration-700 ease-out"
+                            >
+                                <span class="font-display font-black text-3xl sm:text-4xl text-black drop-shadow-sm leading-none">1</span>
+                                <span class="font-sans font-black text-[10px] sm:text-[11px] text-amber-950 uppercase tracking-widest mt-1">{$t.champion || 'CHAMPION'}</span>
+                            </div>
+                        </div>
+                    {/if}
+
+                    <!-- 🥉 3rd Place Podium (Right - Dynamic Height) -->
+                    {#if thirdPlace}
+                        {@const pScore = displayedScores[thirdPlace.id] ?? thirdPlace.score}
+                        <div class="flex-1 max-w-[150px] sm:max-w-[180px] flex flex-col items-center">
+                            <div class="w-13 h-13 sm:w-16 sm:h-16 mb-1 relative">
+                                <PixelAvatar avatar={thirdPlace.avatar} className="w-full h-full" />
+                            </div>
+                            <span class="font-display font-black text-xs sm:text-sm text-amber-500 truncate max-w-full text-center block">
+                                {thirdPlace.name}
+                            </span>
+                            <span class="font-mono text-xs sm:text-sm font-black text-amber-600 block mb-1">
+                                {pScore.toLocaleString()} <span class="text-[9px] text-slate-500 font-sans">PTS</span>
+                            </span>
+
+                            <!-- Bronze Podium Block with Dynamic Score Height -->
+                            <div
+                                style="height: {getDynamicPodiumHeight(pScore)}px"
+                                class="w-full rounded-t-2xl bg-gradient-to-b from-amber-600 to-amber-900 border-2 border-amber-500 flex flex-col items-center justify-start pt-2 pb-1.5 shadow-[0_0_20px_rgba(180,83,9,0.4)] transition-all duration-700 ease-out"
+                            >
+                                <span class="font-display font-black text-2xl sm:text-3xl text-amber-100 drop-shadow-sm leading-none">3</span>
+                                <span class="font-sans font-bold text-[9px] sm:text-[10px] text-amber-200 uppercase tracking-wider mt-1">{$t.podium || 'PODIUM'}</span>
+                            </div>
+                        </div>
+                    {/if}
+                </div>
+
+                <!-- Right Side: Clean Proportional Leaderboard (Compact Pills for 4-6P, 2-Col for 7-14P) -->
+                {#if restOfPlayers.length > 0}
+                    <div class="w-full lg:w-1/2 bg-neutral-950/85 border border-neutral-800 rounded-3xl p-3 sm:p-4 shadow-xl flex flex-col justify-start min-h-0">
+                        <div class="flex items-center justify-between border-b border-neutral-800 pb-1.5 mb-2.5 flex-shrink-0">
+                            <span class="text-xs sm:text-sm font-display font-bold uppercase tracking-wider text-slate-300">
+                                🎮 {$t.leaderboardRoster || 'LEADERBOARD ROSTER'}
+                            </span>
+                            <span class="text-[10px] font-mono text-cyan-400 font-bold px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/40">
+                                {restOfPlayers.length} {$t.players || 'PLAYERS'}
+                            </span>
+                        </div>
+
+                        <!-- Clean Adaptive Grid (1-Col stack for 1-3 players, 2-Col grid for 4-11 players) -->
+                        <div class="grid {restOfPlayers.length > 3 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'} gap-2 w-full">
+                            {#each restOfPlayers as p, idx (p.id)}
+                                {@const pScore = displayedScores[p.id] ?? p.score}
+                                <div class="flex items-center justify-between px-3 py-2 rounded-2xl bg-neutral-900/90 border border-neutral-800 hover:border-cyan-500/50 transition-colors shadow-sm min-w-0">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <span class="font-mono text-xs font-bold text-slate-400 flex-shrink-0">
+                                            #{idx + 4}
+                                        </span>
+                                        <div class="w-7 h-7 flex-shrink-0">
+                                            <PixelAvatar avatar={p.avatar} className="w-full h-full" />
+                                        </div>
+                                        <div class="min-w-0 text-left">
+                                            <span class="font-display font-bold text-xs sm:text-sm text-slate-100 truncate block">
+                                                {p.name}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span class="font-mono text-xs font-bold text-cyan-400 flex-shrink-0 pl-1">
+                                        {pScore.toLocaleString()} <span class="text-[9px] text-slate-500 font-sans">PTS</span>
+                                    </span>
+                                </div>
+                            {/each}
+                        </div>
                     </div>
-                {/each}
+                {/if}
             </div>
 
-            {#if $gameState.superlatives && Object.keys($gameState.superlatives).length > 0}
-                {@const sups = $gameState.superlatives}
-                <div class="max-w-3xl mx-auto mt-6 p-4 sm:p-5 bg-neutral-950/80 border border-secondary/50 rounded-xl shadow-lg">
-                    <h2 class="text-xl font-bold text-secondary mb-3 flex items-center justify-center gap-2 font-display">
-                        <span>🏆</span> {$t.superlativesTitle || 'SPECIAL ACCOLADES'}
+            <!-- 3. Special Accolades Showcase (5 Superlative Cards) -->
+            {#if sups && Object.keys(sups).length > 0}
+                <div class="w-full bg-neutral-950/90 border border-neutral-800 rounded-2xl p-2 sm:p-2.5 flex-shrink-0 shadow-lg mt-2">
+                    <h2 class="text-xs font-display font-black text-amber-400 uppercase tracking-widest text-center mb-1">
+                        🎖️ {$t.superlativesTitle || 'ACCOLADES & AWARDS'}
                     </h2>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-left">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 text-left">
                         {#if sups.ammoFactory}
                             {@const p = $gamePlayers.find(pl => pl.id === sups.ammoFactory.playerId)}
-                            <div class="bg-neutral-900 border border-neutral-700 p-2.5 rounded-lg flex flex-col justify-between">
+                            <div class="p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between">
                                 <div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <div class="w-6 h-6"><PixelAvatar avatar={p?.avatar || '🎯'} /></div>
-                                        <span class="font-bold text-primary truncate text-sm">{p?.name}</span>
+                                    <div class="flex items-center gap-1.5 mb-0.5">
+                                        <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p?.avatar || '🎯'} /></div>
+                                        <span class="font-display font-bold text-[11px] text-slate-200 truncate">{p?.name}</span>
                                     </div>
-                                    <p class="font-bold text-xs text-yellow-300">{$t.ammoFactoryTitle || 'Ammo Factory'}</p>
-                                    <p class="text-[11px] text-neutral-400 mt-0.5">{$t.ammoFactoryDesc || 'Most words contributed'} (+{sups.ammoFactory.value} pts)</p>
+                                    <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.ammoFactoryTitle || '🎯 The Ammo Factory'}</span>
+                                    <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.ammoFactoryDesc || 'Words powered winning battles'} (+{sups.ammoFactory.value} pts)</span>
                                 </div>
                             </div>
                         {/if}
                         {#if sups.rainbowAlchemist}
                             {@const p = $gamePlayers.find(pl => pl.id === sups.rainbowAlchemist.playerId)}
-                            <div class="bg-neutral-900 border border-neutral-700 p-2.5 rounded-lg flex flex-col justify-between">
+                            <div class="p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between">
                                 <div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <div class="w-6 h-6"><PixelAvatar avatar={p?.avatar || '🌈'} /></div>
-                                        <span class="font-bold text-pink-300 truncate text-sm">{p?.name}</span>
+                                    <div class="flex items-center gap-1.5 mb-0.5">
+                                        <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p?.avatar || '🌈'} /></div>
+                                        <span class="font-display font-bold text-[11px] text-slate-200 truncate">{p?.name}</span>
                                     </div>
-                                    <p class="font-bold text-xs text-pink-400">{$t.rainbowAlchemistTitle || 'Rainbow Alchemist'}</p>
-                                    <p class="text-[11px] text-neutral-400 mt-0.5">{$t.rainbowAlchemistDesc || 'Most rainbow answers'} ({sups.rainbowAlchemist.value}x)</p>
+                                    <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.rainbowAlchemistTitle || '🌈 The Rainbow Alchemist'}</span>
+                                    <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.rainbowAlchemistDesc || 'Combined words from 3+ players'} ({sups.rainbowAlchemist.value}x)</span>
                                 </div>
                             </div>
                         {/if}
                         {#if sups.cleanSweeper}
                             {@const p = $gamePlayers.find(pl => pl.id === sups.cleanSweeper.playerId)}
-                            <div class="bg-neutral-900 border border-neutral-700 p-2.5 rounded-lg flex flex-col justify-between">
+                            <div class="p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between">
                                 <div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <div class="w-6 h-6"><PixelAvatar avatar={p?.avatar || '🧹'} /></div>
-                                        <span class="font-bold text-purple-300 truncate text-sm">{p?.name}</span>
+                                    <div class="flex items-center gap-1.5 mb-0.5">
+                                        <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p?.avatar || '🧹'} /></div>
+                                        <span class="font-display font-bold text-[11px] text-slate-200 truncate">{p?.name}</span>
                                     </div>
-                                    <p class="font-bold text-xs text-purple-400">{$t.cleanSweeperTitle || 'Clean Sweeper'}</p>
-                                    <p class="text-[11px] text-neutral-400 mt-0.5">{$t.cleanSweeperDesc || 'Unanimous vote victories'} ({sups.cleanSweeper.value}x)</p>
+                                    <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.cleanSweeperTitle || '🧹 The Clean Sweeper'}</span>
+                                    <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.cleanSweeperDesc || 'Unanimous 100% battle wins'} ({sups.cleanSweeper.value}x)</span>
                                 </div>
                             </div>
                         {/if}
                         {#if sups.minimalist}
                             {@const p = $gamePlayers.find(pl => pl.id === sups.minimalist.playerId)}
-                            <div class="bg-neutral-900 border border-neutral-700 p-2.5 rounded-lg flex flex-col justify-between">
+                            <div class="p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between">
                                 <div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <div class="w-6 h-6"><PixelAvatar avatar={p?.avatar || '🪶'} /></div>
-                                        <span class="font-bold text-emerald-300 truncate text-sm">{p?.name}</span>
+                                    <div class="flex items-center gap-1.5 mb-0.5">
+                                        <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p?.avatar || '🪶'} /></div>
+                                        <span class="font-display font-bold text-[11px] text-slate-200 truncate">{p?.name}</span>
                                     </div>
-                                    <p class="font-bold text-xs text-emerald-400">{$t.minimalistTitle || 'Minimalist'}</p>
-                                    <p class="text-[11px] text-neutral-400 mt-0.5">{$t.minimalistDesc || 'Shortest punchlines'} ({sups.minimalist.count} words)</p>
+                                    <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.minimalistTitle || '🪶 The Minimalist'}</span>
+                                    <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.minimalistDesc || 'Shortest winning punchline'} ({sups.minimalist.count} words)</span>
                                 </div>
                             </div>
                         {/if}
                         {#if sups.shakespeare}
                             {@const p = $gamePlayers.find(pl => pl.id === sups.shakespeare.playerId)}
-                            <div class="bg-neutral-900 border border-neutral-700 p-2.5 rounded-lg flex flex-col justify-between">
+                            <div class="p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between">
                                 <div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <div class="w-6 h-6"><PixelAvatar avatar={p?.avatar || '💬'} /></div>
-                                        <span class="font-bold text-cyan-300 truncate text-sm">{p?.name}</span>
+                                    <div class="flex items-center gap-1.5 mb-0.5">
+                                        <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p?.avatar || '💬'} /></div>
+                                        <span class="font-display font-bold text-[11px] text-slate-200 truncate">{p?.name}</span>
                                     </div>
-                                    <p class="font-bold text-xs text-cyan-400">{$t.shakespeareTitle || 'Shakespeare'}</p>
-                                    <p class="text-[11px] text-neutral-400 mt-0.5">{$t.shakespeareDesc || 'Longest elaborate stories'} ({sups.shakespeare.count} words)</p>
+                                    <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.shakespeareTitle || '💬 The Shakespeare'}</span>
+                                    <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.shakespeareDesc || 'Most epic long masterpiece'} ({sups.shakespeare.count} words)</span>
                                 </div>
                             </div>
                         {/if}
                     </div>
                 </div>
             {/if}
-
-            <div class="mt-6">
-                <button class="btn-arcade" style="--btn-color: var(--color-accent);" on:click={() => sendMessage('play-again', { gameId: $gameState.id, loading: true })}>
-                    {$t.playAgain || 'PLAY AGAIN'}
-                </button>
-            </div>
-        </main>
+        </div>
     {/if}
 
     <!-- Bottom Live Players Score Ribbon (Rendered for Get Ready, Voting, Reveal) -->

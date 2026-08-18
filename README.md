@@ -174,10 +174,16 @@ This continues until all battles for the round have been voted on and revealed.
 - **Final Battle Prompt:** Instead of a simple fill-in-the-blank, the AI generates a **Movie Genre** and a **Bizarre Premise**.
 - **The Task:** The two competing players must use their word banks to create a fitting **Movie Title** and a catchy **Tagline**, turning their opponent's words into a hilarious movie poster concept.
 
-### 4. Game End & Post-Game
-- After the final round, the **Final Scores** are displayed on all screens. All players who tie for the highest score are crowned as winners.
-- **Battle History:** From the results screen, players can tap "View Battle History" to see a full log of every battle. Each battle can be saved as an image to their device.
-- **Play Again:** The **Host Player's device** will show a "Play Again" button. Tapping this instantly resets the game and takes all players (including the Host Display) back to the lobby. Any players who were disconnected at the end of the game are removed, ensuring a clean start for the new match.
+### 4. Game End & Post-Game (Phase 3C Final Results)
+- **Split-Stage Host TV Presentation:**
+  - **Grand 3-Tier Olympic Podium (Left Stage):** 1st Place Gold Champion (with bouncing crown flourish), 2nd Place Silver Runner-Up, and 3rd Place Bronze Podium. The height of each pedestal dynamically scales in real-time proportional to the player's total accumulated score relative to 1st place ($55\text{px}$ to $160\text{px}$). For 3-player matches, the podium centers majestically across the screen.
+  - **Adaptive Leaderboard Roster (Right Stage):** For 4 to 14 players, displays non-podium players (#4 to #14) in compact horizontal rank pills (1-column for 4–6 players, 2-column grid for 7–14 players).
+  - **Special Accolades Showcase (Bottom Stage):** 5 dedicated superlative cards (The Ammo Factory, The Rainbow Alchemist, The Clean Sweeper, The Minimalist, The Shakespeare) formatted with zero text truncation or scrollbars across laptops (1366x768) and Smart TVs.
+- **Mobile Player Results View:**
+  - **Personal Hero Card:** Prominently showcases the player's 115px pixel avatar, animated crown for champions, rank pill badge (`👑 1ST PLACE - CHAMPION!`, `🥈 2ND PLACE`, `🥉 3RD PLACE`, `🎮 #4 - PARTICIPANT`), and inline final score.
+  - **Personal Accolades & GG Banner:** Highlights any awards earned by the player with descriptions.
+  - **Role-Aware Controls:** The room Host receives dedicated `[🔄 PLAY AGAIN]` and `[🏠 MENU]` action buttons, while non-host participants see a clean `Waiting for host to start a new game...` status.
+  - **Battle History & Reaction Bar:** Both host and participants can tap `[📜 VIEW BATTLE HISTORY]` to inspect and export match cards, or tap live reaction emojis (`🔥`, `😂`, `💀`, `💩`, `🤮`, `🤯`) to float celebratory particles across the main TV screen.
 
 ---
 

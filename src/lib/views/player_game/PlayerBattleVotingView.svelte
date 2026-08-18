@@ -38,7 +38,7 @@
         return `(${$t.noAnswerSubmitted})`;
     }
     
-    const reactionEmojis = ['🔥', '😂', '💀', '👏', '🤯', '🌈'];
+    const reactionEmojis = ['🔥', '😂', '💀', '💩', '🤮', '🤯'];
 
     function sendReaction(emoji) {
         if (!gameId || !player) return;

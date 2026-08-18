@@ -27,17 +27,9 @@
     import HostLobby from '../views/HostLobby.svelte';
     import HostGameView from '../views/HostGameView.svelte';
     import AvatarGalleryView from './AvatarGalleryView.svelte';
-
     // URL Query Params parser
     const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-    let activeScreen = urlParams.get('debug') || urlParams.get('screen') || 'player_lobby';
-    let protoMode = urlParams.get('protoMode') || 'new'; // 'new' | 'old'
-    let protoPlayerCount = parseInt(urlParams.get('players')) || 6; // 3 | 6 | 14
-    let protoFormat = urlParams.get('protoFormat') || 'trio'; // 'duo' | 'trio' | 'quad'
-    let protoRole = urlParams.get('protoRole') || 'voter'; // 'voter' | 'competitor' | 'voted'
-    let protoLobbySubView = urlParams.get('protoSubView') || 'lobby'; // 'lobby' | 'avatar'
-    let protoIsHost = urlParams.get('protoIsHost') === '1' || urlParams.get('protoIsHost') === 'true';
-    let protoResult = urlParams.get('protoResult') || 'winner'; // 'winner' | 'runner_up' | 'spectator'
+    let activeScreen = urlParams.get('debug') || urlParams.get('screen') || 'player_question';
     let language = urlParams.get('lang') || 'en';
     let viewport = urlParams.get('viewport') || (activeScreen.startsWith('host_') ? 'full' : 'mobile');
     let hideToolbar = urlParams.get('hideToolbar') === '1' || urlParams.get('hideToolbar') === 'true';
@@ -190,6 +182,8 @@
                         <PlayerResultsView game={$gameState} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} />
                     {:else if activeScreen === 'avatar_gallery'}
                         <AvatarGalleryView />
+                    {:else}
+                        <PlayerQuestionView timer={mockTimer} questions={mockQuestions} />
                     {/if}
                     </div>
                 </div>
@@ -250,59 +244,6 @@
             </div>
         {/if}
     </div>
-
-    <!-- Floating Phase 3B Prototype Controls Bar (Top Center) -->
-    {#if activeScreen.startsWith('proto_mobile_') && !hideToolbar}
-        <div class="fixed top-2.5 left-1/2 -translate-x-1/2 z-50 bg-black/95 border-2 border-fuchsia-500 rounded-full px-4 py-1.5 shadow-2xl flex items-center gap-2 text-xs font-sans flex-wrap justify-center max-w-[95vw]">
-            <span class="font-display font-bold text-fuchsia-400 text-[11px]">3B PROTO:</span>
-            
-            <!-- Mode Toggle -->
-            <button 
-                on:click={() => protoMode = 'new'}
-                class="px-2.5 py-0.5 rounded-full font-bold transition-all {protoMode === 'new' ? 'bg-cyan-500 text-black shadow-[0_0_10px_rgba(6,182,212,0.8)]' : 'bg-neutral-800 text-slate-300 hover:text-white'}"
-            >
-                ✨ New
-            </button>
-            <button 
-                on:click={() => protoMode = 'old'}
-                class="px-2.5 py-0.5 rounded-full font-bold transition-all {protoMode === 'old' ? 'bg-amber-500 text-black shadow-[0_0_10px_rgba(245,158,11,0.8)]' : 'bg-neutral-800 text-slate-300 hover:text-white'}"
-            >
-                ⏪ Old
-            </button>
-            
-            <span class="text-neutral-600">|</span>
-            <!-- Player Count -->
-            <button on:click={() => protoPlayerCount = 3} class="px-2 py-0.5 rounded font-mono text-[11px] {protoPlayerCount === 3 ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">3P</button>
-            <button on:click={() => protoPlayerCount = 6} class="px-2 py-0.5 rounded font-mono text-[11px] {protoPlayerCount === 6 ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">6P</button>
-            <button on:click={() => protoPlayerCount = 14} class="px-2 py-0.5 rounded font-mono text-[11px] {protoPlayerCount === 14 ? 'bg-cyan-600 text-white font-bold ring-1 ring-cyan-300' : 'text-slate-400 hover:text-white'}">14P (Max)</button>
-
-            {#if activeScreen === 'proto_mobile_voting'}
-                <span class="text-neutral-600">|</span>
-                <!-- Matchup Format -->
-                <button on:click={() => protoFormat = 'duo'} class="px-2 py-0.5 rounded font-mono text-[11px] {protoFormat === 'duo' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">1v1</button>
-                <button on:click={() => protoFormat = 'trio'} class="px-2 py-0.5 rounded font-mono text-[11px] {protoFormat === 'trio' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">3-Way</button>
-                <button on:click={() => protoFormat = 'quad'} class="px-2 py-0.5 rounded font-mono text-[11px] {protoFormat === 'quad' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">4-Way</button>
-                
-                <span class="text-neutral-600">|</span>
-                <!-- Role / State -->
-                <button on:click={() => protoRole = 'voter'} class="px-2 py-0.5 rounded font-display text-[10px] {protoRole === 'voter' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">Voter</button>
-                <button on:click={() => protoRole = 'competitor'} class="px-2 py-0.5 rounded font-display text-[10px] {protoRole === 'competitor' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">Competitor</button>
-                <button on:click={() => protoRole = 'voted'} class="px-2 py-0.5 rounded font-display text-[10px] {protoRole === 'voted' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">Voted</button>
-            {:else if activeScreen === 'proto_mobile_lobby'}
-                <span class="text-neutral-600">|</span>
-                <button on:click={() => protoLobbySubView = 'lobby'} class="px-2 py-0.5 rounded font-display text-[10px] {protoLobbySubView === 'lobby' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">Lobby</button>
-                <button on:click={() => protoLobbySubView = 'profile_edit'} class="px-2 py-0.5 rounded font-display text-[10px] {protoLobbySubView === 'profile_edit' || protoLobbySubView === 'avatar' ? 'bg-fuchsia-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">Edit Profile</button>
-                <span class="text-neutral-600">|</span>
-                <button on:click={() => protoIsHost = !protoIsHost} class="px-2 py-0.5 rounded font-display text-[10px] {protoIsHost ? 'bg-amber-500 text-black font-bold' : 'text-slate-400 hover:text-white'}">
-                    {protoIsHost ? '👑 Host: YES' : '👤 Player'}
-                </button>
-            {:else if activeScreen === 'proto_mobile_reveal'}
-                <span class="text-neutral-600">|</span>
-                <button on:click={() => protoResult = 'winner'} class="px-2 py-0.5 rounded font-display text-[10px] {protoResult === 'winner' ? 'bg-yellow-500 text-black font-bold' : 'text-slate-400 hover:text-white'}">👑 Winner</button>
-                <button on:click={() => protoResult = 'runner_up'} class="px-2 py-0.5 rounded font-display text-[10px] {protoResult === 'runner_up' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">🥈 Runner-Up</button>
-            {/if}
-        </div>
-    {/if}
 
     <!-- Floating Dev Toolbar -->
     <DevToolbar

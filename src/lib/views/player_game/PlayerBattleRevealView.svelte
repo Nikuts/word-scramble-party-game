@@ -43,7 +43,7 @@
         return `(${$t.noAnswerSubmitted || 'No answer'})`;
     }
 
-    const reactionEmojis = ['🔥', '😂', '💀', '👏', '🤯', '🌈'];
+    const reactionEmojis = ['🔥', '😂', '💀', '💩', '🤮', '🤯'];
 
     function sendReaction(emoji) {
         if (!battle || !player) return;
