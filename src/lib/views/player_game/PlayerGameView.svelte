@@ -87,7 +87,7 @@
         <PlayerBattleVotingView timer={$phaseTimer} battle={$currentVotingBattle} player={$currentPlayerDetails} gameId={$gameState?.id} players={$gameState?.players}/>
     
     {:else if $gamePhase === 'battle_result_reveal'}
-        <PlayerBattleRevealView timer={$phaseTimer} />
+        <PlayerBattleRevealView timer={$phaseTimer} battle={$currentVotingBattle} player={$currentPlayerDetails} players={$gameState?.players} />
 
     {:else if $gamePhase === 'results'}
         <PlayerResultsView game={$gameState} player={$currentPlayerDetails} />

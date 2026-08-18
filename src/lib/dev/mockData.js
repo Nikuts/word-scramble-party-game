@@ -137,6 +137,18 @@ export const MOCK_SUPERLATIVES = [
     }
 ];
 
+export const MOCK_ACTIVE_BATTLE_DUO = {
+    id: 'b-1-0',
+    prompt: 'Warning sign on the office coffee mug:',
+    competitors: ['p1', 'p2'],
+    formatConfig: { type: 'single_line' },
+    answers: {
+        p1: 'giant laser potato under cheese',
+        p2: 'screaming fluffy badger disco champion'
+    },
+    votes: { p3: 'p2', p4: 'p1' }
+};
+
 export const MOCK_ACTIVE_BATTLE_TRIO = {
     id: 'b-1-0',
     prompt: 'Warning sign on the office coffee mug:',
@@ -148,6 +160,20 @@ export const MOCK_ACTIVE_BATTLE_TRIO = {
         p3: 'never apologize with hot pizzas'
     },
     votes: { p4: 'p2', p5: 'p2', p6: 'p1' }
+};
+
+export const MOCK_ACTIVE_BATTLE_QUAD = {
+    id: 'b-1-0',
+    prompt: 'Warning sign on the office coffee mug:',
+    competitors: ['p1', 'p2', 'p3', 'p4'],
+    formatConfig: { type: 'single_line' },
+    answers: {
+        p1: 'giant laser potato under cheese',
+        p2: 'screaming fluffy badger disco champion',
+        p3: 'never apologize with hot pizzas',
+        p4: 'unleash turbo ducks across the universe'
+    },
+    votes: { p5: 'p2', p6: 'p1', p7: 'p4', p8: 'p2' }
 };
 
 export const MOCK_ACTIVE_BATTLE_REVEAL = {
@@ -216,7 +242,8 @@ export function createMockGameState(overrides = {}) {
         players: [...MOCK_PLAYERS],
         preGeneratedThemes: {
             en: ['Everyday Objects, Epic Backstories', 'Bad Excuses For Being Late', 'Haunted 24-Hour Diner'],
-            uk: ['Звичайні речі, епічні передісторії', 'Погані виправдання запізнення', 'Цілодобова забігайлівка з привидами']
+            uk: ['Звичайні речі, епічні передісторії', 'Погані виправдання запізнення', 'Цілодобова забігайлівка з привидами'],
+            ua: ['Звичайні речі, епічні передісторії', 'Погані виправдання запізнення', 'Цілодобова забігайлівка з привидами']
         },
         playerAnswers: {
             p1: { questions: [{ text: "What is your secret weapon?", answer: "giant laser potato" }] },

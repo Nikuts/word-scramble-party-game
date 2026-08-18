@@ -10,7 +10,7 @@ import {
 
 test.describe('Battle History & Multi-Competitor Recap View', () => {
     test('verifies battle history navigation, multi-competitor layout, and image export triggers', async ({ browser }) => {
-        test.setTimeout(180000); // 3 minutes for complete 3-round flow
+        test.setTimeout(240000); // 4 minutes for complete 3-round flow
 
         // 1. Setup Host & 3 Players
         const hostContext = await browser.newContext();

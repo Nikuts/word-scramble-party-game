@@ -83,7 +83,7 @@ export const SLOWPOKE_FINAL_BATTLE_SECONDS_PER_VOTE = 50;
 
 // --- Player Customization ---
 export const AVATARS = [
-    '👽', '🐶', '🦆', '⚒️', '🦊', '🐸', '👺', '🛡️', '🍄', '🦜', '🐧', '🐷', '🤖', '💀', '🦠', '🐱', '🧛', '🧙', '🐛', '🧟'
+    '👽', '🐶', '🦆', '⚒️', '🦊', '🐸', '👺', '🛡️', '🍄', '🦜', '🐧', '🐷', '🤖', '💀', '🦠', '🐱', '🧛', '🧙', '🐛', '🧟', '🐙'
 ];
 
 export const AVATAR_MAP = {
@@ -106,5 +106,6 @@ export const AVATAR_MAP = {
     '🧛': 'vampire',
     '🧙': 'wizard',
     '🐛': 'worm',
-    '🧟': 'zombie'
+    '🧟': 'zombie',
+    '🐙': 'octopus'
 };

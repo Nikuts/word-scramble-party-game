@@ -13,7 +13,7 @@
             🎨 Pixel Avatar Design Gallery
         </h1>
         <p class="text-gray-400 text-sm">
-            All 14 game avatars with size variations, animation states, and audio triggers.
+            All 21 game avatars with size variations, animation states, and audio triggers.
         </p>
     </div>
 

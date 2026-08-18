@@ -3,8 +3,18 @@
     export let avatar; // the emoji character
     export let className = '';
     
-    // A fallback in case a new emoji is added to AVATARS but not AVATAR_MAP
-    $: imageName = AVATAR_MAP[avatar] || 'frog'; 
+    // Normalization helper for emoji variants and fallbacks
+    const FALLBACK_MAP = {
+        '👽': 'alien', '🐶': 'dog', '🦆': 'duck', '⚒️': 'dwarf', '⚒': 'dwarf',
+        '🦊': 'fox', '🐸': 'frog', '👺': 'goblin', '🛡️': 'knight', '🛡': 'knight',
+        '🍄': 'mushroom', '🦜': 'parrot', '🐧': 'penguin', '🐷': 'pig', '🤖': 'robot',
+        '💀': 'skeleton', '🦠': 'slime', '🫧': 'slime', '🐱': 'sphynx', '🐈': 'sphynx',
+        '🧛': 'vampire', '🧙': 'wizard', '🐛': 'worm', '🪱': 'worm', '🧟': 'zombie',
+        '🐼': 'alien', '🐯': 'fox', '🐵': 'dog', '🦄': 'wizard', '🐙': 'octopus', '🧌': 'goblin', '🧔': 'dwarf'
+    };
+
+    $: raw = avatar ? String(avatar).replace(/[\uFE0E\uFE0F]/g, '') : 'frog';
+    $: imageName = AVATAR_MAP[avatar] || AVATAR_MAP[raw] || FALLBACK_MAP[avatar] || FALLBACK_MAP[raw] || 'frog'; 
     $: src = `/images/${imageName}.webp`;
 </script>
 

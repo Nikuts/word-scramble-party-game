@@ -50,7 +50,10 @@ export function toggleTvMode() {
 }
 
 // --- Base Derived Stores ---
-export const t = derived(language, $language => UI_TEXT[$language]);
+export const t = derived(language, $language => {
+    const lang = ($language === 'ua' || $language === 'uk') ? 'uk' : 'en';
+    return UI_TEXT[lang] || UI_TEXT.en;
+});
 
 // --- Performance-Optimized Derived Stores ---
 export const gamePhase = derived(gameState, $g => $g?.phase);

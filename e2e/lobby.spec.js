@@ -58,24 +58,24 @@ test.describe('Lobby & Multiplayer Session Setup', () => {
         await p4Page.click('#confirmAvatarBtn');
         await expect(p4Page.locator('text=Dave').first()).toBeVisible();
 
-        // 7. Test In-Lobby Name Redaction & Duplicate Rejection
+        // 7. Test In-Lobby Name & Avatar Editing in Unified Profile Editor
         // Dave tries to edit name to "Alice" (duplicate)
-        await p4Page.click('button[title*="Edit Name"], button[aria-label*="Edit Name"]');
-        await p4Page.locator('input[maxlength="25"]').fill('Alice');
-        await p4Page.locator('button:has-text("Save")').click();
+        await p4Page.click('button:has-text("Edit Profile")');
+        await p4Page.locator('#profile-name-input').fill('Alice');
+        await p4Page.click('#confirmAvatarBtn');
         await expect(p4Page.locator('text=This name is already taken')).toBeVisible();
 
-        // Dave edits name to "SuperDave"
-        await p4Page.click('button[title*="Edit Name"], button[aria-label*="Edit Name"]');
-        await p4Page.locator('input[maxlength="25"]').fill('SuperDave');
-        await p4Page.locator('button:has-text("Save")').click();
+        // Dave opens Edit Profile and edits name to "SuperDave"
+        await p4Page.click('button:has-text("Edit Profile")');
+        await p4Page.locator('#profile-name-input').fill('SuperDave');
+        await p4Page.click('#confirmAvatarBtn');
         await expect(p4Page.locator('text=SuperDave').first()).toBeVisible();
         await expect(hostPage.locator('text=SuperDave').first()).toBeVisible();
 
-        // 8. Test In-Lobby Avatar Reselection
-        await p4Page.click('button:has-text("Change Character")');
-        await expect(p4Page.locator('button:has-text("Confirm Character")')).toBeVisible();
-        await p4Page.click('button:has-text("Confirm Character")');
+        // 8. Test In-Lobby Profile Reselection
+        await p4Page.click('button:has-text("Edit Profile")');
+        await expect(p4Page.locator('#confirmAvatarBtn')).toBeVisible();
+        await p4Page.click('#confirmAvatarBtn');
 
         // 9. Test Theme Selection from Host Player
         // Pick a theme button if available or type a custom theme

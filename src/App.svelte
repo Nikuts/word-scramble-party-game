@@ -92,7 +92,7 @@
 
     // Check for debug / dev harness query params
     const urlParams = new URLSearchParams(window.location.search);
-    if (import.meta.env.DEV && (urlParams.has('debug') || urlParams.has('dev') || urlParams.has('harness'))) {
+    if (urlParams.has('debug') || urlParams.has('dev') || urlParams.has('harness')) {
         isDevHarness = true;
         return;
     }

@@ -37,8 +37,12 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
 
 - **Easy Connection with QR Codes:** The host screen displays a QR code that players can scan. This takes them directly to the game's page and **automatically pre-fills the Game ID**, making it incredibly fast to join a lobby.
 - **In-Game Tutorial & Rules:** A dedicated "How to Play" screen, accessible directly from the main menu (after language selection) and during the lobby, provides a quick, multilingual guide to the game rules in the chosen language.
-- **Expressive Image Avatars:** Players can choose from a fun selection of 20 different character avatars (including aliens, wizards, and zombies) to represent themselves, adding a touch of personal flair to the game.
-- **Mobile-First UI:** The core gameplay, including an intuitive click-to-add and drag-to-reorder word scramble, is fully functional and optimized for mobile and touch devices.
+- **Expressive Image Avatars (21 Unique Characters):** Players can choose from a vibrant selection of 21 retro-arcade pixel art avatars (including 🐙 Cyberpunk Octopus, aliens, wizards, knights, and zombies) arranged in a balanced 3-column grid ($3 \times 7 = 21$) with full tactile touch targets.
+- **Mobile-First UI & Touch Ergonomics:** 
+    - **Single-Column Vertical Voting Stack:** 1-on-1, 3-way, and 4-way battle choices are stacked in full-width cards with dedicated `[ 🗳️ VOTE FOR THIS ANSWER ]` button targets to eliminate accidental taps while scrolling on phones.
+    - **De-Cluttered Host Mobile Lobby:** Color themes, single-line outlined topic reload, custom theme inputs, and compact 3-pill game mode switches (`🤡 Silly`, `🌶️ 18+`, `🐌 Slowpoke`) are prioritized at the top of the screen with a direct `🚀 Start Game` button.
+    - **Sleek Custom Arcade Scrollbars:** Replaces OS default scrollbars with custom translucent neon pill scrollbars across desktop and mobile viewports.
+    - **Intuitive Word Scramble Answering:** Fast tap-to-add, tap-to-return, and drag-and-drop word tile reordering with safe-area spacing for notches and dynamic islands.
 - **Immersive Audio & Visuals:** 
     - **Smooth Screen Transitions:** View changes are handled with a clean and simple fade effect, ensuring a smooth user experience.
     - **Dynamic Synthwave Background:** The entire game is set against an animated, retro-futuristic grid that scrolls towards the viewer, enhancing the "Neon Arcade" theme.

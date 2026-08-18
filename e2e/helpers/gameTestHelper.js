@@ -83,7 +83,7 @@ export async function joinPlayerSession(page, { gameId, playerName, avatar }) {
     await confirmAvatarBtn.waitFor({ state: 'visible', timeout: 10000 });
     if (avatar) {
         const avatarOption = page.locator(`.avatar-option[aria-label="Avatar ${avatar}"]`);
-        if (await avatarOption.isVisible().catch(() => false)) {
+        if (await avatarOption.isEnabled({ timeout: 2000 }).catch(() => false)) {
             await avatarOption.click();
         }
     }
@@ -91,6 +91,7 @@ export async function joinPlayerSession(page, { gameId, playerName, avatar }) {
 
     // Wait for Player Lobby to load
     await page.locator('h1, h2, span').filter({ hasText: /Host|Lobby|Чекаємо|гравців|Players/i }).first().waitFor({ state: 'visible', timeout: 15000 });
+    await page.waitForTimeout(100);
 }
 
 /**

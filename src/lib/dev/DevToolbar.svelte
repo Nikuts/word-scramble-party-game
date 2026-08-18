@@ -16,7 +16,7 @@
 
     const screens = [
         { id: 'player_lobby', label: '📱 Player Lobby', category: 'Player' },
-        { id: 'player_avatar', label: '📱 Avatar Select', category: 'Player' },
+        { id: 'player_avatar', label: '📱 Avatar Select & Profile', category: 'Player' },
         { id: 'player_question', label: '📱 Question Answering', category: 'Player' },
         { id: 'player_battle_single', label: '📱 Battle: Single Line', category: 'Player' },
         { id: 'player_battle_movie', label: '📱 Battle: Movie 2-Part', category: 'Player' },
@@ -82,6 +82,11 @@
                     on:change={() => dispatch('changeScreen', activeScreen)}
                     class="w-full bg-gray-900 border border-fuchsia-600/50 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none focus:border-fuchsia-400"
                 >
+                    <optgroup label="✨ Phase 3B Mobile Prototypes">
+                        {#each screens.filter(s => s.category === 'Phase 3B') as s}
+                            <option value={s.id}>{s.label}</option>
+                        {/each}
+                    </optgroup>
                     <optgroup label="📱 Mobile Player Screens">
                         {#each screens.filter(s => s.category === 'Player') as s}
                             <option value={s.id}>{s.label}</option>
