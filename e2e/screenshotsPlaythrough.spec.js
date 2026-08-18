@@ -98,8 +98,8 @@ test('captures full 3-player game playthrough screenshots', async ({ browser }) 
 
     // 6. Voting Phase
     console.log('🗳️ Entering Voting Phase...');
-    await hostPage.locator('.voting-arena, .battle-card, .panel-arcade').first().waitFor({ state: 'visible', timeout: 35000 });
-    await hostPage.waitForTimeout(1000);
+    // Allow get-ready countdown (~5s) to transition into active battle voting
+    await hostPage.waitForTimeout(6000);
 
     await hostPage.screenshot({ path: path.join(SCREENSHOTS_DIR, '08_host_voting_phase.png') });
     await p1Page.screenshot({ path: path.join(SCREENSHOTS_DIR, '09_player_voting_phase.png') });

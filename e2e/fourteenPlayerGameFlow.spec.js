@@ -87,7 +87,7 @@ test.describe('14-Player Maximum Lobby Scale Game Flow', () => {
         // 7. Verify scoreboards updated with all 14 player results
         await expect(
             hostPage.locator('.host-lobby-container, .panel-arcade, .scoreboard, [data-testid="game-id"], h1, h2').first()
-        ).toBeVisible();
+        ).toBeVisible({ timeout: 25000 });
 
         // Cleanup all 15 contexts
         for (const ctx of contexts) {

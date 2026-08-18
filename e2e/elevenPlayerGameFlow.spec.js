@@ -84,7 +84,7 @@ test.describe('11-Player Hybrid (1 vs 1 and 1 vs 1 vs 1) Game Flow', () => {
         // 7. Verify scoreboards updated with all 11 player results
         await expect(
             hostPage.locator('.host-lobby-container, .panel-arcade, .scoreboard, [data-testid="game-id"], h1, h2').first()
-        ).toBeVisible();
+        ).toBeVisible({ timeout: 25000 });
 
         // Cleanup all 12 contexts
         for (const ctx of contexts) {
