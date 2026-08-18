@@ -64,7 +64,7 @@ test.describe('Complete 3-Player Game Flow', () => {
         // 5. Phase 2: Word Scramble Battle Answering
         // Wait for battle answering phase to begin (after get-ready / timer transition)
         await expect(
-            p1Page.locator('.p-3.bg-neutral-900 button, button:has-text("Submit Battle Answer")').first()
+            p1Page.locator('.overflow-y-auto button, button.btn-arcade').first()
         ).toBeVisible({ timeout: 25000 });
 
         // All players submit their battle answers using word bank tiles

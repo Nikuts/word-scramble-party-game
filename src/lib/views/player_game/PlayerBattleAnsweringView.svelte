@@ -3,6 +3,7 @@
     import Sortable from 'sortablejs';
     import { t, sendMessage, getPartialAnswers, clearConsumedPartialAnswers, gameState, currentPlayer } from '../../../stores.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
+    import PixelAvatar from '../../shared/PixelAvatar.svelte';
 
     export let timer;
     export let battlesToAnswer = [];
@@ -126,6 +127,8 @@
         const sortable = new Sortable(node, {
             animation: 150,
             ghostClass: 'sortable-ghost',
+            filter: '.delete-word-btn',
+            preventOnFilter: false,
             onEnd: (evt) => {
                 const { oldIndex, newIndex } = evt;
                 if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return;
@@ -322,251 +325,213 @@
 <style>
     .answer-word {
         cursor: grab;
+        touch-action: none;
     }
     .answer-word:active {
         cursor: grabbing;
     }
+    .sortable-ghost {
+        opacity: 0.4;
+    }
 </style>
 
-<div class="w-full max-w-4xl mx-auto text-center px-2">
-    {#if $gameState?.theme}
-        <div class="flex justify-center mb-2">
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-black/60 border border-primary/50 rounded-full text-xs font-bold text-primary max-w-[85%] truncate">
-                <span>🎭</span> <span class="truncate">{$gameState.theme}</span>
-            </div>
-        </div>
-    {/if}
-
-    <SevenSegmentDisplay time={timer} />
-    
+<div class="w-full max-w-xl mx-auto h-full flex flex-col justify-between px-2 pb-2 relative select-none font-sans">
     {#if currentBattleToAnswer}
         {@const battle = currentBattleToAnswer}
         {@const battleForm = battleForms[battle.id]}
-        
-        <h1 class="text-2xl sm:text-3xl mb-1">{battle.isFinal ? $t.finalBattle : $t.battlePhase}</h1>
-        <div class="mb-3">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary text-primary font-bold text-sm tracking-wide">
-                ⚔️ {battle.competitors.length > 2 ? $t.brawlLabel : $t.battleStatusAnswering} {currentBattleNum}/{totalAssigned}
-            </span>
+        {@const hasAnswerWords = battleForm ? (battleForm.isFinal ? (battleForm.titleWords.length > 0 || battleForm.taglineWords.length > 0) : battleForm.answerWords.length > 0) : false}
+
+        <!-- Stage Center Header: Timer & Centered Stage Badge -->
+        <div class="flex flex-col items-center justify-center mb-2 flex-shrink-0 relative z-10">
+            <div class="scale-95 mb-1.5">
+                <SevenSegmentDisplay time={timer} />
+            </div>
+            <!-- Centered Standardized Badge -->
+            <div class="px-3 py-1 bg-black/80 border border-secondary text-secondary rounded font-display text-xs tracking-wider font-bold shadow-[0_0_10px_rgba(var(--color-secondary-rgb),0.25)]">
+                {battle.competitors.length > 2 ? $t.brawlLabel : (battle.isFinal ? $t.finalBattle : $t.battleStatusAnswering)} {currentBattleNum}/{totalAssigned}
+            </div>
         </div>
 
-        <div class="panel-arcade" style="--neon-color: var(--color-primary);">
-            {#if battleForm}
-                <!-- PROMPT / SCENARIO AREA -->
-                <div class="text-left mb-4">
-                    {#if battleForm.isFinal}
-                        <div class="text-neutral-200 mb-3 p-4 bg-neutral-900 border border-neutral-700 rounded-md">
-                            <div class="flex justify-between items-center mb-2">
-                                <p class="text-primary font-bold text-lg">{battle.genre}</p>
-                                <button 
-                                    type="button"
-                                    on:click={handleTimeBoost}
-                                    disabled={hasUsedTimeBoost}
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-display font-bold rounded-full border transition-all {hasUsedTimeBoost ? 'bg-neutral-800 border-neutral-700 text-neutral-500 opacity-50 cursor-not-allowed' : 'bg-yellow-950/80 border-yellow-400 text-yellow-300 shadow-[0_0_10px_rgba(250,204,21,0.4)] hover:scale-105 cursor-pointer'}"
-                                    title={hasUsedTimeBoost ? $t.timeBoostAlreadyUsed : $t.timeBoost}
-                                >
-                                    <span>⏱️</span> <span>{$t.timeBoost}</span>
-                                </button>
-                            </div>
-                            <div class="flex flex-wrap gap-1.5 items-baseline leading-relaxed text-base sm:text-lg mb-3">
-                                {#each battleForm.promptWords as word (word.id)}
-                                    <button 
-                                        type="button"
-                                        class="hover:text-primary hover:bg-primary/20 px-1 py-0.5 rounded transition-all cursor-pointer inline text-left font-medium"
-                                        on:click={() => addWordToAnswer(word, battle.id)}
-                                        title={$t.promptWordsLabel}
-                                    >
-                                        {word.text}
-                                    </button>
-                                {/each}
-                            </div>
-                            {#if showPromptTooltip}
-                                <div class="mt-2 p-2 bg-neutral-800 border border-accent/50 rounded-md flex items-center justify-between text-xs text-accent gap-2">
-                                    <span>{$t.promptTooltip}</span>
-                                    <button 
-                                        type="button" 
-                                        class="px-2 py-0.5 bg-accent text-black font-bold rounded text-[11px] hover:scale-105 transition-all cursor-pointer flex-shrink-0"
-                                        on:click={dismissPromptTooltip}
-                                    >
-                                        {$t.gotIt}
-                                    </button>
-                                </div>
-                            {/if}
-                        </div>
-                    {:else}
-                        <div class="p-4 bg-neutral-900/90 border border-neutral-700 rounded-lg mb-2 shadow-md">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">❓ {$t.battlePrompt}</span>
-                                <button 
-                                    type="button"
-                                    on:click={handleTimeBoost}
-                                    disabled={hasUsedTimeBoost}
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-display font-bold rounded-full border transition-all {hasUsedTimeBoost ? 'bg-neutral-800 border-neutral-700 text-neutral-500 opacity-50 cursor-not-allowed' : 'bg-yellow-950/80 border-yellow-400 text-yellow-300 shadow-[0_0_10px_rgba(250,204,21,0.4)] hover:scale-105 cursor-pointer'}"
-                                    title={hasUsedTimeBoost ? $t.timeBoostAlreadyUsed : $t.timeBoost}
-                                >
-                                    <span>⏱️</span> <span>{$t.timeBoost}</span>
-                                </button>
-                            </div>
-                            <div class="flex flex-wrap gap-1.5 items-baseline leading-relaxed text-lg sm:text-xl font-medium text-neutral-100">
-                                {#each battleForm.promptWords as word (word.id)}
-                                    <button 
-                                        type="button"
-                                        class="hover:text-primary hover:bg-primary/20 px-1.5 py-0.5 rounded transition-all cursor-pointer inline text-left font-medium"
-                                        on:click={() => addWordToAnswer(word, battle.id)}
-                                        title={$t.promptWordsLabel}
-                                    >
-                                        {word.text}
-                                    </button>
-                                {/each}
-                            </div>
-                            {#if showPromptTooltip}
-                                <div class="mt-3 p-2 bg-neutral-800 border border-accent/50 rounded-md flex items-center justify-between text-xs text-accent gap-2">
-                                    <span>{$t.promptTooltip}</span>
-                                    <button 
-                                        type="button" 
-                                        class="px-2 py-0.5 bg-accent text-black font-bold rounded text-[11px] hover:scale-105 transition-all cursor-pointer flex-shrink-0"
-                                        on:click={dismissPromptTooltip}
-                                    >
-                                        {$t.gotIt}
-                                    </button>
-                                </div>
-                            {/if}
-                        </div>
-                    {/if}
+        {#if battleForm}
+            <!-- Battle Prompt Card with Natural Text Flow and Header +30s Badge -->
+            <div class="panel-arcade p-2.5 sm:p-3 rounded-lg mb-2 flex-shrink-0 relative z-10" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
+                <div class="flex items-center justify-between text-[10px] font-display uppercase tracking-wider text-primary/80 mb-1.5 whitespace-nowrap">
+                    <span>{battleForm.isFinal ? ($t.finalBattle || 'Final Movie Battle') : ($t.battlePrompt || 'Battle Prompt')}</span>
+                    <button 
+                        on:click={handleTimeBoost}
+                        disabled={hasUsedTimeBoost}
+                        class="px-2 py-0.5 rounded font-mono text-[10px] font-bold transition-all whitespace-nowrap leading-none {
+                            hasUsedTimeBoost 
+                            ? 'bg-neutral-900 border border-neutral-700 text-neutral-500 opacity-35 cursor-not-allowed' 
+                            : 'bg-amber-950/70 border border-amber-400 text-amber-200 hover:bg-amber-900 shadow-sm cursor-pointer'
+                        }"
+                        title={hasUsedTimeBoost ? $t.timeBoostAlreadyUsed : $t.timeBoost}
+                    >
+                        +30s ({hasUsedTimeBoost ? '0' : '1'})
+                    </button>
                 </div>
 
-                <!-- ANSWER AREA(S) -->
-                {#if battleForm.isFinal}
-                    <div class="flex items-center justify-between mb-1">
-                        <h3 class="font-bold text-neutral-300">Movie Title</h3>
-                        {#if battleForm.titleWords.length > 0}
+                <!-- Natural flowing text (No boxes around words) -->
+                <div class="text-xs sm:text-sm font-medium text-slate-100 leading-snug py-0.5">
+                    {#if battleForm.isFinal}
+                        <p class="font-bold text-secondary mb-1">{battle.genre || ''}</p>
+                    {/if}
+                    <div class="flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
+                        {#each battleForm.promptWords as word (word.id)}
                             <button 
-                                class="text-xs text-red-400 hover:text-red-300 underline font-medium"
-                                on:click={() => clearLine(battle.id, 'title')}
-                            >
-                                ✕ {$t.clear}
-                            </button>
-                        {/if}
-                    </div>
-                    <div 
-                        use:sortableList={battleForm.titleWords}
-                        on:listUpdated={e => handleListUpdate(e.detail, battle.id, 'title')}
-                        role="button"
-                        aria-label="Select Movie Title for adding words"
-                        tabindex="0"
-                        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { battleForms[battle.id].activeLine = 'title'; } }}
-                        class="p-3 bg-black/50 min-h-[4rem] border-2 border-dashed flex flex-wrap gap-2 items-center mb-4 rounded-md cursor-pointer transition-colors {battleForm.activeLine === 'title' ? 'border-primary ring-1 ring-primary/50' : 'border-neutral-600'}"
-                        on:click={() => battleForms[battle.id].activeLine = 'title'}
-                    >
-                        {#if battleForm.titleWords.length === 0}
-                            <span class="text-neutral-500 pointer-events-none w-full text-left text-sm">{$t.clickWordsHintFinal}</span>
-                        {/if}
-                        {#each battleForm.titleWords as word (word.id)}
-                            <div class="answer-word bg-primary text-black font-semibold pl-3 pr-1 py-1 text-base shadow-md inline-flex items-center rounded-md">
-                                <span>{word.text}</span>
-                                <button class="delete-word-btn !text-red-900 hover:!bg-red-500 hover:!text-white ml-2 rounded" title="Remove word" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
-                            </div>
-                        {/each}
-                    </div>
-                    
-                    <div class="flex items-center justify-between mb-1">
-                        <h3 class="font-bold text-neutral-300">Tagline</h3>
-                        {#if battleForm.taglineWords.length > 0}
-                            <button 
-                                class="text-xs text-red-400 hover:text-red-300 underline font-medium"
-                                on:click={() => clearLine(battle.id, 'tagline')}
-                            >
-                                ✕ {$t.clear}
-                            </button>
-                        {/if}
-                    </div>
-                     <div 
-                        use:sortableList={battleForm.taglineWords}
-                        on:listUpdated={e => handleListUpdate(e.detail, battle.id, 'tagline')}
-                        role="button"
-                        aria-label="Select Movie Tagline for adding words"
-                        tabindex="0"
-                        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { battleForms[battle.id].activeLine = 'tagline'; } }}
-                        class="p-3 bg-black/50 min-h-[4rem] border-2 border-dashed flex flex-wrap gap-2 items-center mb-4 rounded-md cursor-pointer transition-colors {battleForm.activeLine === 'tagline' ? 'border-primary ring-1 ring-primary/50' : 'border-neutral-600'}"
-                        on:click={() => battleForms[battle.id].activeLine = 'tagline'}
-                    >
-                        {#if battleForm.taglineWords.length === 0}
-                            <span class="text-neutral-500 pointer-events-none w-full text-left text-sm">{$t.clickWordsHintFinal}</span>
-                        {/if}
-                        {#each battleForm.taglineWords as word (word.id)}
-                            <div class="answer-word bg-primary text-black font-semibold pl-3 pr-1 py-1 text-base shadow-md inline-flex items-center rounded-md">
-                                <span>{word.text}</span>
-                                <button class="delete-word-btn !text-red-900 hover:!bg-red-500 hover:!text-white ml-2 rounded" title="Remove word" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
-                            </div>
-                        {/each}
-                    </div>
-
-                {:else}
-                    <div class="flex items-center justify-between mb-2">
-                        <h3 class="font-bold text-neutral-300 font-display">{$t.yourAnswer}</h3>
-                        {#if battleForm.answerWords.length > 0}
-                            <button 
-                                class="text-xs text-red-400 hover:text-red-300 underline font-medium"
-                                on:click={() => clearLine(battle.id)}
-                            >
-                                ✕ {$t.clear}
-                            </button>
-                        {/if}
-                    </div>
-                    <div
-                        use:sortableList={battleForm.answerWords}
-                        on:listUpdated={e => handleListUpdate(e.detail, battle.id)}
-                        class="p-3 bg-black/50 min-h-[5rem] border-2 border-dashed border-primary flex flex-wrap gap-2 items-center mb-6 rounded-md"
-                    >
-                        {#if battleForm.answerWords.length === 0}
-                            <span class="text-neutral-500 pointer-events-none w-full text-left text-sm">{$t.clickWordsHint}</span>
-                        {/if}
-                        {#each battleForm.answerWords as word (word.id)}
-                           <div class="answer-word bg-primary text-black font-semibold pl-3 pr-1 py-1 text-lg shadow-md inline-flex items-center rounded-md">
-                                <span>{word.text}</span>
-                                <button class="delete-word-btn !text-red-900 hover:!bg-red-500 hover:!text-white ml-2 rounded" title="Remove word" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
-                            </div>
-                        {/each}
-                    </div>
-                {/if}
-
-                <!-- WORD BANK -->
-                <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <h3 class="font-bold text-neutral-300 font-display text-left">{$t.wordBank}</h3>
-                        <div class="flex items-center gap-2">
-                            <button 
-                                class="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-cyan-300 border border-cyan-500/50 rounded font-semibold transition-all inline-flex items-center gap-1 {(!battleForm.undoStack || battleForm.undoStack.length === 0) ? 'opacity-40 pointer-events-none' : 'hover:scale-105'}"
-                                on:click={() => undoLastWord(battle.id)}
-                                title={$t.undo}
-                            >
-                                <span>↩</span> {$t.undo}
-                            </button>
-                            <button 
-                                class="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-yellow-300 border border-yellow-500/50 rounded font-semibold transition-all hover:scale-105 inline-flex items-center gap-1"
-                                on:click={() => shuffleBank(battle.id)}
-                                title={$t.shuffleBank}
-                            >
-                                <span>🔀</span> {$t.shuffleBank}
-                            </button>
-                        </div>
-                    </div>
-                    <div class="p-3 bg-neutral-900 border border-neutral-700 max-h-64 sm:max-h-72 overflow-y-auto flex flex-wrap gap-2 justify-center items-start select-none rounded-md">
-                        {#each battleForm.wordBankWords as word (word.id)}
-                            <button 
-                                class="bg-neutral-800 text-white font-medium px-3 py-1 border border-neutral-600 text-base transition-transform transform hover:scale-105 hover:bg-secondary hover:text-white rounded-md"
+                                type="button"
                                 on:click={() => addWordToAnswer(word, battle.id)}
+                                class="hover:text-primary hover:underline transition-colors cursor-pointer text-left inline bg-transparent p-0 border-0 font-medium"
+                                title={$t.promptWordsLabel || 'Tap to use prompt word'}
                             >
                                 {word.text}
                             </button>
                         {/each}
                     </div>
                 </div>
-                
-                <button class="mt-6 w-full btn-arcade text-xl" style="--btn-color: var(--color-accent);" on:click={() => submitBattleAnswer(battle.id)}>{$t.submitBattleAnswer}</button>
-            {/if}
-        </div>
+
+                <!-- Single-Line Dismissible Green Tooltip -->
+                {#if showPromptTooltip}
+                    <div class="mt-2 px-2 py-1 bg-emerald-950/90 border border-emerald-500/60 rounded flex items-center justify-between text-[10px] text-emerald-200">
+                        <span class="truncate">💡 {$t.promptTooltip || 'Tip: Tap prompt words to use them!'}</span>
+                        <button 
+                            on:click={dismissPromptTooltip}
+                            class="ml-2 px-2 py-0.5 bg-emerald-500 text-black font-display text-[9px] font-bold rounded hover:bg-emerald-400 transition-colors flex-shrink-0 cursor-pointer"
+                        >
+                            {$t.gotIt || 'OK'}
+                        </button>
+                    </div>
+                {/if}
+            </div>
+
+            <!-- Answer Dropzone (SortableJS Enabled) -->
+            <div class="mb-2 flex-shrink-0 relative z-10">
+                {#if battleForm.isFinal}
+                    <div class="flex items-center justify-between text-[10px] font-display uppercase tracking-widest text-secondary mb-1">
+                        <span>Movie Title</span>
+                        {#if battleForm.titleWords.length > 0}
+                            <button class="text-red-400 hover:text-red-300 font-sans text-xs" on:click={() => clearLine(battle.id, 'title')}>✕ {$t.clear}</button>
+                        {/if}
+                    </div>
+                    <div 
+                        use:sortableList={battleForm.titleWords}
+                        on:listUpdated={e => handleListUpdate(e.detail, battle.id, 'title')}
+                        class="min-h-[2.5rem] p-1.5 bg-black/80 border-2 border-dashed rounded-lg flex flex-wrap gap-1 items-center mb-2 {battleForm.activeLine === 'title' ? 'border-primary' : 'border-neutral-700'}"
+                        on:click={() => battleForms[battle.id].activeLine = 'title'}
+                    >
+                        {#if battleForm.titleWords.length === 0}
+                            <span class="text-[11px] text-slate-500 italic pl-1">{$t.clickWordsHintFinal || 'Click words to assemble title'}</span>
+                        {/if}
+                        {#each battleForm.titleWords as word (word.id)}
+                            <div class="answer-word px-2 py-0.5 bg-pink-950/80 border border-pink-400/90 text-pink-100 font-semibold text-xs rounded-md shadow-sm flex items-center gap-1">
+                                <span>{word.text}</span>
+                                <button class="delete-word-btn text-pink-400 hover:text-white font-bold ml-1" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
+                            </div>
+                        {/each}
+                    </div>
+
+                    <div class="flex items-center justify-between text-[10px] font-display uppercase tracking-widest text-secondary mb-1">
+                        <span>Tagline</span>
+                        {#if battleForm.taglineWords.length > 0}
+                            <button class="text-red-400 hover:text-red-300 font-sans text-xs" on:click={() => clearLine(battle.id, 'tagline')}>✕ {$t.clear}</button>
+                        {/if}
+                    </div>
+                    <div 
+                        use:sortableList={battleForm.taglineWords}
+                        on:listUpdated={e => handleListUpdate(e.detail, battle.id, 'tagline')}
+                        class="min-h-[2.5rem] p-1.5 bg-black/80 border-2 border-dashed rounded-lg flex flex-wrap gap-1 items-center {battleForm.activeLine === 'tagline' ? 'border-primary' : 'border-neutral-700'}"
+                        on:click={() => battleForms[battle.id].activeLine = 'tagline'}
+                    >
+                        {#if battleForm.taglineWords.length === 0}
+                            <span class="text-[11px] text-slate-500 italic pl-1">{$t.clickWordsHintFinal || 'Click words to assemble tagline'}</span>
+                        {/if}
+                        {#each battleForm.taglineWords as word (word.id)}
+                            <div class="answer-word px-2 py-0.5 bg-pink-950/80 border border-pink-400/90 text-pink-100 font-semibold text-xs rounded-md shadow-sm flex items-center gap-1">
+                                <span>{word.text}</span>
+                                <button class="delete-word-btn text-pink-400 hover:text-white font-bold ml-1" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
+                            </div>
+                        {/each}
+                    </div>
+                {:else}
+                    <div class="flex items-center justify-between text-[10px] font-display uppercase tracking-widest text-secondary mb-1">
+                        <span>{$t.yourAnswer || 'YOUR ANSWER'}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-slate-400 font-mono">{battleForm.answerWords.length} {$t.words || 'WORDS'}</span>
+                            {#if battleForm.answerWords.length > 0}
+                                <button class="text-red-400 hover:text-red-300 font-sans text-xs" on:click={() => clearLine(battle.id)}>✕ {$t.clear}</button>
+                            {/if}
+                        </div>
+                    </div>
+                    <div 
+                        use:sortableList={battleForm.answerWords}
+                        on:listUpdated={e => handleListUpdate(e.detail, battle.id)}
+                        class="min-h-[3.25rem] p-2 bg-black/80 border-2 border-dashed border-secondary/80 rounded-lg flex flex-wrap gap-1.5 items-center transition-all duration-200"
+                    >
+                        {#if battleForm.answerWords.length === 0}
+                            <span class="text-xs text-slate-500 italic pl-1">{$t.clickWordsHint || 'Click words to build your answer'}</span>
+                        {/if}
+                        {#each battleForm.answerWords as word (word.id)}
+                            <div class="answer-word px-2 py-0.5 bg-pink-950/80 border border-pink-400/90 text-pink-100 font-semibold text-xs rounded-md shadow-sm flex items-center gap-1.5 transition-transform">
+                                <span>{word.text}</span>
+                                <button class="delete-word-btn text-pink-400 hover:text-white font-bold ml-1" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+
+            <!-- Word Bank Card with Undo & Shuffle -->
+            <div class="flex-1 flex flex-col min-h-0 mb-2 relative z-10">
+                <div class="flex items-center justify-between text-[10px] font-display uppercase tracking-widest text-primary mb-1">
+                    <span>{$t.wordBank || 'WORD BANK'}</span>
+                    <div class="flex items-center gap-1">
+                        <button 
+                            on:click={() => undoLastWord(battle.id)}
+                            disabled={!battleForm.undoStack || battleForm.undoStack.length === 0}
+                            class="px-2 py-0.5 bg-neutral-900 border border-neutral-700 text-slate-200 font-display text-[9px] font-bold rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-800"
+                        >
+                            {$t.undo || 'Undo'}
+                        </button>
+                        <button 
+                            on:click={() => shuffleBank(battle.id)}
+                            class="px-2 py-0.5 bg-neutral-900 border border-neutral-700 text-slate-200 font-display text-[9px] font-bold rounded hover:bg-neutral-800 transition-colors"
+                        >
+                            {$t.shuffleBank || 'Shuffle'}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Word Tiles (Reusable) -->
+                <div class="flex-1 overflow-y-auto p-1.5 bg-black/60 border border-neutral-800 rounded-lg flex flex-wrap content-start gap-1 justify-center">
+                    {#each battleForm.wordBankWords as word (word.id)}
+                        <button 
+                            on:click={() => addWordToAnswer(word, battle.id)}
+                            class="px-2 py-1 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/80 text-cyan-200 font-medium text-xs rounded-md shadow-sm transition-transform active:scale-95 cursor-pointer"
+                        >
+                            {word.text}
+                        </button>
+                    {/each}
+                </div>
+            </div>
+
+            <!-- Bottom Fixed Submit Button -->
+            <div class="pt-1 flex-shrink-0 relative z-10">
+                <button 
+                    disabled={!hasAnswerWords}
+                    class="btn-arcade w-full py-2.5 text-sm sm:text-base font-display uppercase tracking-widest rounded-lg transition-all {
+                        hasAnswerWords ? 'shadow-[0_0_20px_rgba(57,255,20,0.5)] border-emerald-400 text-emerald-200' : 'opacity-40 cursor-not-allowed'
+                    }"
+                    style="--btn-color: {hasAnswerWords ? 'var(--color-accent)' : '#4b5563'};"
+                    on:click={() => submitBattleAnswer(battle.id)}
+                >
+                    {$t.submitBattleAnswer || 'SUBMIT ANSWER'}
+                </button>
+            </div>
+        {/if}
     {:else}
-        <p class="mt-12 text-2xl text-warning animate-pulse">{$t.waitingForCompetitors}</p>
+        <div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+            <SevenSegmentDisplay time={timer} />
+            <p class="mt-12 text-2xl text-warning animate-pulse font-display">{$t.waitingForCompetitors}</p>
+        </div>
     {/if}
 </div>

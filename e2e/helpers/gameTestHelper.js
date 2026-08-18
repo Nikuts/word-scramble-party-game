@@ -126,7 +126,7 @@ export async function submitAllRoundQuestions(page, playerName) {
  * @param {number} wordCount Number of words to click from word bank
  */
 export async function submitScrambleBattleAnswer(page, wordCount = 4) {
-    const wordBankButtons = page.locator('.p-3.bg-neutral-900 button, button:has-text("✕") ~ div button');
+    const wordBankButtons = page.locator('.overflow-y-auto button, .p-3.bg-neutral-900 button, button:has-text("✕") ~ div button');
     await wordBankButtons.first().waitFor({ state: 'visible', timeout: 20000 });
 
     const totalAvailable = await wordBankButtons.count();
@@ -140,7 +140,7 @@ export async function submitScrambleBattleAnswer(page, wordCount = 4) {
         }
     }
 
-    const submitBtn = page.locator('button.btn-arcade:has-text("Submit Battle Answer"), button.btn-arcade:has-text("Надіслати відповідь")');
+    const submitBtn = page.locator('button.btn-arcade').filter({ hasText: /Submit|Надіслати/i });
     await submitBtn.waitFor({ state: 'visible' });
     await submitBtn.click();
 }
@@ -151,7 +151,7 @@ export async function submitScrambleBattleAnswer(page, wordCount = 4) {
  * @param {import('@playwright/test').Page} page
  */
 export async function submitFinalBattleAnswer(page) {
-    const wordBankButtons = page.locator('.p-3.bg-neutral-900 button');
+    const wordBankButtons = page.locator('.overflow-y-auto button, .p-3.bg-neutral-900 button');
     await wordBankButtons.first().waitFor({ state: 'visible', timeout: 20000 });
 
     // 1. Add words to Title (default active line)
@@ -184,7 +184,7 @@ export async function submitFinalBattleAnswer(page) {
     }
 
     // 4. Submit Final Battle Answer
-    const submitBtn = page.locator('button.btn-arcade:has-text("Submit Battle Answer"), button.btn-arcade:has-text("Надіслати відповідь")');
+    const submitBtn = page.locator('button.btn-arcade').filter({ hasText: /Submit|Надіслати/i });
     await submitBtn.waitFor({ state: 'visible' });
     await submitBtn.click();
 }
@@ -197,7 +197,7 @@ export async function submitFinalBattleAnswer(page) {
  */
 export async function submitAllPlayerBattles(page, isFinalRound = false) {
     for (let b = 0; b < 2; b++) {
-        const submitBtn = page.locator('button.btn-arcade:has-text("Submit Battle Answer")');
+        const submitBtn = page.locator('button.btn-arcade').filter({ hasText: /Submit|Надіслати/i });
         try {
             if (await submitBtn.isVisible({ timeout: 5000 })) {
                 if (isFinalRound) {

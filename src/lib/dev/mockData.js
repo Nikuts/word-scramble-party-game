@@ -2,12 +2,12 @@
 import { AVATARS } from '../config.js';
 
 export const MOCK_PLAYERS = [
-    { id: 'p1', name: 'Alice', avatar: '🦊', isHost: true, isReady: true, isConnected: true, score: 2800 },
-    { id: 'p2', name: 'Bob', avatar: '🐸', isHost: false, isReady: true, isConnected: true, score: 3400 },
-    { id: 'p3', name: 'Charlie', avatar: '🤖', isHost: false, isReady: true, isConnected: true, score: 2100 },
-    { id: 'p4', name: 'Diana', avatar: '🐱', isHost: false, isReady: true, isConnected: true, score: 3950 },
-    { id: 'p5', name: 'Evan', avatar: '🐼', isHost: false, isReady: false, isConnected: true, score: 1800 },
-    { id: 'p6', name: 'Fiona', avatar: '🦄', isHost: false, isReady: true, isConnected: false, score: 1500 }
+    { id: 'p1', name: 'Alice', avatar: '🦊', isHost: true, isReady: true, isConnected: true, socketId: 'sock_p1', score: 2800 },
+    { id: 'p2', name: 'Bob', avatar: '🐸', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p2', score: 2400 },
+    { id: 'p3', name: 'Charlie', avatar: '🤖', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p3', score: 1950 },
+    { id: 'p4', name: 'Diana', avatar: '🧙', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p4', score: 2200 },
+    { id: 'p5', name: 'Evan', avatar: '🦁', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p5', score: 1800 },
+    { id: 'p6', name: 'Fiona', avatar: '🐱', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p6', score: 2100 }
 ];
 
 export const MOCK_WORD_BANK_EN = [

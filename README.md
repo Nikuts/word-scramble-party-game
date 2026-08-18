@@ -117,6 +117,14 @@ The game consists of **three rounds**. Each round has a **Question Phase** follo
 #### **Phase 1: Question Answering**
 - **Objective:** To provide creative, text-based answers that will become the raw material for the upcoming battles.
 - **Gameplay:** Each player receives a unique set of open-ended questions on their screen (e.g., "What's a minor inconvenience that feels like a major tragedy?"). Players type their answers, aiming to be descriptive and funny. The time for this phase scales with the number of questions.
+- **Single-Screen Mobile Ergonomics:**
+    - **Single-Line Header:** Displays `PROMPT` alongside compact `[Re-Roll (1)]` and `[+30s (1)]` micro-badges that dynamically flip to `(0)` and grey out when exhausted.
+    - **Clean Word Counter:** Real-time feedback with `Word count: X (Min 5 words)` and dynamic `VALID` status indicator.
+    - **Zero Scrolling:** The entire stage header, prompt card, textarea, and fixed bottom Submit button fit within standard phone viewports (390x844) with zero vertical scrolling.
+- **Host TV Arena Display:**
+    - **Prominent Theme Marquee:** Displays the chosen game topic in a glowing marquee box at the top center.
+    - **Adaptive 3–14 Player Grid:** Dynamically scales across 3 to 14 players to fit laptops (1366x768 / 1440x900) and Smart TVs with zero scrollbars.
+    - **Unified Dark Arcade Cards & Live Status:** Shows real-time progress indicators (`✓ READY!`, `✍️ Assembling...`, `💭 Thinking...`, `OFFLINE`) with animated progress bars.
 
 #### **Phase 2: The Battle Phase (Vote -> Reveal -> Next)**
 This phase is a rapid, sequential series of events where players vote on one battle at a time.
@@ -127,14 +135,21 @@ This phase is a rapid, sequential series of events where players vote on one bat
 ##### **Step B: Answering (Timed)**
 - **Gameplay:** A schedule of one-on-one battles is created for the round. On their devices, every player who is competing is presented with all their assigned battle prompts to answer within a single timed phase.
 - **The Timer:** The timer for this phase is dynamic. It is calculated to give each player adequate time to answer their **two battles** for the round (e.g., `2 * seconds_per_battle_answer`). This keeps the game pace brisk and fair, regardless of the total number of players.
+- **Single-Screen Mobile Layout:**
+    - **Natural Prompt Text:** Prompt sentences flow naturally as ordinary text without boxed word borders. Tapping any word in the prompt seamlessly adds it to the player's answer.
+    - **Header +30s Micro-Badge:** Positioned in the prompt card header, flipping to `+30s (0)` and disabling upon activation.
+    - **Single-Line Tooltip:** Compact green tip (`💡 Tip: Tap prompt words to use them!`) with an instant `[OK]` dismiss button.
+    - **Reusable Word Bank:** Word bank tiles remain clickable for multiple usages and don't disappear when added to an answer.
+    - **SortableJS Drag-and-Drop:** Drag and drop words within the answer dropzone to reorder them freely, with deletion strictly triggered by clicking the small `✕` icon.
+    - **Header Actions:** Word bank header provides instant `[Undo]` and `[Shuffle]` actions.
 - **Building an Answer with Syntactic Clause Bundles:**
     - **100% Opponent Words (0% Self-Words):** Players are provided a curated word bank sourced strictly from their opponents' answers and themed fallbacks—a player never receives their own words.
     - **Grammar & Clause Segmentation:** When players submit full sentences in Phase 1, the engine segments them into natural syntactic clauses and grammatical bundles (using conjunctions and punctuation boundaries). Whole bundles are routed together to an opponent so they have matching subjects, verbs, prepositions, and modifiers to construct fluent and hilarious sentences.
     - **Individual Single-Word Tiles:** Every word in the bank is delivered as an individual, clickable single-word tile (no forced multi-word clumps), providing maximum freedom to rearrange, scramble, or weave words together.
 - **Interaction:**
-    - **Click to Add:** Players **click** single-word tiles from the Word Bank to add them to their answer.
-    - **Drag and Reorder:** Players can drag and drop the words *within their answer area* to reorder them. A translucent, neon-blue box with a dashed border serves as a placeholder, providing a clear indicator of where the item will be placed.
-    - **Click to Delete:** Each item added to the answer has a small **'x'** icon, making it easy to click and instantly remove it.
+    - **Click to Add:** Players **click** single-word tiles from the Word Bank or prompt text to add them to their answer.
+    - **Drag and Reorder:** Players can drag and drop the words *within their answer area* to reorder them with smooth SortableJS animations.
+    - **Click to Delete:** Each item added to the answer has a small **'x'** icon, making it easy to click and remove it without triggering during drag.
 
 ##### **Step C: Sequential Voting & Reveals**
 This is a fast-paced cycle that repeats for every battle in the round.

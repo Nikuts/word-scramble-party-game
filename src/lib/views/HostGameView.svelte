@@ -141,6 +141,110 @@
     }
 </script>
 
+{#if $gamePhase === 'question' || $gamePhase === 'battle_answering'}
+    <!-- Full-Width Host Arena Phase 2 Redesign (Zero Scroll 14P Adaptive Grid) -->
+    <div class="w-full min-h-screen flex flex-col justify-between p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto safe-top safe-bottom relative select-none font-sans host-game-container">
+        {#if $activeTimeBoostNotice}
+            <div class="fixed top-6 right-6 z-50 animate-bounce bg-yellow-400 text-black px-4 py-2 rounded-lg font-display font-extrabold shadow-[0_0_20px_rgba(250,204,21,0.8)] border-2 border-white flex items-center gap-2">
+                <span class="text-xl">⏱️</span>
+                <span>{$t.timeBoostUsed.replace('{name}', $activeTimeBoostNotice.playerName)}</span>
+            </div>
+        {/if}
+
+        <!-- Top Prominent Neon Theme Marquee -->
+        <header class="flex-shrink-0 mb-3 text-center">
+            <div class="panel-arcade px-4 py-2 sm:py-2.5 inline-block max-w-4xl mx-auto rounded-lg shadow-[0_0_15px_rgba(var(--color-primary-rgb),0.3)]" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
+                <span class="text-[10px] sm:text-xs font-display uppercase tracking-widest text-primary/80 block mb-0.5">
+                    {$t.chosenTheme || 'THEME'}
+                </span>
+                <span class="font-bold text-amber-300 font-display text-sm sm:text-lg lg:text-xl tracking-wide drop-shadow-[0_0_10px_rgba(252,211,77,0.5)]">
+                    {$gameState.theme || '...'}
+                </span>
+            </div>
+        </header>
+
+        <!-- Stage Center: Timer & Phase Status -->
+        <div class="flex-shrink-0 text-center mb-3 sm:mb-4">
+            <div class="scale-90 sm:scale-100 mb-2">
+                <SevenSegmentDisplay time={$phaseTimer} />
+            </div>
+            <h1 class="text-xl sm:text-2xl lg:text-3xl font-display font-black tracking-wider text-primary drop-shadow-[0_0_12px_rgba(var(--color-primary-rgb),0.6)]">
+                {$t.roundStatus ? $t.roundStatus.replace('{currentRound}', $currentRound) : `ROUND ${$currentRound}`} · {$gamePhase === 'question' ? ($t.questionPhase || 'QUESTION').toUpperCase() : ($currentRound === 3 ? ($t.finalRound || 'FINAL BATTLE').toUpperCase() : ($t.battlePhase || 'BATTLE').toUpperCase())}
+            </h1>
+        </div>
+
+        <!-- Adaptive Arena Grid for 3 to 14 Players (Option 1 Dark Arcade Frames) -->
+        <main class="flex-1 flex items-center justify-center min-h-0 py-1">
+            <div class="w-full grid gap-2.5 sm:gap-3.5 {$gamePlayers.length <= 6 ? 'grid-cols-2 md:grid-cols-3 max-w-4xl' : 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 max-w-6xl'} mx-auto">
+                {#each $gamePlayers as p (p.id)}
+                    {@const isConnected = !!p.socketId}
+                    {@const isQuestionPhase = $gamePhase === 'question'}
+                    {@const totalItems = isQuestionPhase 
+                        ? ($gameState.playerAnswers?.[p.id]?.questions?.length || 3) 
+                        : ($gameState.battleSchedule?.filter(b => b.competitors?.includes(p.id))?.length || 1)}
+                    {@const answeredItems = isQuestionPhase 
+                        ? ($gameState.playerAnswers?.[p.id]?.questions?.filter(q => !!q.answer)?.length || 0) 
+                        : ($gameState.battleSchedule?.filter(b => b.competitors?.includes(p.id) && !!b.answers?.[p.id])?.length || 0)}
+                    {@const isComplete = isConnected && answeredItems >= totalItems && totalItems > 0}
+                    {@const isWorking = isConnected && answeredItems > 0 && !isComplete}
+                    {@const progressPct = totalItems > 0 ? Math.round((answeredItems / totalItems) * 100) : 0}
+
+                    <div class="panel-arcade p-2.5 sm:p-3 rounded-lg flex flex-col justify-between border-neutral-700/90 bg-black/85 shadow-md transition-all duration-300">
+                        <!-- Card Header: Avatar, Name, Host & Score -->
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <div class="{$gamePlayers.length > 8 ? 'w-8 h-8 sm:w-10 sm:h-10' : 'w-10 h-10 sm:w-12 sm:h-12'} flex-shrink-0">
+                                <PixelAvatar avatar={p.avatar} />
+                            </div>
+                            <div class="min-w-0 flex-1 text-left">
+                                <div class="flex items-center gap-1">
+                                    <p class="font-bold text-xs sm:text-sm text-slate-100 truncate">{p.name}</p>
+                                    {#if p.isHost}
+                                        <span class="px-1 py-0.2 bg-warning text-black text-[8px] font-display rounded font-bold flex-shrink-0">{$t.host || 'HOST'}</span>
+                                    {/if}
+                                </div>
+                                <p class="text-primary font-mono font-bold text-xs leading-tight">
+                                    {Math.round($animatedScores[p.id] || p.score)} <span class="text-[9px] text-slate-400 font-display">{$t.pts || 'PTS'}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar & Dynamic Status Indicator -->
+                        <div class="w-full mt-auto pt-1">
+                            <div class="flex items-center justify-between text-[9px] sm:text-[10px] font-display font-bold mb-1">
+                                {#if !isConnected}
+                                    <span class="text-danger animate-pulse font-bold">{$t.disconnected || 'OFFLINE'}</span>
+                                {:else if isComplete}
+                                    <span class="text-emerald-400 flex items-center gap-1 font-black">
+                                        ✓ {$t.ready || 'READY!'}
+                                    </span>
+                                {:else if isWorking}
+                                    <span class="text-cyan-300 flex items-center gap-1 animate-pulse">
+                                        ✍️ {$t.answering || 'Assembling...'}
+                                    </span>
+                                {:else}
+                                    <span class="text-amber-300 flex items-center gap-1">
+                                        💭 {$t.thinking || 'Thinking...'}
+                                    </span>
+                                {/if}
+                                <span class="font-mono text-slate-400">{answeredItems}/{totalItems}</span>
+                            </div>
+
+                            <!-- Sleek Progress Track -->
+                            <div class="w-full h-1.5 bg-neutral-900 rounded-full overflow-hidden border border-neutral-700/60">
+                                <div 
+                                    class="h-full transition-all duration-500 {
+                                        !isConnected ? 'bg-red-500' : (isComplete ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : (isWorking ? 'bg-cyan-400' : 'bg-amber-400'))
+                                    }" 
+                                    style="width: {isConnected ? progressPct : 0}%;"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+                {/each}
+            </div>
+        </main>
+    </div>
+{:else}
 <div class="p-3 sm:p-6 flex flex-col md:flex-row gap-4 sm:gap-6 min-h-screen relative host-game-container">
     {#if $activeTimeBoostNotice}
         <div class="fixed top-6 right-6 z-50 animate-bounce bg-yellow-400 text-black px-4 py-2 rounded-lg font-display font-extrabold shadow-[0_0_20px_rgba(250,204,21,0.8)] border-2 border-white flex items-center gap-2">
@@ -550,3 +654,4 @@
         {$t.endGame}
     </button>
 </div>
+{/if}

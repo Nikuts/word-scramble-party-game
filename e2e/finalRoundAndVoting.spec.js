@@ -57,7 +57,7 @@ test.describe('Full Multi-Round Lifecycle, Voting & Final Round Showdown', () =>
         }
 
         // Phase 2: Word Scramble Battles
-        await expect(p1Page.locator('.p-3.bg-neutral-900 button, button:has-text("Submit Battle Answer")').first()).toBeVisible({ timeout: 25000 });
+        await expect(p1Page.locator('.overflow-y-auto button, button.btn-arcade').first()).toBeVisible({ timeout: 25000 });
         for (const p of players) {
             await submitAllPlayerBattles(p.page, false);
         }
@@ -78,7 +78,7 @@ test.describe('Full Multi-Round Lifecycle, Voting & Final Round Showdown', () =>
         }
 
         // Round 2 Battle Answering
-        await expect(p1Page.locator('.p-3.bg-neutral-900 button, button:has-text("Submit Battle Answer")').first()).toBeVisible({ timeout: 25000 });
+        await expect(p1Page.locator('.overflow-y-auto button, button.btn-arcade').first()).toBeVisible({ timeout: 25000 });
         for (const p of players) {
             await submitAllPlayerBattles(p.page, false);
         }
@@ -100,7 +100,7 @@ test.describe('Full Multi-Round Lifecycle, Voting & Final Round Showdown', () =>
 
         // Round 3 Final Battle: Movie Title & Tagline builder
         await expect(
-            p1Page.locator('[aria-label*="Movie Title"], [aria-label*="Movie Tagline"], button:has-text("Submit Battle Answer")').first()
+            p1Page.locator('.overflow-y-auto button, [aria-label*="Movie Title"], [aria-label*="Movie Tagline"], button.btn-arcade').first()
         ).toBeVisible({ timeout: 25000 });
 
         for (const p of players) {

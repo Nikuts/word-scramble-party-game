@@ -9,6 +9,7 @@
     export let tileCount = 35;
     export let isTvMode = false;
     export let colorTheme = 'default';
+    export let hideToolbar = false;
 
     const dispatch = createEventDispatcher();
     let isCollapsed = false;
@@ -44,6 +45,7 @@
     }
 </script>
 
+{#if !hideToolbar}
 <div class="fixed bottom-3 right-3 z-50 font-sans text-xs select-none">
     {#if isCollapsed}
         <button
@@ -220,3 +222,4 @@
         </div>
     {/if}
 </div>
+{/if}

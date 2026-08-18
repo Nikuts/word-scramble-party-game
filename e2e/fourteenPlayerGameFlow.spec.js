@@ -69,7 +69,7 @@ test.describe('14-Player Maximum Lobby Scale Game Flow', () => {
 
         // 5. Phase 2: Word Scramble Battles (7 battles scheduled: 7 quads * 4 = 28 slots = 2 battles per player)
         await expect(
-            p1Page.locator('.p-3.bg-neutral-900 button, button:has-text("Submit Battle Answer")').first()
+            p1Page.locator('.overflow-y-auto button, button.btn-arcade').first()
         ).toBeVisible({ timeout: 25000 });
 
         for (const p of players) {

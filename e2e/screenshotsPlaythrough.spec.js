@@ -86,7 +86,7 @@ test('captures full 3-player game playthrough screenshots', async ({ browser }) 
 
     // 5. Battle Answering Phase
     console.log('⚔️ Entering Battle Answering Phase...');
-    await p1Page.locator('.p-3.bg-neutral-900 button, button:has-text("Submit Battle Answer")').first().waitFor({ state: 'visible', timeout: 35000 });
+    await p1Page.locator('.overflow-y-auto button, button.btn-arcade').first().waitFor({ state: 'visible', timeout: 35000 });
     await hostPage.waitForTimeout(1500);
 
     await hostPage.screenshot({ path: path.join(SCREENSHOTS_DIR, '06_host_battle_answering.png') });
