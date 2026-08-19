@@ -31,6 +31,7 @@
     import HostLobby from '../views/HostLobby.svelte';
     import HostGameView from '../views/HostGameView.svelte';
     import AvatarGalleryView from './AvatarGalleryView.svelte';
+    import Instructions from '../views/Instructions.svelte';
     // URL Query Params parser
     const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     let activeScreen = urlParams.get('debug') || urlParams.get('screen') || 'player_question';
@@ -222,6 +223,10 @@
                         <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_results'}
                         <PlayerResultsView game={$gameState} player={activePlayerObj} />
+                    {:else if activeScreen === 'instructions'}
+                        <div class="overflow-y-auto h-full">
+                            <Instructions />
+                        </div>
                     {:else if activeScreen === 'avatar_gallery'}
                         <AvatarGalleryView />
                     {:else}
@@ -237,6 +242,8 @@
                     <HostLobby />
                 {:else if activeScreen.startsWith('host_')}
                     <HostGameView />
+                {:else if activeScreen === 'instructions'}
+                    <Instructions />
                 {:else if activeScreen === 'avatar_gallery'}
                     <AvatarGalleryView />
                 {:else}

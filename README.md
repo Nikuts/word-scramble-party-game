@@ -172,16 +172,34 @@ This continues until all battles for the round have been voted on and revealed.
 ### 3. The Final Round: Movie Poster
 - The third and final round follows the same flow, but the battle is elevated.
 - **Final Battle Prompt:** Instead of a simple fill-in-the-blank, the AI generates a **Movie Genre** and a **Bizarre Premise**.
-- **The Task:** The two competing players must use their word banks to create a fitting **Movie Title** and a catchy **Tagline**, turning their opponent's words into a hilarious movie poster concept.
+- **The Task:** The competing players must use their word banks to create a fitting **Movie Title** and a catchy **Tagline**, turning their opponents' words into a hilarious movie poster concept.
 
-### 4. Game End & Post-Game (Phase 3C Final Results)
+### 4. One-Time Powerups & Scoring Bonuses
+
+To add tactical depth and party chaos, players have access to **one-time powerups** and **passive scoring bonuses**:
+
+- **🎲 Question Re-Roll (1x per Game):**
+  - In the **Question Phase**, if a player receives an awkward or difficult prompt, they can tap **`[RE-ROLL (1)]`** to immediately replace it with a fresh prompt.
+  - **Strictly One-Time Use:** Each player receives exactly **1 Re-Roll token per entire game**. Once activated, the token is consumed, the header badge flips to `RE-ROLL (0)`, and the button is permanently disabled for subsequent rounds.
+- **⏱️ +30s Time Boost (1x per Game):**
+  - In either the **Question Phase** or the **Battle Answering Phase**, a player who needs more time can tap **`[+30S (1)]`** to instantly extend the phase countdown timer by **+30 seconds for all players in the room**.
+  - **Room-Wide Announcement:** Triggers an animated neon broadcast banner across all connected screens (`⚡ PlayerName used +30s Time Boost!`).
+  - **Strictly One-Time Use:** Each player receives exactly **1 Time Boost token per entire game**. Once activated, it flips to `+30S (0)` and is permanently spent.
+- **👑 Author Royalties (+50 PTS per word):**
+  - Whenever an opponent uses a word that you authored during Phase 1 in their winning battle answer, you passively earn **+50 bonus points** in word royalties.
+- **🌈 Variety Rainbow Bonus (+150 PTS):**
+  - Awarded to any player whose winning punchline successfully weaves together words authored by **3 or more distinct players**.
+- **⚡ Speed Bonus (+50 to +150 PTS):**
+  - Awarded to the fastest 20% of players who submit their winning battle answer early in the phase.
+
+### 5. Game End & Post-Game (Phase 3C Final Results)
 - **Split-Stage Host TV Presentation:**
-  - **Grand 3-Tier Olympic Podium (Left Stage):** 1st Place Gold Champion (with bouncing crown flourish), 2nd Place Silver Runner-Up, and 3rd Place Bronze Podium. The height of each pedestal dynamically scales in real-time proportional to the player's total accumulated score relative to 1st place ($55\text{px}$ to $160\text{px}$). For 3-player matches, the podium centers majestically across the screen.
+  - **Grand 3-Tier Olympic Podium (Left Stage):** 1st Place Gold Champion (with bouncing crown flourish), 2nd Place Silver Runner-Up, and 3rd Place Bronze Podium. Pedestal heights dynamically scale in real-time between $68\text{px}$ and $175\text{px}$ proportional to scores, maintaining the step hierarchy ($1\text{st} > 2\text{nd} > 3\text{rd}$) even if 3rd place finishes with 0 points. For 3-player matches, the podium centers symmetrically across the screen.
   - **Adaptive Leaderboard Roster (Right Stage):** For 4 to 14 players, displays non-podium players (#4 to #14) in compact horizontal rank pills (1-column for 4–6 players, 2-column grid for 7–14 players).
-  - **Special Accolades Showcase (Bottom Stage):** 5 dedicated superlative cards (The Ammo Factory, The Rainbow Alchemist, The Clean Sweeper, The Minimalist, The Shakespeare) formatted with zero text truncation or scrollbars across laptops (1366x768) and Smart TVs.
+  - **Special Accolades Showcase (Bottom Stage):** 5 dedicated superlative cards (The Ammo Factory, The Rainbow Alchemist, The Clean Sweeper, The Minimalist, The Shakespeare) centered horizontally across the bottom with zero text truncation or scrollbars across laptops (1366x768) and Smart TVs.
 - **Mobile Player Results View:**
-  - **Personal Hero Card:** Prominently showcases the player's 115px pixel avatar, animated crown for champions, rank pill badge (`👑 1ST PLACE - CHAMPION!`, `🥈 2ND PLACE`, `🥉 3RD PLACE`, `🎮 #4 - PARTICIPANT`), and inline final score.
-  - **Personal Accolades & GG Banner:** Highlights any awards earned by the player with descriptions.
+  - **Personal Hero Card:** Prominently showcases the player's 115px pixel avatar, animated crown for champions, rank pill badge (`👑 1ST PLACE - CHAMPION!`, `🥈 2ND PLACE`, `🥉 3RD PLACE`, `🎮 #4 - PARTICIPANT`), and inline final score with glowing font.
+  - **Personal Accolades & GG Banner:** Highlights any awards earned by the player with centered descriptions.
   - **Role-Aware Controls:** The room Host receives dedicated `[🔄 PLAY AGAIN]` and `[🏠 MENU]` action buttons, while non-host participants see a clean `Waiting for host to start a new game...` status.
   - **Battle History & Reaction Bar:** Both host and participants can tap `[📜 VIEW BATTLE HISTORY]` to inspect and export match cards, or tap live reaction emojis (`🔥`, `😂`, `💀`, `💩`, `🤮`, `🤯`) to float celebratory particles across the main TV screen.
 

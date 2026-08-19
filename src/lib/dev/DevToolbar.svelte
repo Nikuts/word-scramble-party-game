@@ -31,6 +31,7 @@
         { id: 'host_voting', label: '📺 Host Voting Brawl (3-Way)', category: 'Host' },
         { id: 'host_reveal', label: '📺 Host Reveal & Royalties', category: 'Host' },
         { id: 'host_podium', label: '📺 Host Winner Podium', category: 'Host' },
+        { id: 'instructions', label: '📖 How to Play (Instructions)', category: 'Showcase' },
         { id: 'avatar_gallery', label: '🎨 Pixel Avatars Gallery', category: 'Showcase' }
     ];
 
