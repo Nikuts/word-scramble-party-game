@@ -518,15 +518,21 @@
         {/if}
 
     {:else if $gamePhase === 'results'}
-        {@const sortedPlayers = [...$gamePlayers].sort((a, b) => (displayedScores[b.id] ?? b.score) - (displayedScores[a.id] ?? a.score))}
+        {@const sortedPlayers = [...$gamePlayers].sort((a, b) => ((displayedScores[b.id] ?? b.score) || 0) - ((displayedScores[a.id] ?? a.score) || 0))}
         {@const firstPlace = sortedPlayers[0]}
         {@const secondPlace = sortedPlayers[1]}
         {@const thirdPlace = sortedPlayers[2]}
         {@const restOfPlayers = sortedPlayers.slice(3)}
         {@const maxScore = Math.max(1, (displayedScores[firstPlace?.id] ?? firstPlace?.score) || 1)}
-        {@const getDynamicPodiumHeight = (score) => {
-            const ratio = Math.max(0.1, Math.min(1, (score || 0) / maxScore));
-            return Math.round(55 + (ratio * 105));
+        {@const getPodiumHeight = (place, score) => {
+            const ratio = Math.max(0, Math.min(1, ((score ?? 0) / maxScore)));
+            if (place === 1) {
+                return Math.round(140 + (ratio * 35)); // 140px -> 175px
+            } else if (place === 2) {
+                return Math.round(96 + (ratio * 30));  // 96px -> 126px
+            } else {
+                return Math.round(68 + (ratio * 20));  // 68px -> 88px
+            }
         }}
         {@const sups = $gameState?.superlatives}
 
@@ -548,7 +554,7 @@
                     
                     <!-- 🥈 2nd Place Podium (Left - Dynamic Height) -->
                     {#if secondPlace}
-                        {@const pScore = displayedScores[secondPlace.id] ?? secondPlace.score}
+                        {@const pScore = displayedScores[secondPlace.id] ?? secondPlace.score ?? 0}
                         <div class="flex-1 max-w-[150px] sm:max-w-[180px] flex flex-col items-center">
                             <div class="w-13 h-13 sm:w-16 sm:h-16 mb-1 relative">
                                 <PixelAvatar avatar={secondPlace.avatar} className="w-full h-full" />
@@ -562,18 +568,18 @@
 
                             <!-- Silver Podium Block with Dynamic Score Height -->
                             <div
-                                style="height: {getDynamicPodiumHeight(pScore)}px"
+                                style="height: {getPodiumHeight(2, pScore)}px"
                                 class="w-full rounded-t-2xl bg-gradient-to-b from-slate-300 to-slate-600 border-2 border-slate-200 flex flex-col items-center justify-start pt-2 pb-1.5 shadow-[0_0_20px_rgba(203,213,225,0.4)] transition-all duration-700 ease-out"
                             >
                                 <span class="font-display font-black text-2xl sm:text-3xl text-black drop-shadow-sm leading-none">2</span>
-                                <span class="font-sans font-bold text-[9px] sm:text-[10px] text-slate-900 uppercase tracking-wider mt-1">{$t.runnerUp || 'RUNNER UP'}</span>
+                                <span class="font-sans font-bold text-[9px] sm:text-[10px] text-slate-900 uppercase tracking-wider mt-0.5">{$t.runnerUp || 'RUNNER UP'}</span>
                             </div>
                         </div>
                     {/if}
 
                     <!-- 🥇 1st Place Champion Podium (Center - Tallest Dynamic Height) -->
                     {#if firstPlace}
-                        {@const pScore = displayedScores[firstPlace.id] ?? firstPlace.score}
+                        {@const pScore = displayedScores[firstPlace.id] ?? firstPlace.score ?? 0}
                         <div class="flex-1 max-w-[170px] sm:max-w-[210px] flex flex-col items-center z-10">
                             <div class="w-16 h-16 sm:w-22 sm:h-22 mb-1 relative">
                                 <PixelAvatar avatar={firstPlace.avatar} className="w-full h-full" />
@@ -590,18 +596,18 @@
 
                             <!-- Gold Champion Podium Block with Dynamic Max Score Height -->
                             <div
-                                style="height: {getDynamicPodiumHeight(pScore)}px"
+                                style="height: {getPodiumHeight(1, pScore)}px"
                                 class="w-full rounded-t-2xl bg-gradient-to-b from-amber-300 via-amber-400 to-yellow-600 border-2 border-amber-200 flex flex-col items-center justify-start pt-2.5 pb-2 shadow-[0_0_35px_rgba(251,191,36,0.7)] transition-all duration-700 ease-out"
                             >
                                 <span class="font-display font-black text-3xl sm:text-4xl text-black drop-shadow-sm leading-none">1</span>
-                                <span class="font-sans font-black text-[10px] sm:text-[11px] text-amber-950 uppercase tracking-widest mt-1">{$t.champion || 'CHAMPION'}</span>
+                                <span class="font-sans font-black text-[10px] sm:text-[11px] text-amber-950 uppercase tracking-widest mt-0.5">{$t.champion || 'CHAMPION'}</span>
                             </div>
                         </div>
                     {/if}
 
                     <!-- 🥉 3rd Place Podium (Right - Dynamic Height) -->
                     {#if thirdPlace}
-                        {@const pScore = displayedScores[thirdPlace.id] ?? thirdPlace.score}
+                        {@const pScore = displayedScores[thirdPlace.id] ?? thirdPlace.score ?? 0}
                         <div class="flex-1 max-w-[150px] sm:max-w-[180px] flex flex-col items-center">
                             <div class="w-13 h-13 sm:w-16 sm:h-16 mb-1 relative">
                                 <PixelAvatar avatar={thirdPlace.avatar} className="w-full h-full" />
@@ -615,11 +621,11 @@
 
                             <!-- Bronze Podium Block with Dynamic Score Height -->
                             <div
-                                style="height: {getDynamicPodiumHeight(pScore)}px"
+                                style="height: {getPodiumHeight(3, pScore)}px"
                                 class="w-full rounded-t-2xl bg-gradient-to-b from-amber-600 to-amber-900 border-2 border-amber-500 flex flex-col items-center justify-start pt-2 pb-1.5 shadow-[0_0_20px_rgba(180,83,9,0.4)] transition-all duration-700 ease-out"
                             >
                                 <span class="font-display font-black text-2xl sm:text-3xl text-amber-100 drop-shadow-sm leading-none">3</span>
-                                <span class="font-sans font-bold text-[9px] sm:text-[10px] text-amber-200 uppercase tracking-wider mt-1">{$t.podium || 'PODIUM'}</span>
+                                <span class="font-sans font-bold text-[9px] sm:text-[10px] text-amber-200 uppercase tracking-wider mt-0.5">{$t.podium || 'PODIUM'}</span>
                             </div>
                         </div>
                     {/if}
@@ -668,74 +674,84 @@
             <!-- 3. Special Accolades Showcase (5 Superlative Cards) -->
             {#if sups && Object.keys(sups).length > 0}
                 <div class="w-full bg-neutral-950/90 border border-neutral-800 rounded-2xl p-2 sm:p-2.5 flex-shrink-0 shadow-lg mt-2">
-                    <h2 class="text-xs font-display font-black text-amber-400 uppercase tracking-widest text-center mb-1">
+                    <h2 class="text-xs font-display font-black text-amber-400 uppercase tracking-widest text-center mb-1.5">
                         🎖️ {$t.superlativesTitle || 'ACCOLADES & AWARDS'}
                     </h2>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 text-left">
+                    <div class="flex flex-wrap items-stretch justify-center gap-2 text-center">
                         {#if sups.ammoFactory}
                             {@const p = $gamePlayers.find(pl => pl.id === sups.ammoFactory.playerId)}
-                            <div class="p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between">
-                                <div>
-                                    <div class="flex items-center gap-1.5 mb-0.5">
-                                        <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p?.avatar || '🎯'} /></div>
-                                        <span class="font-display font-bold text-[11px] text-slate-200 truncate">{p?.name}</span>
+                            {#if p}
+                                <div class="flex-1 min-w-[160px] max-w-[210px] p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between items-center text-center">
+                                    <div class="w-full flex flex-col items-center">
+                                        <div class="flex items-center justify-center gap-1.5 mb-0.5">
+                                            <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p.avatar} /></div>
+                                            <span class="font-display font-bold text-[11px] text-slate-200 truncate max-w-[120px]">{p.name}</span>
+                                        </div>
+                                        <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.ammoFactoryTitle || '🎯 The Ammo Factory'}</span>
+                                        <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.ammoFactoryDesc || 'Words powered winning battles'} (+{sups.ammoFactory.value} pts)</span>
                                     </div>
-                                    <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.ammoFactoryTitle || '🎯 The Ammo Factory'}</span>
-                                    <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.ammoFactoryDesc || 'Words powered winning battles'} (+{sups.ammoFactory.value} pts)</span>
                                 </div>
-                            </div>
+                            {/if}
                         {/if}
                         {#if sups.rainbowAlchemist}
                             {@const p = $gamePlayers.find(pl => pl.id === sups.rainbowAlchemist.playerId)}
-                            <div class="p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between">
-                                <div>
-                                    <div class="flex items-center gap-1.5 mb-0.5">
-                                        <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p?.avatar || '🌈'} /></div>
-                                        <span class="font-display font-bold text-[11px] text-slate-200 truncate">{p?.name}</span>
+                            {#if p}
+                                <div class="flex-1 min-w-[160px] max-w-[210px] p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between items-center text-center">
+                                    <div class="w-full flex flex-col items-center">
+                                        <div class="flex items-center justify-center gap-1.5 mb-0.5">
+                                            <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p.avatar} /></div>
+                                            <span class="font-display font-bold text-[11px] text-slate-200 truncate max-w-[120px]">{p.name}</span>
+                                        </div>
+                                        <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.rainbowAlchemistTitle || '🌈 The Rainbow Alchemist'}</span>
+                                        <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.rainbowAlchemistDesc || 'Combined words from 3+ players'} ({sups.rainbowAlchemist.value}x)</span>
                                     </div>
-                                    <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.rainbowAlchemistTitle || '🌈 The Rainbow Alchemist'}</span>
-                                    <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.rainbowAlchemistDesc || 'Combined words from 3+ players'} ({sups.rainbowAlchemist.value}x)</span>
                                 </div>
-                            </div>
+                            {/if}
                         {/if}
                         {#if sups.cleanSweeper}
                             {@const p = $gamePlayers.find(pl => pl.id === sups.cleanSweeper.playerId)}
-                            <div class="p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between">
-                                <div>
-                                    <div class="flex items-center gap-1.5 mb-0.5">
-                                        <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p?.avatar || '🧹'} /></div>
-                                        <span class="font-display font-bold text-[11px] text-slate-200 truncate">{p?.name}</span>
+                            {#if p}
+                                <div class="flex-1 min-w-[160px] max-w-[210px] p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between items-center text-center">
+                                    <div class="w-full flex flex-col items-center">
+                                        <div class="flex items-center justify-center gap-1.5 mb-0.5">
+                                            <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p.avatar} /></div>
+                                            <span class="font-display font-bold text-[11px] text-slate-200 truncate max-w-[120px]">{p.name}</span>
+                                        </div>
+                                        <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.cleanSweeperTitle || '🧹 The Clean Sweeper'}</span>
+                                        <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.cleanSweeperDesc || 'Unanimous 100% battle wins'} ({sups.cleanSweeper.value}x)</span>
                                     </div>
-                                    <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.cleanSweeperTitle || '🧹 The Clean Sweeper'}</span>
-                                    <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.cleanSweeperDesc || 'Unanimous 100% battle wins'} ({sups.cleanSweeper.value}x)</span>
                                 </div>
-                            </div>
+                            {/if}
                         {/if}
                         {#if sups.minimalist}
                             {@const p = $gamePlayers.find(pl => pl.id === sups.minimalist.playerId)}
-                            <div class="p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between">
-                                <div>
-                                    <div class="flex items-center gap-1.5 mb-0.5">
-                                        <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p?.avatar || '🪶'} /></div>
-                                        <span class="font-display font-bold text-[11px] text-slate-200 truncate">{p?.name}</span>
+                            {#if p}
+                                <div class="flex-1 min-w-[160px] max-w-[210px] p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between items-center text-center">
+                                    <div class="w-full flex flex-col items-center">
+                                        <div class="flex items-center justify-center gap-1.5 mb-0.5">
+                                            <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p.avatar} /></div>
+                                            <span class="font-display font-bold text-[11px] text-slate-200 truncate max-w-[120px]">{p.name}</span>
+                                        </div>
+                                        <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.minimalistTitle || '🪶 The Minimalist'}</span>
+                                        <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.minimalistDesc || 'Shortest winning punchline'} ({sups.minimalist.count} words)</span>
                                     </div>
-                                    <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.minimalistTitle || '🪶 The Minimalist'}</span>
-                                    <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.minimalistDesc || 'Shortest winning punchline'} ({sups.minimalist.count} words)</span>
                                 </div>
-                            </div>
+                            {/if}
                         {/if}
                         {#if sups.shakespeare}
                             {@const p = $gamePlayers.find(pl => pl.id === sups.shakespeare.playerId)}
-                            <div class="p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between">
-                                <div>
-                                    <div class="flex items-center gap-1.5 mb-0.5">
-                                        <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p?.avatar || '💬'} /></div>
-                                        <span class="font-display font-bold text-[11px] text-slate-200 truncate">{p?.name}</span>
+                            {#if p}
+                                <div class="flex-1 min-w-[160px] max-w-[210px] p-1.5 sm:p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 transition-colors flex flex-col justify-between items-center text-center">
+                                    <div class="w-full flex flex-col items-center">
+                                        <div class="flex items-center justify-center gap-1.5 mb-0.5">
+                                            <div class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><PixelAvatar avatar={p.avatar} /></div>
+                                            <span class="font-display font-bold text-[11px] text-slate-200 truncate max-w-[120px]">{p.name}</span>
+                                        </div>
+                                        <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.shakespeareTitle || '💬 The Shakespeare'}</span>
+                                        <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.shakespeareDesc || 'Most epic long masterpiece'} ({sups.shakespeare.count} words)</span>
                                     </div>
-                                    <span class="font-display font-black text-[11px] text-amber-300 block mb-0.5">{$t.shakespeareTitle || '💬 The Shakespeare'}</span>
-                                    <span class="text-[9px] text-slate-300 font-sans leading-tight block">{$t.shakespeareDesc || 'Most epic long masterpiece'} ({sups.shakespeare.count} words)</span>
                                 </div>
-                            </div>
+                            {/if}
                         {/if}
                     </div>
                 </div>

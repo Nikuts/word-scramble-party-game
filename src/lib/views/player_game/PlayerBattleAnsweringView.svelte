@@ -329,7 +329,7 @@
     .answer-word:active {
         cursor: grabbing;
     }
-    .sortable-ghost {
+    :global(.sortable-ghost) {
         opacity: 0.4;
     }
 </style>

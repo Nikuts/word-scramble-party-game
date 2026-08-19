@@ -1,6 +1,12 @@
 // src/lib/dev/mockData.js
 import { AVATARS } from '../config.js';
 
+export const MOCK_PLAYERS_3_LOW_SCORE = [
+    { id: 'p1', name: 'Alice', avatar: '🦊', isHost: true, isReady: true, isConnected: true, socketId: 'sock_p1', score: 1500 },
+    { id: 'p2', name: 'Bob', avatar: '🐸', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p2', score: 150 },
+    { id: 'p3', name: 'Charlie', avatar: '🤖', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p3', score: 0 }
+];
+
 export const MOCK_PLAYERS_6 = [
     { id: 'p1', name: 'Alice', avatar: '🦊', isHost: true, isReady: true, isConnected: true, socketId: 'sock_p1', score: 2800 },
     { id: 'p2', name: 'Bob', avatar: '🐸', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p2', score: 2400 },
@@ -100,9 +106,16 @@ export const MOCK_WORD_BANK_UA = [
     { word: 'святковий', authorId: 'p3', isBonus: false },
     { word: 'борсук', authorId: 'p4', isBonus: false },
     { word: 'раптом', authorId: 'p5', isBonus: false },
-    { word: 'переміг', authorId: 'p2', isBonus: false },
-    { word: 'усіх', authorId: 'p3', isBonus: false }
+    { word: 'переміг', authorId: 'p2', isBonus: false }
 ];
+
+export const MOCK_SUPERLATIVES_OBJECT = {
+    ammoFactory: { playerId: 'p2', value: 500 },
+    rainbowAlchemist: { playerId: 'p1', value: 4 },
+    cleanSweeper: { playerId: 'p3', value: 2 },
+    minimalist: { playerId: 'p4', count: 5 },
+    shakespeare: { playerId: 'p5', count: 14 }
+};
 
 export const MOCK_SUPERLATIVES = [
     {

@@ -5,8 +5,9 @@
     export let game;
     export let player;
 
-    $: myRankData = game && player ? game.players.map((p, i) => ({...p, rank: i + 1})).find(p => p.id === player.id) : null;
-    $: myRank = myRankData ? myRankData.rank : 4;
+    $: sortedPlayers = game?.players ? [...game.players].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)) : [];
+    $: myRankIndex = sortedPlayers.findIndex(p => p.id === player?.id);
+    $: myRank = myRankIndex >= 0 ? myRankIndex + 1 : 4;
     $: isHost = player?.id === game?.hostPlayerId || player?.isHost || false;
 
     // Option 1 Emojis: Hype, Laugh, Skull, Poop, Vomit, Mindblown
@@ -33,6 +34,24 @@
         if (rank === 2) return $t.greatGame || 'GREAT GAME!';
         if (rank === 3) return $t.onThePodium || 'ON THE PODIUM!';
         return $t.wellPlayed || 'WELL PLAYED! (GG)';
+    }
+
+    function getMyBadges(superlatives, playerId, dict) {
+        if (!superlatives) return [];
+        if (Array.isArray(superlatives)) {
+            return superlatives
+                .filter(s => s?.playerId === playerId)
+                .map(s => ({
+                    title: s.title || s.title_uk || s.name || '',
+                    desc: s.description || s.description_uk || s.desc || ''
+                }));
+        }
+        return Object.entries(superlatives)
+            .filter(([k, v]) => v?.playerId === playerId)
+            .map(([k, v]) => ({
+                title: dict[`${k}Title`] || k,
+                desc: dict[`${k}Desc`] || (v?.value ? `+${v.value} pts` : '')
+            }));
     }
 
     function sendReaction(emoji) {
@@ -90,17 +109,16 @@
             </span>
             
             {#if game?.superlatives}
-                {@const sups = game.superlatives}
-                {@const myBadges = Object.entries(sups).filter(([k, v]) => v?.playerId === player?.id)}
+                {@const myBadges = getMyBadges(game.superlatives, player?.id, $t)}
                 {#if myBadges.length > 0}
                     <div class="space-y-1">
-                        {#each myBadges as [badgeKey, badgeData]}
-                            <div class="p-2 rounded-xl bg-amber-950/40 border border-amber-500/50 shadow-sm text-left">
+                        {#each myBadges as badge}
+                            <div class="p-2 rounded-xl bg-amber-950/40 border border-amber-500/50 shadow-sm text-center">
                                 <span class="font-display font-black text-xs text-amber-300 block mb-0.5 leading-tight">
-                                    {$t[`${badgeKey}Title`] || badgeKey}
+                                    {badge.title}
                                 </span>
                                 <span class="text-[10px] text-slate-300 font-sans leading-tight block">
-                                    {$t[`${badgeKey}Desc`] || ''}
+                                    {badge.desc}
                                 </span>
                             </div>
                         {/each}

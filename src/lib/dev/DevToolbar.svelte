@@ -7,6 +7,8 @@
     export let language = 'en';
     export let viewport = 'mobile';
     export let tileCount = 35;
+    export let playerCount = 6;
+    export let playerIndex = 0;
     export let isTvMode = false;
     export let colorTheme = 'default';
     export let hideToolbar = false;
@@ -154,6 +156,67 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Player Count Preset -->
+            <div class="border-t border-gray-800 pt-1.5">
+                <span class="block text-[10px] uppercase tracking-wider text-gray-400 mb-1">Match Scale (Player Count)</span>
+                <div class="flex rounded-lg overflow-hidden border border-gray-800 bg-gray-900">
+                    <button
+                        class="flex-1 py-1 text-center font-bold {playerCount === 3 ? 'bg-amber-600 text-white' : 'text-gray-400 hover:text-white'}"
+                        on:click={() => { playerCount = 3; dispatch('changePlayerCount', 3); }}
+                        title="3 Players (Includes 0-pts 3rd place)"
+                    >
+                        3P (0 pts)
+                    </button>
+                    <button
+                        class="flex-1 py-1 text-center font-bold {playerCount === 6 ? 'bg-amber-600 text-white' : 'text-gray-400 hover:text-white'}"
+                        on:click={() => { playerCount = 6; dispatch('changePlayerCount', 6); }}
+                        title="6 Players Standard"
+                    >
+                        6P
+                    </button>
+                    <button
+                        class="flex-1 py-1 text-center font-bold {playerCount === 14 ? 'bg-amber-600 text-white' : 'text-gray-400 hover:text-white'}"
+                        on:click={() => { playerCount = 14; dispatch('changePlayerCount', 14); }}
+                        title="14 Players Max Grid"
+                    >
+                        14P
+                    </button>
+                </div>
+            </div>
+
+            {#if activeScreen === 'player_results'}
+                <!-- Mobile Result Rank Switcher -->
+                <div class="border-t border-gray-800 pt-1.5">
+                    <span class="block text-[10px] uppercase tracking-wider text-gray-400 mb-1">Player Rank Perspective</span>
+                    <div class="grid grid-cols-4 gap-1">
+                        <button
+                            class="py-1 text-center font-bold rounded text-[10px] {playerIndex === 0 ? 'bg-amber-400 text-black shadow' : 'bg-gray-900 text-gray-400 border border-gray-800'}"
+                            on:click={() => { playerIndex = 0; dispatch('changePlayerIndex', 0); }}
+                        >
+                            🥇 #1
+                        </button>
+                        <button
+                            class="py-1 text-center font-bold rounded text-[10px] {playerIndex === 1 ? 'bg-slate-300 text-black shadow' : 'bg-gray-900 text-gray-400 border border-gray-800'}"
+                            on:click={() => { playerIndex = 1; dispatch('changePlayerIndex', 1); }}
+                        >
+                            🥈 #2
+                        </button>
+                        <button
+                            class="py-1 text-center font-bold rounded text-[10px] {playerIndex === 2 ? 'bg-amber-700 text-white shadow' : 'bg-gray-900 text-gray-400 border border-gray-800'}"
+                            on:click={() => { playerIndex = 2; dispatch('changePlayerIndex', 2); }}
+                        >
+                            🥉 #3
+                        </button>
+                        <button
+                            class="py-1 text-center font-bold rounded text-[10px] {playerIndex === 3 ? 'bg-cyan-600 text-white shadow' : 'bg-gray-900 text-gray-400 border border-gray-800'}"
+                            on:click={() => { playerIndex = 3; dispatch('changePlayerIndex', 3); }}
+                        >
+                            🎮 #4
+                        </button>
+                    </div>
+                </div>
+            {/if}
 
             <!-- TV Mode & Theme Selector -->
             <div class="grid grid-cols-2 gap-2 border-t border-gray-800 pt-1.5">

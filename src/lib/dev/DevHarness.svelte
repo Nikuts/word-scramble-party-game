@@ -9,9 +9,13 @@
         tvMode
     } from '../../stores.js';
     import {
+        MOCK_PLAYERS_3_LOW_SCORE,
+        MOCK_PLAYERS_6,
+        MOCK_PLAYERS_14,
         MOCK_PLAYERS,
         MOCK_WORD_BANK_EN,
         MOCK_WORD_BANK_UA,
+        MOCK_SUPERLATIVES_OBJECT,
         MOCK_SUPERLATIVES,
         createMockGameState
     } from './mockData.js';
@@ -30,9 +34,13 @@
     // URL Query Params parser
     const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     let activeScreen = urlParams.get('debug') || urlParams.get('screen') || 'player_question';
+    let playerCount = parseInt(urlParams.get('players')) || 6;
+    let playerIndex = parseInt(urlParams.get('pIndex')) || 0;
     let language = urlParams.get('lang') || 'en';
     let viewport = urlParams.get('viewport') || (activeScreen.startsWith('host_') ? 'full' : 'mobile');
     let hideToolbar = urlParams.get('hideToolbar') === '1' || urlParams.get('hideToolbar') === 'true';
+
+    $: activePlayerObj = (playerCount === 3 ? MOCK_PLAYERS_3_LOW_SCORE : (playerCount === 14 ? MOCK_PLAYERS_14 : MOCK_PLAYERS_6))[playerIndex] || (playerCount === 3 ? MOCK_PLAYERS_3_LOW_SCORE[0] : MOCK_PLAYERS_6[0]);
     let tileCount = 35;
     let isTvMode = false;
 
@@ -116,15 +124,18 @@
             { id: 'q3', text: isUkrainian ? "Яку таємницю приховує ваш холодильник пізно вночі?" : "What is the most suspicious excuse for arriving 2 hours late to a party?", answer: "" }
         ];
 
+        const selectedPlayers = playerCount === 3 ? MOCK_PLAYERS_3_LOW_SCORE : (playerCount === 14 ? MOCK_PLAYERS_14 : MOCK_PLAYERS_6);
+
         gameState.set(createMockGameState({
             phase,
             language,
+            players: selectedPlayers,
             theme: 'Everyday Objects, Epic Backstories',
             currentRound: activeScreen.includes('movie') || activeScreen.includes('podium') ? 3 : 1,
             battleSchedule: [currentBattle],
             currentBattleIndex: 0,
             activeBattle: currentBattle,
-            superlatives: MOCK_SUPERLATIVES,
+            superlatives: MOCK_SUPERLATIVES_OBJECT,
             phaseTimer: activeScreen.includes('question') ? 80 : 65,
             playerAnswers: {
                 p1: { questions: [{ answer: 'a' }, { answer: 'b' }, { answer: 'c' }] },
@@ -137,7 +148,7 @@
         }));
     }
 
-    $: activeScreen, language, tileCount, viewport, isTvMode, setupMockStores();
+    $: activeScreen, playerCount, language, tileCount, viewport, isTvMode, setupMockStores();
 
     onMount(() => {
         setupMockStores();
@@ -179,7 +190,7 @@
                     {:else if activeScreen === 'player_reveal'}
                         <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_results'}
-                        <PlayerResultsView game={$gameState} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} />
+                        <PlayerResultsView game={$gameState} player={activePlayerObj} />
                     {:else if activeScreen === 'avatar_gallery'}
                         <AvatarGalleryView />
                     {:else}
@@ -210,7 +221,7 @@
                     {:else if activeScreen === 'player_reveal'}
                         <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_results'}
-                        <PlayerResultsView game={$gameState} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} />
+                        <PlayerResultsView game={$gameState} player={activePlayerObj} />
                     {:else if activeScreen === 'avatar_gallery'}
                         <AvatarGalleryView />
                     {:else}
@@ -248,12 +259,16 @@
     <!-- Floating Dev Toolbar -->
     <DevToolbar
         bind:activeScreen
+        bind:playerCount
+        bind:playerIndex
         bind:language
         bind:viewport
         bind:tileCount
         bind:isTvMode
         bind:hideToolbar
         on:changeScreen={handleScreenChange}
+        on:changePlayerCount={(e) => playerCount = e.detail}
+        on:changePlayerIndex={(e) => playerIndex = e.detail}
         on:changeLang={(e) => language = e.detail}
         on:changeViewport={(e) => viewport = e.detail}
         on:changeTileCount={(e) => tileCount = e.detail}
