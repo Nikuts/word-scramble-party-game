@@ -168,6 +168,19 @@ export function initializeSocket() {
         gameState.set(newGameState);
         currentPlayer.set(updatedPlayer);
 
+        // Synchronize client UI language with the room's language
+        if (newGameState.language) {
+            const normalizedRoomLang = (newGameState.language === 'ua' || newGameState.language === 'uk') ? 'uk' : 'en';
+            const currentLang = get(language);
+            const normalizedCurrentLang = (currentLang === 'ua' || currentLang === 'uk') ? 'uk' : 'en';
+            if (normalizedRoomLang !== normalizedCurrentLang) {
+                language.set(normalizedRoomLang);
+                try {
+                    localStorage.setItem('wordScrambleLang', normalizedRoomLang);
+                } catch (e) {}
+            }
+        }
+
         // If the player is viewing instructions and the host starts the game,
         // automatically close the instructions and show the game.
         if (get(view) === 'instructions' && newGameState.phase !== 'lobby') {

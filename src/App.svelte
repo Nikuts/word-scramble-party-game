@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { view, isLoading, error, t, joinForm, initializeSocket, reconnectSocket, resetToMenu, gameState } from './stores.js';
+  import { view, language, isLoading, error, t, joinForm, initializeSocket, reconnectSocket, resetToMenu, gameState } from './stores.js';
 
   // Import all possible view components
   import Language from './lib/views/Language.svelte';
@@ -121,6 +121,14 @@
     if (urlParams.has('debug') || urlParams.has('dev') || urlParams.has('harness')) {
         isDevHarness = true;
         return;
+    }
+
+    // Check for language in query params
+    const urlLang = urlParams.get('lang');
+    if (urlLang) {
+        const normalizedUrlLang = (urlLang === 'ua' || urlLang === 'uk') ? 'uk' : 'en';
+        language.set(normalizedUrlLang);
+        try { localStorage.setItem('wordScrambleLang', normalizedUrlLang); } catch (e) {}
     }
 
     // Check for a gameId in the URL, which happens when scanning the QR code or clicking a shared link.

@@ -487,8 +487,8 @@
                     {/if}
                 </div>
 
-                <!-- Word Bank Card with Undo & Shuffle -->
-                <div class="flex-1 flex flex-col min-h-[100px] my-1">
+                <!-- Word Bank Card with Undo & Shuffle (Expansive Natural Flow) -->
+                <div class="flex flex-col min-h-0 my-1">
                     <div class="flex items-center justify-between text-[10px] font-display font-bold uppercase tracking-widest text-cyan-400 mb-1">
                         <span>🔤 {$t.wordBank || 'WORD BANK'}</span>
                         <div class="flex items-center gap-1">
@@ -510,40 +510,38 @@
                         </div>
                     </div>
 
-                    <!-- Word Tiles (Unified Arcade Cyan Chips) -->
-                    <div class="flex-1 overflow-y-auto max-h-[130px] sm:max-h-[160px] p-2 bg-neutral-950/90 border border-neutral-800 rounded-2xl flex flex-wrap content-start gap-1.5 justify-center">
+                    <!-- Word Tiles (Expanded Arcade Cyan Chips with Zero Inner Scroll Trap) -->
+                    <div class="p-2.5 bg-neutral-950/90 border border-neutral-800 rounded-2xl flex flex-wrap content-start gap-1.5 justify-center min-h-[120px]">
                         {#each battleForm.wordBankWords as word (word.id)}
                             <button
                                 type="button"
                                 data-testid="word-bank-chip"
                                 on:click={() => addWordToAnswer(word, battle.id)}
-                                class="word-bank-chip px-2.5 py-1 bg-cyan-950/70 hover:bg-cyan-900/90 border border-cyan-400/80 text-cyan-200 font-sans font-semibold text-xs rounded-lg shadow-sm active:scale-95 transition-all cursor-pointer"
+                                class="word-bank-chip px-2.5 py-1.5 bg-cyan-950/70 hover:bg-cyan-900/90 border border-cyan-400/80 text-cyan-200 font-sans font-semibold text-xs rounded-lg shadow-sm active:scale-95 transition-all cursor-pointer"
                             >
                                 {word.text}
                             </button>
                         {/each}
                     </div>
                 </div>
+
+                <!-- Submit Button Inside Natural Scroll Flow (Ample Space for 2 Input Fields & Word Bank) -->
+                <div class="pt-2 pb-4">
+                    <button
+                        type="button"
+                        disabled={!hasAnswerWords}
+                        on:click={() => submitBattleAnswer(battle.id)}
+                        class="btn-arcade w-full py-3.5 px-4 rounded-xl font-display font-black text-sm sm:text-base uppercase tracking-wider transition-all cursor-pointer {
+                            hasAnswerWords 
+                            ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-[0_0_25px_rgba(236,72,153,0.5)] active:scale-98' 
+                            : 'bg-neutral-900 border border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed'
+                        }"
+                    >
+                        ⚔️ {$t.submitBattleAnswer || 'SUBMIT BATTLE ANSWER'}
+                    </button>
+                </div>
             {/if}
         </div>
-
-        <!-- Submit Button Permanently Anchored in Viewport -->
-        {#if battleForm}
-            <footer class="pt-2 flex-shrink-0">
-                <button
-                    type="button"
-                    disabled={!hasAnswerWords}
-                    on:click={() => submitBattleAnswer(battle.id)}
-                    class="btn-arcade w-full py-3 px-4 rounded-xl font-display font-black text-sm sm:text-base uppercase tracking-wider transition-all cursor-pointer {
-                        hasAnswerWords 
-                        ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-[0_0_25px_rgba(236,72,153,0.5)] active:scale-98' 
-                        : 'bg-neutral-900 border border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed'
-                    }"
-                >
-                    ⚔️ {$t.submitBattleAnswer || 'SUBMIT BATTLE ANSWER'}
-                </button>
-            </footer>
-        {/if}
     {:else}
         <div class="flex-1 flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
             <SevenSegmentDisplay time={timer} />

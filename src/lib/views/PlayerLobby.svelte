@@ -120,9 +120,9 @@
 
             <div class="text-left min-w-0">
                 <div class="flex items-center gap-1.5">
-                    <span class="font-display font-bold text-sm text-white truncate">{player?.name || 'Player'}</span>
+                    <span class="font-display font-bold text-sm text-white truncate">{player?.name || ($t.player || 'Player')}</span>
                     {#if isHost}
-                        <span class="px-1.5 py-0.2 bg-amber-400 text-black text-[9px] font-display font-black rounded flex-shrink-0">HOST</span>
+                        <span class="px-1.5 py-0.2 bg-amber-400 text-black text-[9px] font-display font-black rounded flex-shrink-0">{$t.host || 'HOST'}</span>
                     {/if}
                 </div>
                 <button
@@ -159,7 +159,7 @@
                     <span class="text-[11px] font-display font-black text-amber-300 uppercase tracking-wider flex items-center gap-1">
                         👑 {$t.youAreTheHost || 'HOST CONTROLS'}
                     </span>
-                    <span class="text-[10px] font-mono text-slate-400 font-bold">{connectedPlayerCount} / {MAX_PLAYERS} Players</span>
+                    <span class="text-[10px] font-mono text-slate-400 font-bold">{connectedPlayerCount} / {MAX_PLAYERS} {$t.players || 'Players'}</span>
                 </div>
 
                 <!-- 1. Color Theme Selection -->
@@ -343,7 +343,7 @@
                     {$t.connectedPlayers || 'PLAYERS IN LOBBY'} ({game?.players?.length || 0})
                 </span>
                 <span class="text-[10px] font-mono text-emerald-400 font-bold">
-                    {connectedPlayerCount} / {MAX_PLAYERS} {isUkrainian ? 'Гравців' : 'Players'}
+                    {connectedPlayerCount} / {MAX_PLAYERS} {$t.players || 'Players'}
                 </span>
             </div>
 
@@ -379,7 +379,7 @@
         <footer class="mt-2.5 pt-1.5 border-t border-neutral-800 flex-shrink-0">
             <div class="w-full py-2.5 bg-neutral-900/80 border border-neutral-800 text-slate-300 font-display font-bold text-xs tracking-wider uppercase rounded-xl text-center flex items-center justify-center gap-2">
                 <span>⏳</span>
-                <span>{$t.waitingForHost || 'WAITING FOR THE HOST TO START THE GAME...'}</span>
+                <span>{$t.waitingForHostToStart || $t.waitingForHost || 'WAITING FOR THE HOST TO START THE GAME...'}</span>
             </div>
         </footer>
     {/if}

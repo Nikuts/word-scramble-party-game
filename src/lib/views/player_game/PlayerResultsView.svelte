@@ -22,11 +22,11 @@
 
     $: currentRankStyle = rankTitles[myRank] || rankTitles[4];
 
-    function getRankTitle(rank) {
-        if (rank === 1) return `👑 1ST PLACE - CHAMPION!`;
-        if (rank === 2) return `🥈 2ND PLACE - RUNNER UP`;
-        if (rank === 3) return `🥉 3RD PLACE - PODIUM`;
-        return `🎮 #${rank} - PARTICIPANT`;
+    function getRankTitle(rank, dict) {
+        if (rank === 1) return `👑 1 ${dict.place || 'PLACE'} - ${dict.champion || 'CHAMPION'}!`;
+        if (rank === 2) return `🥈 2 ${dict.place || 'PLACE'} - ${dict.runnerUp || 'RUNNER UP'}`;
+        if (rank === 3) return `🥉 3 ${dict.place || 'PLACE'} - ${dict.podium || 'PODIUM'}`;
+        return `🎮 #${rank} - ${dict.participant || 'PARTICIPANT'}`;
     }
 
     function getRankSubtitle(rank) {
@@ -69,7 +69,7 @@
         <div class="text-center flex flex-col items-center justify-start flex-shrink-0 pt-0.5">
             <!-- Rank Pill Badge -->
             <div class="inline-block px-3.5 py-1 rounded-xl {currentRankStyle.bg} font-sans font-black text-xs uppercase tracking-wider mb-1 shadow-md">
-                {getRankTitle(myRank)}
+                {getRankTitle(myRank, $t)}
             </div>
 
             <span class="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-widest block mb-1">
@@ -97,7 +97,7 @@
                     <span class="text-4xl sm:text-5xl font-display font-black {currentRankStyle.scoreColor} leading-none drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
                         {(player?.score || 0).toLocaleString()}
                     </span>
-                    <span class="text-sm font-sans font-bold text-slate-400 uppercase leading-none">PTS</span>
+                    <span class="text-sm font-sans font-bold text-slate-400 uppercase leading-none">{$t.pts || 'PTS'}</span>
                 </div>
             </div>
         </div>

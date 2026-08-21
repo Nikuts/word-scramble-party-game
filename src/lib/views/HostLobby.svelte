@@ -53,7 +53,7 @@
     
     // Regenerate the QR code whenever the connectURL or game ID changes.
     $: if (qrElement && connectURL) {
-        const urlForQr = $gameState && $gameState.id ? `${connectURL}/?gameId=${$gameState.id}` : connectURL;
+        const urlForQr = $gameState && $gameState.id ? `${connectURL}/?gameId=${$gameState.id}&lang=${$language}` : connectURL;
         generateQRCode(urlForQr);
     }
 
@@ -116,7 +116,7 @@
                         {$t.appName}
                     </h1>
                     <p class="text-[9px] sm:text-[10px] text-slate-400 font-mono tracking-widest uppercase mt-0.5">
-                        {$language === 'uk' ? 'ГРА ДЛЯ ВЕЧІРОК' : 'REAL-TIME MULTIPLAYER PARTY GAME'}
+                        {$t.realTimePartyGame || 'REAL-TIME MULTIPLAYER PARTY GAME'}
                     </p>
                 </div>
 
@@ -136,7 +136,7 @@
                         disabled={$gameState.isGeneratingThemes}
                         class="px-2 py-0.5 text-[10px] bg-neutral-900 hover:bg-accent hover:text-black border border-accent/60 rounded text-accent transition-all font-display cursor-pointer flex items-center gap-1 disabled:opacity-40"
                     >
-                        <span>🎲</span> {$language === 'uk' ? 'Випадкова' : 'Random'}
+                        <span>🎲</span> {$t.randomTheme || 'Random'}
                     </button>
                 </div>
             </div>
@@ -211,7 +211,7 @@
             
             <div class="w-full">
                 <p class="text-[10px] font-display text-slate-300 uppercase tracking-wider">
-                    {$t.openBrowserTo || 'Join on your phone at'}
+                    {$t.joinOnYourPhone || $t.openBrowserTo || 'Join on your phone at'}
                 </p>
                 <p class="text-xs font-mono font-bold text-accent break-all leading-tight my-0.5">
                     {connectURL || '...'}
@@ -234,19 +234,19 @@
                     type="button"
                     class="px-2 py-0.5 bg-neutral-800 hover:bg-primary hover:text-black border border-primary/60 rounded text-[9px] font-display transition-all cursor-pointer"
                     on:click={() => {
-                        const shareUrl = $gameState?.id ? `${connectURL}/?gameId=${$gameState.id}` : connectURL;
+                        const shareUrl = $gameState?.id ? `${connectURL}/?gameId=${$gameState.id}&lang=${$language}` : connectURL;
                         if (navigator.clipboard) {
                             navigator.clipboard.writeText(shareUrl).then(() => {
-                                alert('Link copied to clipboard!');
+                                alert($t.linkCopied || 'Link copied to clipboard!');
                             }).catch(() => {
-                                prompt('Copy game link:', shareUrl);
+                                prompt($t.copyGameLink || 'Copy game link:', shareUrl);
                             });
                         } else {
-                            prompt('Copy game link:', shareUrl);
+                            prompt($t.copyGameLink || 'Copy game link:', shareUrl);
                         }
                     }}
                 >
-                    📋 Copy
+                    📋 {$t.copy || 'Copy'}
                 </button>
             </div>
         </div>
@@ -259,7 +259,7 @@
                 👥 {$t.players || 'PLAYERS'} ({$gameState.players.length})
             </span>
             <span class="text-[10px] font-mono text-slate-400">
-                {$gameState.players.filter(p => !!p.socketId).length} / {$gameState.players.length} {$language === 'uk' ? 'ПІДКЛЮЧЕНО' : 'CONNECTED'}
+                {$gameState.players.filter(p => !!p.socketId).length} / {$gameState.players.length} {$t.connected || 'CONNECTED'}
             </span>
         </div>
 
@@ -277,7 +277,7 @@
                                     <span class="px-1 py-0.2 bg-warning text-black text-[8px] font-display rounded font-bold">{$t.host || 'HOST'}</span>
                                 {/if}
                                 {#if p.socketId}
-                                    <span class="text-[9px] font-display text-emerald-400 font-bold">✓ {$language === 'uk' ? 'Готовий' : 'Ready'}</span>
+                                    <span class="text-[9px] font-display text-emerald-400 font-bold">✓ {$t.ready || 'Ready'}</span>
                                 {:else}
                                     <span class="text-[9px] font-display text-danger animate-pulse font-bold">{$t.disconnected || 'OFFLINE'}</span>
                                 {/if}
