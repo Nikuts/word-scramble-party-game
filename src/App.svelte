@@ -14,7 +14,6 @@
   import LoadingSpinner from './lib/shared/LoadingSpinner.svelte';
   import ErrorDisplay from './lib/shared/ErrorDisplay.svelte';
   import DevHarness from './lib/dev/DevHarness.svelte';
-  import SoundTestView from './lib/dev/SoundTestView.svelte';
   import { get } from 'svelte/store';
 
   const initialUrlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
@@ -149,7 +148,6 @@
     hostDisplay: HostDisplay,
     playerGame: PlayerGame,
     instructions: Instructions,
-    soundTest: SoundTestView,
     devHarness: DevHarness,
   };
 </script>
