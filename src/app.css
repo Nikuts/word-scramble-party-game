@@ -329,28 +329,16 @@
 .seg-f { left: 0; }
 .seg-g { top: 19px; }
 
-/* Lit state for segments */
-.digit[style*="--seg-a: 1"] .seg-a,
-.digit[style*="--seg-b: 1"] .seg-b,
-.digit[style*="--seg-c: 1"] .seg-c,
-.digit[style*="--seg-d: 1"] .seg-d,
-.digit[style*="--seg-e: 1"] .seg-e,
-.digit[style*="--seg-f: 1"] .seg-f,
-.digit[style*="--seg-g: 1"] .seg-g {
+/* Lit state for segments (bulletproof across smart TVs, mobile & desktop) */
+.segment.lit {
     background-color: var(--color-warning);
-    box-shadow: 0 0 5px var(--color-warning), 0 0 8px rgba(var(--color-warning-rgb), 0.2);
+    box-shadow: 0 0 6px var(--color-warning), 0 0 10px rgba(var(--color-warning-rgb), 0.3);
 }
 
-/* Flashing override for lit segments */
-.digit.flashing[style*="--seg-a: 1"] .seg-a,
-.digit.flashing[style*="--seg-b: 1"] .seg-b,
-.digit.flashing[style*="--seg-c: 1"] .seg-c,
-.digit.flashing[style*="--seg-d: 1"] .seg-d,
-.digit.flashing[style*="--seg-e: 1"] .seg-e,
-.digit.flashing[style*="--seg-f: 1"] .seg-f,
-.digit.flashing[style*="--seg-g: 1"] .seg-g {
+/* Flashing override for lit segments when time <= 10s */
+.digit.flashing .segment.lit {
     background-color: var(--color-danger);
-    box-shadow: 0 0 6px var(--color-danger), 0 0 10px rgba(var(--color-danger-rgb), 0.4);
+    box-shadow: 0 0 8px var(--color-danger), 0 0 12px rgba(var(--color-danger-rgb), 0.5);
     animation: flicker 1.2s infinite ease-in-out;
 }
 

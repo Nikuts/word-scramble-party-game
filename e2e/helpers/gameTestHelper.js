@@ -143,6 +143,7 @@ export async function submitScrambleBattleAnswer(page, wordCount = 4) {
 
     const submitBtn = page.locator('button.btn-arcade').filter({ hasText: /Submit|Надіслати/i });
     await submitBtn.waitFor({ state: 'visible' });
+    await submitBtn.scrollIntoViewIfNeeded();
     await submitBtn.click();
 }
 
@@ -187,6 +188,7 @@ export async function submitFinalBattleAnswer(page) {
     // 4. Submit Final Battle Answer
     const submitBtn = page.locator('button.btn-arcade').filter({ hasText: /Submit|Надіслати/i });
     await submitBtn.waitFor({ state: 'visible' });
+    await submitBtn.scrollIntoViewIfNeeded();
     await submitBtn.click();
 }
 

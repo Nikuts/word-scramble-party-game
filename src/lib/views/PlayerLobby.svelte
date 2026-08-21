@@ -1,11 +1,15 @@
 <!-- src/lib/views/PlayerLobby.svelte -->
 <script>
     import { createEventDispatcher } from 'svelte';
-    import { t, language, sendMessage, gameState, error, currentPlayerDetails } from '../../stores.js';
+    import { t, language, sendMessage, gameState, error, currentPlayerDetails, flyingEmojis } from '../../stores.js';
     import { MIN_PLAYERS, MAX_PLAYERS } from '../config.js';
     import PixelAvatar from '../shared/PixelAvatar.svelte';
 
     const dispatch = createEventDispatcher();
+
+    function removeEmoji(id) {
+        flyingEmojis.update(all => all.filter(e => e.id !== id));
+    }
 
     $: game = $gameState;
     $: player = $currentPlayerDetails;
@@ -388,7 +392,7 @@
 <!-- Floating Reaction Emoji Button (Bottom Right) -->
 <div class="fixed bottom-4 right-4 z-20">
     <button 
-        type="button"
+        type="button" 
         on:click={sendEmoji} 
         disabled={!canSendEmoji || !player} 
         class="w-12 h-12 rounded-full flex justify-center items-center p-1.5 bg-secondary border-2 border-white shadow-[0_0_15px_rgba(255,0,168,0.7)] transition-transform transform hover:scale-110 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
@@ -399,4 +403,17 @@
             <PixelAvatar avatar={player.avatar} className="w-full h-full" />
         {/if}
     </button>
+</div>
+
+<!-- Flying Live Emoji Reactions Overlay -->
+<div class="pointer-events-none fixed inset-0 overflow-hidden z-50">
+    {#each $flyingEmojis as emoji (emoji.id)}
+        <div 
+            class="absolute animate-float-up text-3xl select-none"
+            style="left: {emoji.x}%; bottom: 0;"
+            on:animationend={() => removeEmoji(emoji.id)}
+        >
+            {emoji.emoji}
+        </div>
+    {/each}
 </div>

@@ -78,30 +78,30 @@
         {@const isFinalRound = !!battle.genre}
         
         <!-- Prompt Box -->
-        <div class="bg-neutral-950/90 border border-neutral-800 rounded-xl p-2.5 mb-2.5 text-center shadow-md flex-shrink-0">
-            <span class="text-[10px] font-display font-bold text-cyan-400 uppercase tracking-widest block mb-0.5">
+        <div class="bg-neutral-950/90 border border-neutral-800 rounded-2xl p-3 mb-2.5 text-center shadow-md flex-shrink-0">
+            <span class="text-xs font-display font-bold text-cyan-400 uppercase tracking-widest block mb-1">
                 {isFinalRound ? ($t.moviePitch || 'MOVIE PREMISE') : ($t.battlePrompt || 'BATTLE PROMPT')}
             </span>
-            <p class="text-xs sm:text-sm font-semibold text-slate-200 leading-snug line-clamp-3">
+            <p class="text-sm sm:text-base font-bold text-slate-100 leading-snug">
                 {isFinalRound ? (battle.premise || battle.prompt) : battle.prompt}
             </p>
         </div>
 
         <!-- Vertical Single-Column Stack of Full-Width Voting Cards -->
-        <div class="flex-1 overflow-y-auto space-y-2.5 pr-0.5">
+        <div class="flex-1 overflow-y-auto space-y-3 pr-0.5">
             {#each battle.competitors as c_id, i (c_id)}
                 {@const c = players.find(p => p.id === c_id)}
                 {@const style = cardStyles[i % cardStyles.length]}
                 {@const answer = c ? renderAnswer(battle.answers[c.id]) : `(${$t.disconnected})`}
                 
-                <div class="bg-neutral-950/90 border-2 {style.cardBorder} rounded-2xl p-3 shadow-md flex flex-col justify-between transition-all">
+                <div class="bg-neutral-950/90 border-2 {style.cardBorder} rounded-2xl p-3.5 shadow-md flex flex-col justify-between transition-all">
                     <div>
-                        <div class="flex items-center justify-between mb-1.5">
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-display font-bold uppercase tracking-wider {style.badgeBg} border {style.badgeBorder} {style.badgeText}">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-display font-bold uppercase tracking-wider {style.badgeBg} border {style.badgeBorder} {style.badgeText}">
                                 {style.label}
                             </span>
                         </div>
-                        <p class="text-xs sm:text-sm font-medium text-slate-100 whitespace-pre-wrap leading-snug min-h-[2.5rem] bg-neutral-900/90 p-2.5 rounded-lg border border-neutral-800">
+                        <p class="text-sm sm:text-base font-medium text-slate-100 whitespace-pre-wrap leading-relaxed min-h-[3rem] bg-neutral-900/90 p-3 rounded-xl border border-neutral-800">
                             {answer}
                         </p>
                     </div>
@@ -111,8 +111,8 @@
                         type="button"
                         disabled={!c}
                         on:click={() => c && castVote(battle.id, c.id)}
-                        class="btn-arcade mt-2.5 w-full py-2.5 bg-gradient-to-r {style.btnBg} text-white font-display font-black text-xs tracking-wider uppercase rounded-xl active:scale-98 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        style="box-shadow: 0 0 12px {style.btnShadow};"
+                        class="btn-arcade mt-3 w-full py-3.5 bg-gradient-to-r {style.btnBg} text-white font-display font-black text-sm tracking-wider uppercase rounded-xl active:scale-98 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        style="box-shadow: 0 0 15px {style.btnShadow};"
                     >
                         🗳️ {$t.voteForThisAnswer || 'VOTE FOR THIS ANSWER'}
                     </button>

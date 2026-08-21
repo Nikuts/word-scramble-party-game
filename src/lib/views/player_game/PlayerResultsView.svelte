@@ -60,27 +60,27 @@
     }
 </script>
 
-<div class="w-full h-full max-h-full min-h-0 flex flex-col justify-between p-3 pb-[max(8px,env(safe-area-inset-bottom))] max-w-md mx-auto select-none font-sans overflow-hidden box-border">
+<div class="w-full h-full flex flex-col p-3 pb-8 max-w-md mx-auto select-none font-sans overflow-y-auto overscroll-contain box-border">
     
     <!-- 1. Main Card: Scrollable Content with Clean Inline Spacing -->
-    <div class="flex-1 flex flex-col justify-between bg-neutral-950/95 border-2 {currentRankStyle.border} {currentRankStyle.glow} rounded-2xl p-3.5 mb-2 min-h-0 overflow-y-auto space-y-2">
+    <div class="flex-1 flex flex-col justify-between bg-neutral-950/95 border-2 {currentRankStyle.border} {currentRankStyle.glow} rounded-2xl p-4 mb-2 space-y-3">
         
         <!-- Top Hero Rank & Avatar -->
         <div class="text-center flex flex-col items-center justify-start flex-shrink-0 pt-0.5">
             <!-- Rank Pill Badge -->
-            <div class="inline-block px-3.5 py-1 rounded-xl {currentRankStyle.bg} font-sans font-black text-xs uppercase tracking-wider mb-1 shadow-md">
+            <div class="inline-block px-4 py-1.5 rounded-xl {currentRankStyle.bg} font-sans font-black text-sm uppercase tracking-wider mb-1 shadow-md">
                 {getRankTitle(myRank, $t)}
             </div>
 
-            <span class="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-widest block mb-1">
+            <span class="text-xs font-sans font-bold text-slate-400 uppercase tracking-widest block mb-1">
                 {getRankSubtitle(myRank)}
             </span>
 
-            <!-- Avatar Hero (115px) -->
-            <div class="w-[115px] h-[115px] mx-auto my-2 relative flex-shrink-0">
+            <!-- Avatar Hero (120px) -->
+            <div class="w-[120px] h-[120px] mx-auto my-2 relative flex-shrink-0">
                 <PixelAvatar avatar={player?.avatar || '🦊'} className="w-full h-full" />
                 {#if myRank === 1}
-                    <div class="absolute -top-4 -right-1 text-3xl animate-bounce">
+                    <div class="absolute -top-4 -right-1 text-4xl animate-bounce">
                         👑
                     </div>
                 {/if}

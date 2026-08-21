@@ -1,5 +1,5 @@
 <script>
-    import { t, showBattleHistory, gamePhase, phaseTimer, currentRound, myPlayerQuestions, myBattlesToAnswer, currentVotingBattle, currentPlayerDetails, gameState } from '../../../stores.js';
+    import { t, showBattleHistory, gamePhase, phaseTimer, currentRound, myPlayerQuestions, myBattlesToAnswer, currentVotingBattle, currentPlayerDetails, gameState, flyingEmojis } from '../../../stores.js';
     import { tweened } from 'svelte/motion';
     import { cubicOut } from 'svelte/easing';
     import LoadingSpinner from '../../shared/LoadingSpinner.svelte';
@@ -18,6 +18,10 @@
 
     let loadingMessage = '';
     
+    function removeEmoji(id) {
+        flyingEmojis.update(all => all.filter(e => e.id !== id));
+    }
+    
     const animatedScore = tweened($currentPlayerDetails?.score || 0, {
         duration: 400,
         easing: cubicOut
@@ -34,7 +38,7 @@
     }
 </script>
 
-<div class="h-[100dvh] max-h-[100dvh] w-full flex flex-col justify-between overflow-hidden select-none font-sans box-border">
+<div class="h-[100dvh] max-h-[100dvh] w-full flex flex-col justify-between overflow-hidden select-none font-sans box-border relative">
     {#if $currentPlayerDetails}
         <header class="flex-shrink-0 bg-neutral-950/95 px-3.5 py-1.5 z-10 border-b-2 pt-[max(6px,env(safe-area-inset-top))]" style="border-color: var(--color-secondary); box-shadow: 0 0 10px var(--color-secondary);">
             <div class="w-full max-w-md mx-auto flex items-center justify-between gap-3">
@@ -87,4 +91,17 @@
             <PlayerResultsView game={$gameState} player={$currentPlayerDetails} />
         {/if}
     </main>
+
+    <!-- Flying Live Emoji Reactions Overlay -->
+    <div class="pointer-events-none fixed inset-0 overflow-hidden z-50">
+        {#each $flyingEmojis as emoji (emoji.id)}
+            <div 
+                class="absolute animate-float-up text-3xl select-none"
+                style="left: {emoji.x}%; bottom: 0;"
+                on:animationend={() => removeEmoji(emoji.id)}
+            >
+                {emoji.emoji}
+            </div>
+        {/each}
+    </div>
 </div>

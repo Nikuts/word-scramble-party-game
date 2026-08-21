@@ -1,11 +1,27 @@
 <script>
     import { t } from '../../../stores.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
-    export let timer;
+    export let timer = 0;
 </script>
 
-<div class="flex flex-col justify-center items-center w-full h-full flex-grow text-center py-8">
-    <SevenSegmentDisplay time={timer} />
-    <h1 class="font-display text-2xl sm:text-4xl md:text-5xl my-4 text-primary animate-pulse" style="text-shadow: 0 0 10px var(--color-primary);">{$t.votingGetReadyTitle}</h1>
-    <h2 class="font-display text-lg sm:text-2xl md:text-3xl text-accent" style="text-shadow: 0 0 8px var(--color-accent);">{$t.votingPhase}</h2>
+<div class="w-full h-full flex flex-col justify-center items-center p-4 max-w-md mx-auto select-none font-sans text-center">
+    <div class="w-full panel-arcade p-6 rounded-3xl border-2 border-emerald-400/80 bg-neutral-950/90 shadow-[0_0_25px_rgba(52,211,153,0.4)] flex flex-col items-center justify-center backdrop-blur-md">
+        <div class="text-4xl sm:text-5xl mb-2 animate-bounce">🗳️</div>
+        
+        <h1 class="text-2xl sm:text-3xl font-display font-black tracking-wider uppercase mb-1 text-white drop-shadow-[0_0_15px_rgba(52,211,153,0.8)]">
+            {$t.votingGetReadyTitle || 'GET READY TO VOTE!'}
+        </h1>
+        
+        <h2 class="text-sm sm:text-base font-display font-bold text-emerald-300 tracking-widest uppercase mb-4">
+            {$t.votingPhase || 'VOTING ARENA'}
+        </h2>
+        
+        <div class="scale-90 my-2">
+            <SevenSegmentDisplay time={timer} showLabel={false} />
+        </div>
+        
+        <p class="text-xs font-sans text-slate-300 mt-3 leading-relaxed">
+            👑 {$t.instructions3Text || 'Vote for the funniest punchline to award points and score voting bonuses!'}
+        </p>
+    </div>
 </div>

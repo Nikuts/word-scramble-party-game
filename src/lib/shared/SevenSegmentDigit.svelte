@@ -21,16 +21,15 @@
 <div 
     class="digit" 
     class:flashing={isLow}
-    style="--seg-a: {segments[0]}; --seg-b: {segments[1]}; --seg-c: {segments[2]}; --seg-d: {segments[3]}; --seg-e: {segments[4]}; --seg-f: {segments[5]}; --seg-g: {segments[6]};"
 >
     <!-- Horizontal segments -->
-    <div class="segment h-segment seg-a"></div>
-    <div class="segment h-segment seg-g"></div>
-    <div class="segment h-segment seg-d"></div>
+    <div class="segment h-segment seg-a" class:lit={segments[0] === 1}></div>
+    <div class="segment h-segment seg-g" class:lit={segments[6] === 1}></div>
+    <div class="segment h-segment seg-d" class:lit={segments[3] === 1}></div>
 
     <!-- Vertical segments -->
-    <div class="segment v-segment seg-f"></div>
-    <div class="segment v-segment seg-b"></div>
-    <div class="segment v-segment seg-e"></div>
-    <div class="segment v-segment seg-c"></div>
+    <div class="segment v-segment seg-f" class:lit={segments[5] === 1}></div>
+    <div class="segment v-segment seg-b" class:lit={segments[1] === 1}></div>
+    <div class="segment v-segment seg-e" class:lit={segments[4] === 1}></div>
+    <div class="segment v-segment seg-c" class:lit={segments[2] === 1}></div>
 </div>
