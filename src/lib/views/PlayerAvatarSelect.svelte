@@ -55,7 +55,7 @@
     }
 </script>
 
-<div class="w-full h-full max-h-screen flex flex-col justify-between p-3.5 sm:p-4 max-w-md mx-auto safe-top safe-bottom select-none font-sans overflow-hidden box-border">
+<div class="w-full h-full max-h-[100dvh] min-h-0 flex flex-col justify-between p-3.5 sm:p-4 max-w-md mx-auto safe-top safe-bottom select-none font-sans overflow-hidden box-border">
     
     <header class="text-center mb-2 flex-shrink-0">
         <h1 class="text-lg font-display font-black text-cyan-400 uppercase tracking-wide">
@@ -73,7 +73,7 @@
     {/if}
 
     <!-- Name Input Field -->
-    <div class="bg-neutral-950/90 border border-neutral-800 rounded-xl p-3 mb-2.5 flex-shrink-0">
+    <div class="bg-neutral-950/90 border border-neutral-800 rounded-xl p-3 mb-2 flex-shrink-0 select-text">
         <label for="profile-name-input" class="text-[10px] font-display font-bold text-slate-400 uppercase block mb-1">
             {$t.enterYourName || 'PLAYER NAME'}:
         </label>
@@ -81,13 +81,13 @@
             id="profile-name-input"
             type="text"
             bind:value={editNameValue}
-            class="w-full bg-neutral-900 border-2 border-cyan-400 text-white font-display font-bold text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-300"
+            class="w-full bg-neutral-900 border-2 border-cyan-400 text-white font-display font-bold text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-300 select-text"
             maxlength="15"
         />
     </div>
 
     <!-- 21 Character 3-Column Grid (Edge-to-Edge Big Avatars) -->
-    <div class="flex-1 overflow-y-auto bg-neutral-950/90 border border-neutral-800 p-3 rounded-2xl shadow-inner mb-2.5">
+    <div class="flex-1 min-h-0 overflow-y-auto bg-neutral-950/90 border border-neutral-800 p-3 rounded-2xl shadow-inner mb-2.5">
         <span class="text-[10px] font-display font-bold text-slate-400 uppercase tracking-wider block mb-2 text-center">
             {$t.chooseAvatar || 'CHOOSE AN AVATAR'}
         </span>
@@ -125,7 +125,7 @@
     </div>
 
     <!-- Save Profile Action -->
-    <footer class="flex-shrink-0">
+    <footer class="flex-shrink-0 pt-0.5">
         <button
             type="button"
             id="confirmAvatarBtn"

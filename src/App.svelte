@@ -14,12 +14,16 @@
   import LoadingSpinner from './lib/shared/LoadingSpinner.svelte';
   import ErrorDisplay from './lib/shared/ErrorDisplay.svelte';
   import DevHarness from './lib/dev/DevHarness.svelte';
+  import SoundTestView from './lib/dev/SoundTestView.svelte';
   import { get } from 'svelte/store';
+
+  const initialUrlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  let isDevHarness = initialUrlParams ? (initialUrlParams.has('debug') || initialUrlParams.has('dev') || initialUrlParams.has('harness')) : false;
 
   let currentView = $view;
   let mainContentElement;
   let isTransitioning = false;
-  let isDevHarness = false;
+  let transitionFallbackTimer = null;
 
   function transitionToView(targetView) {
       if (!mainContentElement) {
@@ -30,18 +34,41 @@
       isTransitioning = true;
       mainContentElement.classList.add('view-out');
 
-      const onFadeOutEnd = () => {
-          currentView = targetView;
-          mainContentElement.classList.remove('view-out');
-          mainContentElement.classList.add('view-in');
-
-          mainContentElement.addEventListener('animationend', () => {
+      let transitionDone = false;
+      const cleanupTransition = () => {
+          if (transitionDone) return;
+          transitionDone = true;
+          if (transitionFallbackTimer) {
+              clearTimeout(transitionFallbackTimer);
+              transitionFallbackTimer = null;
+          }
+          if (mainContentElement) {
+              mainContentElement.classList.remove('view-out');
               mainContentElement.classList.remove('view-in');
-              isTransitioning = false;
-              if (get(view) !== currentView) {
-                  transitionToView(get(view));
-              }
-          }, { once: true });
+          }
+          currentView = targetView;
+          isTransitioning = false;
+          if (get(view) !== currentView) {
+              transitionToView(get(view));
+          }
+      };
+
+      // Failsafe timer: if animationend never fires (TV mode, reduced motion, inactive tab), recover immediately
+      transitionFallbackTimer = setTimeout(cleanupTransition, 300);
+
+      const onFadeOutEnd = () => {
+          if (transitionDone) return;
+          currentView = targetView;
+          if (mainContentElement) {
+              mainContentElement.classList.remove('view-out');
+              mainContentElement.classList.add('view-in');
+
+              mainContentElement.addEventListener('animationend', () => {
+                  cleanupTransition();
+              }, { once: true });
+          } else {
+              cleanupTransition();
+          }
       };
 
       mainContentElement.addEventListener('animationend', onFadeOutEnd, { once: true });
@@ -122,14 +149,16 @@
     hostDisplay: HostDisplay,
     playerGame: PlayerGame,
     instructions: Instructions,
+    soundTest: SoundTestView,
+    devHarness: DevHarness,
   };
 </script>
 
 {#if isDevHarness}
     <DevHarness />
 {:else}
-    <main class="min-h-screen" style="transform: translateZ(0);">
-        <div bind:this={mainContentElement}>
+    <main class="h-[100dvh] max-h-[100dvh] w-full overflow-hidden flex flex-col" style="transform: translateZ(0);">
+        <div bind:this={mainContentElement} class="w-full h-full flex-1 flex flex-col min-h-0 overflow-hidden">
             {#if $isLoading}
                 <LoadingSpinner message={$error.message || $t.connecting} />
             {:else if $error.fatal}

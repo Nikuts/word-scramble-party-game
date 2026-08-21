@@ -11,7 +11,7 @@ import {
 import fs from 'fs';
 import path from 'path';
 
-const SCREENSHOTS_DIR = 'C:/Users/nikku/.gemini/antigravity-ide/brain/d32ef294-c23d-4607-83f6-f37908825cdd/screenshots';
+const SCREENSHOTS_DIR = 'C:/Users/nikku/.gemini/antigravity-ide/brain/009dc139-9a03-4c7b-9063-ffcb2566e6d1/screenshots';
 
 if (!fs.existsSync(SCREENSHOTS_DIR)) {
     fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });

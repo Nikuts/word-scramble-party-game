@@ -1,7 +1,7 @@
 import { writable, get, derived } from 'svelte/store';
 import { io } from 'socket.io-client';
-import { UI_TEXT } from './ui_text.js';
 import { playSound } from './lib/utils.js';
+import { UI_TEXT } from './ui_text.js';
 
 // --- Individual, Granular Stores for Better Performance ---
 export const view = writable('language'); // 'language', 'mainMenu', 'joinPrompt', 'hostDisplay', 'playerGame', 'instructions'
@@ -183,6 +183,10 @@ export function initializeSocket() {
         const _isHostDisplay = get(isHostDisplay);
         const timerPhasesForTick = ['question', 'battle_answering', 'battle_voting'];
 
+        if (_isHostDisplay && newGameState.phase) {
+            playMusic(newGameState.phase);
+        }
+
         if (timerPhasesForTick.includes(newGameState.phase) && remaining <= 10 && remaining > 0) {
             if (remaining !== lastTickSecond) {
                 if (!newGameState.soundsOnHostOnly || _isHostDisplay) {
@@ -227,6 +231,7 @@ export function initializeSocket() {
         error.set({ ...initialErrorState });
         view.set('hostDisplay');
         isHostDisplay.set(true);
+        playMusic('lobby');
         gameState.set({ 
             id: gameId,
             phase: 'lobby',
@@ -332,15 +337,30 @@ export function initializeSocket() {
     });
 
     socket.on('lobby-emoji-sent', ({ avatar, emoji, playerName }) => {
+        const id = Date.now() + Math.random();
+        const startX = Math.floor(Math.random() * 75 + 10);
+        const endX = Math.max(5, Math.min(90, startX + (Math.random() * 30 - 15)));
+        const startRotate = Math.floor(Math.random() * 40 - 20);
+        const endRotate = Math.floor(Math.random() * 180 - 90);
+
         flyingEmojis.update(emojis => {
             const next = [...emojis, {
-                id: Date.now() + Math.random(),
+                id,
                 avatar: avatar,
                 emoji: emoji || null,
                 playerName: playerName || '',
+                startX,
+                endX,
+                startRotate,
+                endRotate
             }];
             return next.length > 25 ? next.slice(next.length - 25) : next;
         });
+
+        // Guaranteed auto-cleanup failsafe after 4.5s
+        setTimeout(() => {
+            flyingEmojis.update(all => all.filter(e => e.id !== id));
+        }, 4500);
     });
 
     socket.on('time-boost-used', (data) => {
@@ -424,6 +444,7 @@ export function resetToMenu() {
      error.set({ ...initialErrorState });
      isHostDisplay.set(false);
      showBattleHistory.set(false);
+     stopMusic();
 }
 
 export function getPartialAnswers() {

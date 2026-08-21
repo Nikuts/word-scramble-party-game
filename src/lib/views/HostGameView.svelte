@@ -148,8 +148,8 @@
     ];
 </script>
 
-<!-- Full-Width Host Game Arena Layout (Zero Scroll 100% Width Harmonization) -->
-<div class="w-full min-h-screen flex flex-col justify-between p-2.5 sm:p-4 lg:p-6 max-w-7xl mx-auto safe-top safe-bottom relative select-none font-sans host-game-container">
+<!-- Full-Width Host Game Arena Layout (Zero Scroll 100% Viewport Height Clamping) -->
+<div class="w-full h-screen max-h-[100dvh] flex flex-col justify-between p-2 sm:p-3.5 lg:p-4 max-w-7xl mx-auto safe-top safe-bottom relative select-none font-sans host-game-container overflow-hidden box-border pb-11">
     {#if $activeTimeBoostNotice}
         <div class="fixed top-6 right-6 z-50 animate-bounce bg-yellow-400 text-black px-4 py-2 rounded-lg font-display font-extrabold shadow-[0_0_20px_rgba(250,204,21,0.8)] border-2 border-white flex items-center gap-2">
             <span class="text-xl">⏱️</span>
@@ -537,7 +537,7 @@
         {@const sups = $gameState?.superlatives}
 
         <!-- Phase: Final Results Split-Stage Olympic Podium & Adaptive Roster -->
-        <div class="w-full h-full max-h-screen flex flex-col justify-between p-2.5 sm:p-4 select-none font-sans overflow-hidden box-border max-w-6xl mx-auto flex-1">
+        <div class="w-full h-full max-h-[100dvh] flex flex-col justify-between p-2.5 sm:p-4 select-none font-sans overflow-hidden box-border max-w-6xl mx-auto flex-1">
             
             <!-- 1. Stage Header: Glowing Trophy & Title -->
             <header class="text-center flex-shrink-0 pt-1 pb-1">
@@ -783,15 +783,15 @@
     {/if}
 
     <!-- Flying Avatar & Emoji Container -->
-    <div class="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-30">
+    <div class="fixed inset-0 w-full h-full pointer-events-none overflow-hidden z-50">
         {#each $flyingEmojis as emoji (emoji.id)}
-            {@const startX = Math.random() * 80 + 10}
-            {@const endX = Math.random() * 80 + 10}
-            {@const startRotate = Math.random() * 90 - 45}
-            {@const endRotate = Math.random() * 540 - 270}
+            {@const startX = emoji.startX ?? (Math.random() * 75 + 10)}
+            {@const endX = emoji.endX ?? startX}
+            {@const startRotate = emoji.startRotate ?? 0}
+            {@const endRotate = emoji.endRotate ?? 0}
             <div
                 class="flying-emoji"
-                style="--start-x: {startX}%; --end-x: {endX}%; --start-rotate: {startRotate}deg; --end-rotate: {endRotate}deg;"
+                style="--start-x: {startX}vw; --end-x: {endX}vw; --start-rotate: {startRotate}deg; --end-rotate: {endRotate}deg;"
                 on:animationend={() => removeEmoji(emoji.id)}
             >
                 {#if emoji.emoji}

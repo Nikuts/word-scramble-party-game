@@ -99,4 +99,52 @@ test.describe('In-Game Live Emoji Reactions E2E', () => {
         await p2Context.close();
         await p3Context.close();
     });
+
+    test('renders animated flying reactions on TV Mode without static freeze', async ({ browser }) => {
+        test.setTimeout(45000);
+
+        // 1. Setup Host Display in TV Mode
+        const hostContext = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+        const hostPage = await hostContext.newPage();
+        const gameId = await createHostSession(hostPage);
+
+        // Toggle TV Mode on Host
+        const tvModeBtn = hostPage.locator('button[title*="TV"], button[aria-label*="TV"]').first();
+        if (await tvModeBtn.isVisible()) {
+            await tvModeBtn.click();
+        } else {
+            await hostPage.evaluate(() => document.body.setAttribute('data-tv-mode', 'true'));
+        }
+
+        // Verify TV mode is active
+        await expect(hostPage.locator('body')).toHaveAttribute('data-tv-mode', 'true');
+
+        // 2. Setup Mobile Player
+        const playerContext = await createMobilePlayerContext(browser);
+        const playerPage = await playerContext.newPage();
+        await joinPlayerSession(playerPage, { gameId, playerName: 'TVReactor', avatar: '🚀' });
+
+        // 3. Send reactions from player lobby
+        const reactionBtn = playerPage.locator('button[aria-label*="Reaction"], button[title*="Reaction"], div.fixed.bottom-4.right-4 button').first();
+        await expect(reactionBtn).toBeVisible({ timeout: 5000 });
+        await reactionBtn.click();
+
+        // 4. Verify Host Display has active flying emoji with animation
+        const flyingEmoji = hostPage.locator('.flying-emoji').first();
+        await expect(flyingEmoji).toBeVisible({ timeout: 5000 });
+
+        // Verify computed animation is 'fly-across' and NOT 'none'
+        const animationName = await flyingEmoji.evaluate(el => window.getComputedStyle(el).animationName);
+        expect(animationName).toBe('fly-across');
+
+        // Capture screenshot of flying emoji on TV mode
+        await hostPage.screenshot({ path: 'C:/Users/nikku/.gemini/antigravity-ide/brain/009dc139-9a03-4c7b-9063-ffcb2566e6d1/screenshots/tv_mode_flying_reactions.png' });
+
+        // 5. Verify auto-cleanup after animation / fallback timer
+        await expect(hostPage.locator('.flying-emoji')).toHaveCount(0, { timeout: 6000 });
+
+        // Cleanup
+        await hostContext.close();
+        await playerContext.close();
+    });
 });

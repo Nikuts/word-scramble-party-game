@@ -29,12 +29,12 @@
         {#if $error.message && $view === 'joinPrompt'}
             <p class="text-danger text-center mb-4 font-bold font-display text-sm">{$error.message}</p>
         {/if}
-        <div class="mb-6">
+        <div class="mb-6 select-text">
             <label for="gameIdInput" class="block text-sm text-neutral-300 mb-2 font-display">{$t.enterGameId}</label>
             <input 
                 type="text" 
                 id="gameIdInput" 
-                class="input-arcade" 
+                class="input-arcade select-text" 
                 maxlength="4" 
                 autocomplete="off" 
                 autocorrect="off" 
@@ -43,12 +43,12 @@
                 on:input={clearError}
             >
         </div>
-        <div class="mb-8">
+        <div class="mb-8 select-text">
             <label for="playerNameInput" class="block text-sm text-neutral-300 mb-2 font-display">{$t.enterYourName}</label>
             <input 
                 type="text" 
                 id="playerNameInput" 
-                class="block w-full bg-black border-2 p-3 text-lg focus:outline-none" 
+                class="block w-full bg-black border-2 p-3 text-lg focus:outline-none select-text" 
                 style="border-color: var(--color-secondary); box-shadow: 0 0 8px var(--color-secondary), inset 0 0 8px rgba(var(--color-secondary-rgb), 0.2); color: var(--color-secondary);" 
                 maxlength="25" 
                 bind:value={$joinForm.playerName} 

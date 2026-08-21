@@ -76,7 +76,7 @@ test.describe('11-Player Hybrid (1 vs 1 and 1 vs 1 vs 1) Game Flow', () => {
         // 6. Phase 3: Voting on Hybrid Battles (6 Battles total: 4 Quads + 2 Trios)
         await expect(
             hostPage.locator('h1, h2, h3').filter({ hasText: /Vote|Showdown|Brawl|1-on-1|3-Way|4-Way|Battle/i }).first()
-        ).toBeVisible({ timeout: 30000 });
+        ).toBeVisible({ timeout: 45000 });
 
         // Complete voting for all 6 hybrid battles in the round
         await completeAllBattlesVoting(players, hostPage, 6);

@@ -131,7 +131,7 @@
     }
 </script>
 
-<div class="w-full max-w-md mx-auto h-full max-h-screen flex flex-col justify-between p-3 select-none font-sans overflow-hidden box-border">
+<div class="w-full max-w-md mx-auto h-[100dvh] max-h-[100dvh] min-h-0 flex flex-col justify-between p-3 select-none font-sans overflow-hidden box-border">
     {#if allQuestionsAnswered}
         <div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
             <SevenSegmentDisplay time={timer} />
@@ -201,10 +201,10 @@
 
         <!-- Answer Input Textarea & Status Bar -->
         <div class="flex-1 flex flex-col justify-between my-1 min-h-0">
-            <div class="relative flex-1 flex flex-col min-h-0">
+            <div class="relative flex-1 flex flex-col min-h-0 select-text">
                 <textarea
                     rows="3"
-                    class="w-full flex-1 p-3 bg-neutral-950/90 border-2 rounded-2xl text-slate-100 font-mono text-sm sm:text-base resize-none focus:outline-none transition-all duration-200 {
+                    class="w-full flex-1 p-3 bg-neutral-950/90 border-2 rounded-2xl text-slate-100 font-mono text-sm sm:text-base resize-none focus:outline-none transition-all duration-200 select-text {
                         isAnswerValid ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-neutral-800 focus:border-cyan-500'
                     }"
                     placeholder={$t.minWordsWarning || 'Type your funny answer here...'}

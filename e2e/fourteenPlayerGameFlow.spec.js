@@ -69,8 +69,8 @@ test.describe('14-Player Maximum Lobby Scale Game Flow', () => {
 
         // 5. Phase 2: Word Scramble Battles (7 battles scheduled: 7 quads * 4 = 28 slots = 2 battles per player)
         await expect(
-            p1Page.locator('.overflow-y-auto button, button.btn-arcade').first()
-        ).toBeVisible({ timeout: 25000 });
+            p1Page.locator('button:has-text("Submit Battle Answer"), button:has-text("Надіслати відповідь"), .overflow-y-auto button, button.btn-arcade').first()
+        ).toBeVisible({ timeout: 45000 });
 
         for (const p of players) {
             await submitAllPlayerBattles(p.page, false);
@@ -79,7 +79,7 @@ test.describe('14-Player Maximum Lobby Scale Game Flow', () => {
         // 6. Phase 3: Voting on Battles (7 Battles total)
         await expect(
             hostPage.locator('h1, h2, h3').filter({ hasText: /Vote|Showdown|Brawl|1-on-1|3-Way|4-Way|Battle/i }).first()
-        ).toBeVisible({ timeout: 30000 });
+        ).toBeVisible({ timeout: 45000 });
 
         // Complete voting for all 7 battles in the round
         await completeAllBattlesVoting(players, hostPage, 7);

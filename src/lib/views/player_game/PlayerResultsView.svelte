@@ -60,7 +60,7 @@
     }
 </script>
 
-<div class="w-full h-full max-h-screen flex flex-col justify-between p-3 max-w-md mx-auto safe-top safe-bottom select-none font-sans overflow-hidden box-border">
+<div class="w-full h-[100dvh] max-h-[100dvh] min-h-0 flex flex-col justify-between p-3 max-w-md mx-auto safe-top safe-bottom select-none font-sans overflow-hidden box-border">
     
     <!-- 1. Main Card: Scrollable Content with Clean Inline Spacing -->
     <div class="flex-1 flex flex-col justify-between bg-neutral-950/95 border-2 {currentRankStyle.border} {currentRankStyle.glow} rounded-2xl p-3.5 mb-2 min-h-0 overflow-y-auto space-y-2">

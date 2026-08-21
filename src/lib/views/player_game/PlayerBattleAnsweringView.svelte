@@ -334,7 +334,7 @@
     }
 </style>
 
-<div class="w-full max-w-md mx-auto h-full max-h-screen flex flex-col justify-between p-3 select-none font-sans overflow-hidden box-border">
+<div class="w-full max-w-md mx-auto h-[100dvh] max-h-[100dvh] min-h-0 flex flex-col justify-between p-3 select-none font-sans overflow-hidden box-border">
     {#if currentBattleToAnswer}
         {@const battle = currentBattleToAnswer}
         {@const battleForm = battleForms[battle.id]}

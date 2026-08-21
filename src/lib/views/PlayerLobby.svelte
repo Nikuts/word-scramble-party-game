@@ -15,6 +15,14 @@
     let customTheme = '';
     let isInputFocused = false;
 
+    $: gameLang = game?.language || ($language === 'ua' || $language === 'uk' ? 'uk' : 'en');
+    $: availableThemes = game?.preGeneratedThemes?.[gameLang] 
+        || game?.preGeneratedThemes?.[$language] 
+        || game?.preGeneratedThemes?.['en'] 
+        || game?.preGeneratedThemes?.['uk'] 
+        || game?.preGeneratedThemes?.['ua'] 
+        || [];
+
     // Sync local customTheme with game state
     $: {
         if (game?.isGeneratingThemes) {
@@ -93,7 +101,7 @@
     }
 </script>
 
-<div class="w-full h-full max-h-screen flex flex-col justify-between p-3.5 sm:p-4 max-w-md mx-auto safe-top safe-bottom select-none font-sans overflow-hidden box-border">
+<div class="w-full h-[100dvh] max-h-[100dvh] min-h-0 flex flex-col justify-between p-3.5 sm:p-4 max-w-md mx-auto safe-top safe-bottom select-none font-sans overflow-hidden box-border">
     
     <!-- Top Player HUD Card (Fixed Height, Aligned Badges) -->
     <header class="bg-neutral-950/90 border border-neutral-800 rounded-xl px-3.5 py-2.5 shadow-md mb-2.5 flex items-center justify-between flex-shrink-0">
@@ -142,7 +150,7 @@
     {/if}
 
     <!-- Scrollable Main Container: Host Controls FIRST, then Players List -->
-    <main class="flex-1 overflow-y-auto space-y-3 pr-0.5">
+    <main class="flex-1 min-h-0 overflow-y-auto space-y-3 pr-0.5">
         
         {#if isHost}
             <!-- 👑 HOST CONTROLS FIRST -->
@@ -198,7 +206,7 @@
                         </div>
                     {:else}
                         <div class="space-y-1.5">
-                            {#each (game?.preGeneratedThemes?.[$language] || []) as th}
+                            {#each availableThemes as th}
                                 <button
                                     type="button"
                                     on:click={() => handleThemeClick(th)}
@@ -221,7 +229,7 @@
                     <span class="text-[10px] font-display font-bold text-slate-300 uppercase block mb-1">
                         ✍️ {$t.customTheme || 'OR ENTER CUSTOM THEME'}:
                     </span>
-                    <div class="relative">
+                    <div class="relative select-text">
                         <input 
                             type="text"
                             bind:value={customTheme}
@@ -229,7 +237,7 @@
                             on:focus={() => isInputFocused = true}
                             on:blur={() => isInputFocused = false}
                             placeholder={$t.customTheme || (isUkrainian ? 'Власна тема...' : 'Custom Theme...')}
-                            class="w-full bg-neutral-900 border-2 border-neutral-700 focus:border-amber-400 text-white font-sans text-xs px-3 py-2 rounded-lg focus:outline-none"
+                            class="w-full bg-neutral-900 border-2 border-neutral-700 focus:border-amber-400 text-white font-sans text-xs px-3 py-2 rounded-lg focus:outline-none select-text"
                             maxlength="50"
                         />
                         {#if customTheme}

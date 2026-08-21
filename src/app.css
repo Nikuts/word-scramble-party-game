@@ -44,6 +44,12 @@
     text-shadow: 0 0 2px rgba(226, 232, 240, 0.2);
   }
 
+  /* Guarantee mobile keyboard focus and text entry across all devices */
+  input, textarea, select, [contenteditable="true"] {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-display uppercase tracking-wider;
   }
@@ -229,15 +235,30 @@
     animation: final-winner-glow-arcade 2s ease-in-out infinite;
 }
 
-/* Flying Emoji */
+/* Flying Emoji - GPU Hardware Accelerated */
 @keyframes fly-across {
-  0% { bottom: -10%; left: var(--start-x); opacity: 1; transform: scale(0.8) rotate(var(--start-rotate)); }
-  100% { bottom: 110%; left: var(--end-x); opacity: 0; transform: scale(1.5) rotate(var(--end-rotate)); }
+  0% {
+    opacity: 1;
+    transform: translate3d(var(--start-x, 50vw), 105vh, 0) scale(0.85) rotate(var(--start-rotate, 0deg));
+  }
+  75% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--end-x, 50vw), -15vh, 0) scale(1.35) rotate(var(--end-rotate, 0deg));
+  }
 }
 .flying-emoji {
-  @apply absolute w-20 h-20 pointer-events-none;
-  animation: fly-across 5s linear forwards;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5rem;
+  height: 5rem;
+  pointer-events: none;
+  animation: fly-across 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
   will-change: transform, opacity;
+  z-index: 50;
 }
 
 /* Synthwave Background - STABLE FLICKER FIX */
@@ -370,8 +391,7 @@ body[data-tv-mode="true"] {
 
   /* 3. Disable heavy continuous pulsing animations on TV screens */
   .winner-card,
-  .final-winner-card,
-  .flying-emoji {
+  .final-winner-card {
     animation: none !important;
   }
 
@@ -419,8 +439,7 @@ body[data-tv-mode="true"] {
   }
 
   .winner-card,
-  .final-winner-card,
-  .flying-emoji {
+  .final-winner-card {
     animation: none !important;
   }
 
