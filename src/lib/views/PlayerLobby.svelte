@@ -23,9 +23,9 @@
         || game?.preGeneratedThemes?.['ua'] 
         || [];
 
-    // Sync local customTheme with game state
+    // Sync local customTheme with game state (safeguarded against wiping active typing)
     $: {
-        if (game?.isGeneratingThemes) {
+        if (game?.isGeneratingThemes && !isInputFocused) {
             customTheme = '';
         } else if (game?.theme !== customTheme && !isInputFocused) {
             customTheme = game?.theme || '';

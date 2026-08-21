@@ -11,8 +11,8 @@
     }
 </script>
 
-<div class="min-h-screen flex flex-col items-center p-3 sm:p-6 lg:p-8 py-6 justify-center select-none font-sans">
-    <div class="w-full max-w-2xl panel-arcade overflow-y-auto max-h-[88vh] p-4 sm:p-6 rounded-3xl border border-fuchsia-500/40 shadow-2xl backdrop-blur-md" style="--neon-color: var(--color-accent); --neon-color-rgb: var(--color-accent-rgb);">
+<div class="h-[100dvh] max-h-[100dvh] overflow-y-auto overscroll-contain flex flex-col items-center p-3 sm:p-6 lg:p-8 py-4 justify-start sm:justify-center select-none font-sans safe-top safe-bottom">
+    <div class="w-full max-w-2xl panel-arcade overflow-y-auto max-h-full p-4 sm:p-6 rounded-3xl border border-fuchsia-500/40 shadow-2xl backdrop-blur-md my-auto" style="--neon-color: var(--color-accent); --neon-color-rgb: var(--color-accent-rgb);">
         
         <!-- Header -->
         <header class="text-center mb-4">

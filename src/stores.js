@@ -183,10 +183,6 @@ export function initializeSocket() {
         const _isHostDisplay = get(isHostDisplay);
         const timerPhasesForTick = ['question', 'battle_answering', 'battle_voting'];
 
-        if (_isHostDisplay && newGameState.phase) {
-            playMusic(newGameState.phase);
-        }
-
         if (timerPhasesForTick.includes(newGameState.phase) && remaining <= 10 && remaining > 0) {
             if (remaining !== lastTickSecond) {
                 if (!newGameState.soundsOnHostOnly || _isHostDisplay) {

@@ -10,7 +10,7 @@
     let isThemeInputFocused = false;
 
     $: {
-        if ($gameState?.isGeneratingThemes) {
+        if ($gameState?.isGeneratingThemes && !isThemeInputFocused) {
             hostCustomTheme = '';
         } else if ($gameState?.theme !== hostCustomTheme && !isThemeInputFocused) {
             hostCustomTheme = $gameState?.theme || '';
@@ -43,7 +43,7 @@
                 const qr = qrcode(typeNumber, errorCorrectionLevel);
                 qr.addData(url);
                 qr.make();
-                qrElement.innerHTML = qr.createSvgTag({cellSize: 3, margin: 2});
+                qrElement.innerHTML = qr.createSvgTag({cellSize: 6, margin: 2});
             } catch (e) {
                 console.error("QR Code generation failed:", e);
                 qrElement.innerHTML = `<p class="text-xs text-danger">QR error</p>`;
@@ -102,144 +102,158 @@
 </script>
 
 <!-- Full-Width Harmonized Host Lobby Arena (Zero Scroll 100% Viewport Clamping) -->
-<div class="h-screen max-h-[100dvh] w-full flex flex-col justify-between p-3 sm:p-4 lg:p-5 max-w-7xl mx-auto safe-top safe-bottom relative select-none font-sans overflow-hidden box-border pb-12 host-lobby-container">
+<div class="h-screen max-h-[100dvh] w-full flex flex-col justify-between p-2.5 sm:p-3.5 lg:p-4 max-w-7xl mx-auto safe-top safe-bottom relative select-none font-sans overflow-hidden box-border pb-11 host-lobby-container">
     
-    <!-- Top Header: Title & Sleek Join Information Capsule -->
-    <header class="w-full flex flex-col md:flex-row items-center justify-between gap-3 bg-neutral-950/85 border-2 border-cyan-400/80 rounded-2xl p-3 sm:p-4 shadow-[0_0_20px_rgba(6,182,212,0.25)] backdrop-blur-md flex-shrink-0">
-        <!-- Brand Title -->
-        <div class="text-center md:text-left">
-            <h1 class="text-xl sm:text-2xl lg:text-3xl font-display font-black text-primary drop-shadow-[0_0_12px_rgba(var(--color-primary-rgb),0.8)] tracking-wide leading-tight">
-                {$t.appName}
-            </h1>
-            <p class="text-[10px] sm:text-xs text-slate-300 font-mono tracking-widest uppercase mt-0.5">
-                {$language === 'uk' ? 'ГРА ДЛЯ ВЕЧІРОК' : 'REAL-TIME MULTIPLAYER PARTY GAME'}
-            </p>
-        </div>
-
-        <!-- Integrated Join Capsule & QR Code -->
-        <div class="flex items-center gap-3 sm:gap-4 bg-black/80 border border-neutral-700/90 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2">
-            <div class="text-right">
-                <p class="text-[10px] sm:text-xs text-slate-300">{$t.openBrowserTo || 'Join at'}</p>
-                <p class="text-xs sm:text-sm font-mono font-bold text-accent break-all">{connectURL || '...'}</p>
-                <div class="flex items-center justify-end gap-2 mt-0.5">
-                    <span class="text-[10px] text-slate-400 font-mono">{$t.orEnterId || 'ROOM'}:</span>
-                    <span class="font-display font-black text-lg sm:text-xl text-white tracking-widest leading-none drop-shadow-[0_0_8px_#fff]" data-testid="game-id">
-                        {$gameState.id}
-                    </span>
-                    <button 
-                        type="button"
-                        class="px-1.5 py-0.5 bg-neutral-800 hover:bg-primary hover:text-black border border-primary/60 rounded text-[9px] font-display transition-all cursor-pointer"
-                        on:click={() => {
-                            const shareUrl = $gameState?.id ? `${connectURL}/?gameId=${$gameState.id}` : connectURL;
-                            if (navigator.clipboard) {
-                                navigator.clipboard.writeText(shareUrl).then(() => {
-                                    alert('Link copied to clipboard!');
-                                }).catch(() => {
-                                    prompt('Copy game link:', shareUrl);
-                                });
-                            } else {
-                                prompt('Copy game link:', shareUrl);
-                            }
-                        }}
-                    >
-                        📋 Copy
-                    </button>
-                </div>
-            </div>
-            <div bind:this={qrElement} class="flex items-center justify-center bg-white p-1 border-2 border-cyan-400 rounded-lg w-16 h-16 sm:w-20 sm:h-20 aspect-square shadow-[0_0_10px_rgba(6,182,212,0.5)] flex-shrink-0 overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"></div>
-        </div>
-    </header>
-
-    <!-- Center Stage: Theme Showcase & Mode Badges -->
-    <section class="w-full my-auto flex flex-col items-center justify-center py-2 flex-shrink-0">
-        {#if $gameState.isGeneratingThemes}
-            <div class="p-6 bg-black/60 border-2 border-warning rounded-2xl text-center w-full max-w-xl shadow-lg">
-                <p class="text-xl sm:text-2xl text-warning animate-pulse font-display">{$t.generatingThemes}...</p>
-            </div>
-        {:else}
-            <!-- Theme Card -->
-            <div class="w-full max-w-4xl bg-neutral-950/85 border-2 border-fuchsia-500/80 rounded-2xl p-3 sm:p-4 shadow-[0_0_25px_rgba(217,70,239,0.2)] backdrop-blur-md text-center mb-2">
-                <div class="flex items-center justify-between mb-1.5 px-1">
-                    <span class="text-xs sm:text-sm font-display font-bold text-fuchsia-400 tracking-wider uppercase">
-                        ✨ {$t.theme || 'CHOSEN THEME'}
-                    </span>
-                    <div class="flex items-center gap-2">
-                        <button 
-                            type="button" 
-                            on:click={handleReloadTopics}
-                            disabled={$gameState.isGeneratingThemes}
-                            class="px-2 py-0.5 text-xs bg-neutral-900 hover:bg-fuchsia-500 hover:text-white border border-fuchsia-500/60 rounded text-fuchsia-300 transition-all font-display cursor-pointer flex items-center gap-1 disabled:opacity-50"
-                        >
-                            <span>🔄</span> {$t.reloadThemes || 'Reload'}
-                        </button>
-                        <button 
-                            type="button" 
-                            on:click={handlePickRandomTheme}
-                            class="px-2 py-0.5 text-xs bg-neutral-900 hover:bg-accent hover:text-black border border-accent/60 rounded text-accent transition-all font-display cursor-pointer flex items-center gap-1"
-                        >
-                            <span>🎲</span> {$language === 'uk' ? 'Випадкова' : 'Random'}
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Theme Name Display -->
-                <div class="p-2.5 sm:p-3 bg-black/70 border border-neutral-700/80 rounded-xl mb-2">
-                    <p class="text-lg sm:text-xl lg:text-2xl xl:text-3xl text-amber-300 font-display font-bold leading-tight drop-shadow-[0_0_10px_rgba(252,211,77,0.5)] break-words">
-                        {$gameState.theme ? $gameState.theme : $t.waitingForTheme}
+    <!-- Top Showcase Stage: Brand & Theme on Left + Large Scannable QR Join Tile on Right -->
+    <header class="w-full grid grid-cols-1 lg:grid-cols-12 gap-3 bg-neutral-950/90 border-2 border-cyan-400/80 rounded-2xl p-3 sm:p-4 shadow-[0_0_25px_rgba(6,182,212,0.25)] backdrop-blur-md flex-shrink-0">
+        
+        <!-- Left Column: Brand & Active Theme Selection (8 cols) -->
+        <div class="lg:col-span-8 flex flex-col justify-between space-y-2">
+            <!-- Brand Bar -->
+            <div class="flex items-center justify-between border-b border-neutral-800/80 pb-1.5">
+                <div>
+                    <h1 class="text-lg sm:text-xl lg:text-2xl font-display font-black text-primary drop-shadow-[0_0_10px_rgba(var(--color-primary-rgb),0.8)] tracking-wide leading-none">
+                        {$t.appName}
+                    </h1>
+                    <p class="text-[9px] sm:text-[10px] text-slate-400 font-mono tracking-widest uppercase mt-0.5">
+                        {$language === 'uk' ? 'ГРА ДЛЯ ВЕЧІРОК' : 'REAL-TIME MULTIPLAYER PARTY GAME'}
                     </p>
                 </div>
 
-                <!-- Suggested AI Theme Chips -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
-                    {#each availableThemes as themeOption}
-                        <button 
-                            type="button"
-                            on:click={() => handleSelectTheme(themeOption)}
-                            class="p-2 sm:p-2.5 text-xs sm:text-sm font-bold text-center rounded-xl border transition-all cursor-pointer flex items-center justify-center min-h-[44px] sm:min-h-[50px] {
-                                $gameState?.theme === themeOption 
-                                ? 'bg-fuchsia-500 text-white font-bold border-white shadow-[0_0_12px_rgba(217,70,239,0.8)] scale-[1.01]' 
-                                : 'bg-neutral-900/90 border-neutral-700 hover:border-slate-300 text-slate-200 active:scale-98'
-                            }"
-                        >
-                            <span class="line-clamp-2">{themeOption}</span>
-                        </button>
-                    {/each}
+                <!-- Theme Control Actions -->
+                <div class="flex items-center gap-1.5">
+                    <button 
+                        type="button" 
+                        on:click={handleReloadTopics}
+                        disabled={$gameState.isGeneratingThemes}
+                        class="px-2 py-0.5 text-[10px] bg-neutral-900 hover:bg-primary hover:text-black border border-primary/60 rounded text-primary transition-all font-display cursor-pointer flex items-center gap-1 disabled:opacity-40"
+                    >
+                        <span>🔄</span> {$t.reloadThemes || 'Reload Themes'}
+                    </button>
+                    <button 
+                        type="button" 
+                        on:click={handlePickRandomTheme}
+                        disabled={$gameState.isGeneratingThemes}
+                        class="px-2 py-0.5 text-[10px] bg-neutral-900 hover:bg-accent hover:text-black border border-accent/60 rounded text-accent transition-all font-display cursor-pointer flex items-center gap-1 disabled:opacity-40"
+                    >
+                        <span>🎲</span> {$language === 'uk' ? 'Випадкова' : 'Random'}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Theme Display & Chips -->
+            {#if $gameState.isGeneratingThemes}
+                <div class="p-3 bg-black/60 border-2 border-warning/80 rounded-xl text-center shadow-inner">
+                    <p class="text-sm sm:text-base text-warning animate-pulse font-display">{$t.generatingThemes}...</p>
+                </div>
+            {:else}
+                <div class="p-2 sm:p-2.5 bg-neutral-900/90 border border-neutral-700 rounded-xl text-center shadow-inner">
+                    <span class="text-[9px] font-display font-bold uppercase tracking-widest text-cyan-400 block mb-0.5">
+                        ✨ {$t.theme || 'CHOSEN THEME'}:
+                    </span>
+                    <p class="text-base sm:text-lg lg:text-xl text-amber-300 font-display font-bold truncate leading-snug drop-shadow-[0_0_8px_rgba(252,211,77,0.4)]">
+                        {$gameState.theme || ($t.waitingForTheme || 'Waiting for theme selection...')}
+                    </p>
                 </div>
 
-                <!-- Custom Theme Input -->
-                <div class="relative select-text">
+                <!-- Suggested Theme Chips (Horizontal Pill Grid) -->
+                {#if availableThemes.length > 0}
+                    <div class="grid grid-cols-3 gap-1.5 sm:gap-2">
+                        {#each availableThemes as themeOption}
+                            <button 
+                                type="button"
+                                on:click={() => handleSelectTheme(themeOption)} 
+                                class="p-1.5 sm:p-2 text-[11px] sm:text-xs font-sans font-bold text-center transition-all rounded-lg cursor-pointer border {
+                                    $gameState?.theme === themeOption 
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black border-white shadow-[0_0_12px_rgba(6,182,212,0.8)] scale-[1.02]' 
+                                    : 'bg-neutral-900/80 border-neutral-700 hover:border-cyan-400/80 text-slate-200'
+                                }"
+                            >
+                                <span class="truncate block">{themeOption}</span>
+                            </button>
+                        {/each}
+                    </div>
+                {/if}
+
+                <!-- Custom Theme Input (Clean One-Line) -->
+                <div class="select-text">
                     <input 
                         type="text" 
-                        class="w-full bg-black/80 border border-fuchsia-500/60 p-2 text-center focus:outline-none text-xs sm:text-sm rounded-xl transition-all font-mono select-text text-fuchsia-300" 
-                        placeholder={$t.customTheme || 'Or type custom theme...'} 
+                        class="w-full bg-black/80 border border-cyan-500/60 py-1.5 px-3 text-center focus:outline-none text-xs rounded-lg transition-all font-mono text-cyan-200 select-text placeholder:text-neutral-500" 
+                        placeholder={$t.customTheme || 'Or type a custom theme...'} 
                         bind:value={hostCustomTheme} 
                         on:input={handleCustomThemeInput}
                         on:focus={() => isThemeInputFocused = true}
                         on:blur={() => isThemeInputFocused = false}
-                    >
+                    />
+                </div>
+            {/if}
+
+            <!-- Mode Pills -->
+            <div class="flex items-center justify-center gap-2 pt-0.5">
+                <div class="px-2.5 py-0.5 flex items-center gap-1 border rounded-full text-[10px] font-display transition-all {$gameState.sillyMode ? 'bg-purple-900/60 border-purple-400 text-purple-200' : 'bg-neutral-900/60 border-neutral-700 text-neutral-400'}">
+                    <span>🤡</span>
+                    <span class="font-bold">{$t.sillyMode}</span>
+                </div>
+                <div class="px-2.5 py-0.5 flex items-center gap-1 border rounded-full text-[10px] font-display transition-all {$gameState.is18PlusMode ? 'bg-red-900/60 border-red-400 text-red-200' : 'bg-neutral-900/60 border-neutral-700 text-neutral-400'}">
+                    <span>🌶️</span>
+                    <span class="font-bold">{$t.is18PlusMode}</span>
+                </div>
+                <div class="px-2.5 py-0.5 flex items-center gap-1 border rounded-full text-[10px] font-display transition-all {$gameState.slowpokeMode ? 'bg-teal-900/60 border-teal-400 text-teal-200' : 'bg-neutral-900/60 border-neutral-700 text-neutral-400'}">
+                    <span>🐌</span>
+                    <span class="font-bold">{$t.slowpokeMode}</span>
                 </div>
             </div>
-        {/if}
+        </div>
 
-        <!-- Mode Pills -->
-        <div class="flex items-center justify-center gap-2 sm:gap-3 w-full max-w-2xl">
-            <div class="px-3 py-1 flex items-center gap-1.5 border rounded-full text-xs font-display transition-all {$gameState.sillyMode ? 'bg-purple-900/60 border-purple-400 text-purple-200' : 'bg-neutral-900/60 border-neutral-700 text-neutral-400'}">
-                <span>🤡</span>
-                <span class="font-bold">{$t.sillyMode}</span>
+        <!-- Right Column: Prominent Scannable Join Information & Large QR Tile (4 cols) -->
+        <div class="lg:col-span-4 bg-black/85 border-2 border-cyan-400/90 rounded-xl p-3 flex flex-col items-center justify-between text-center shadow-lg">
+            
+            <div class="w-full">
+                <p class="text-[10px] font-display text-slate-300 uppercase tracking-wider">
+                    {$t.openBrowserTo || 'Join on your phone at'}
+                </p>
+                <p class="text-xs font-mono font-bold text-accent break-all leading-tight my-0.5">
+                    {connectURL || '...'}
+                </p>
             </div>
-            <div class="px-3 py-1 flex items-center gap-1.5 border rounded-full text-xs font-display transition-all {$gameState.is18PlusMode ? 'bg-red-900/60 border-red-400 text-red-200' : 'bg-neutral-900/60 border-neutral-700 text-neutral-400'}">
-                <span>🌶️</span>
-                <span class="font-bold">{$t.is18PlusMode}</span>
-            </div>
-            <div class="px-3 py-1 flex items-center gap-1.5 border rounded-full text-xs font-display transition-all {$gameState.slowpokeMode ? 'bg-teal-900/60 border-teal-400 text-teal-200' : 'bg-neutral-900/60 border-neutral-700 text-neutral-400'}">
-                <span>🐌</span>
-                <span class="font-bold">{$t.slowpokeMode}</span>
+
+            <!-- Prominent Large QR Code Tile (140px-176px) -->
+            <div 
+                bind:this={qrElement} 
+                class="my-1.5 flex items-center justify-center bg-white p-1.5 border-2 border-cyan-400 rounded-xl w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 aspect-square shadow-[0_0_20px_rgba(6,182,212,0.6)] flex-shrink-0 overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
+            ></div>
+
+            <!-- Room Code Badge -->
+            <div class="w-full flex items-center justify-center gap-2 pt-0.5">
+                <span class="text-[11px] text-slate-400 font-mono">{$t.orEnterId || 'ROOM'}:</span>
+                <span class="font-display font-black text-2xl sm:text-3xl text-amber-300 tracking-widest leading-none drop-shadow-[0_0_10px_rgba(252,211,77,0.8)]" data-testid="game-id">
+                    {$gameState.id}
+                </span>
+                <button 
+                    type="button"
+                    class="px-2 py-0.5 bg-neutral-800 hover:bg-primary hover:text-black border border-primary/60 rounded text-[9px] font-display transition-all cursor-pointer"
+                    on:click={() => {
+                        const shareUrl = $gameState?.id ? `${connectURL}/?gameId=${$gameState.id}` : connectURL;
+                        if (navigator.clipboard) {
+                            navigator.clipboard.writeText(shareUrl).then(() => {
+                                alert('Link copied to clipboard!');
+                            }).catch(() => {
+                                prompt('Copy game link:', shareUrl);
+                            });
+                        } else {
+                            prompt('Copy game link:', shareUrl);
+                        }
+                    }}
+                >
+                    📋 Copy
+                </button>
             </div>
         </div>
-    </section>
+    </header>
 
     <!-- Players Arena Grid (Full-Width Responsive Cards) -->
-    <section class="w-full flex-1 min-h-0 flex flex-col justify-start overflow-hidden my-1">
+    <section class="w-full flex-1 min-h-0 flex flex-col justify-start overflow-hidden my-2">
         <div class="flex items-center justify-between mb-1.5 px-1 flex-shrink-0">
             <span class="text-xs sm:text-sm font-display font-bold text-cyan-400 tracking-widest uppercase">
                 👥 {$t.players || 'PLAYERS'} ({$gameState.players.length})

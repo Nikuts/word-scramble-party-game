@@ -23,7 +23,7 @@
     }
 </script>
 
-<div class="min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8">
+<div class="min-h-[100dvh] max-h-[100dvh] overflow-y-auto overscroll-contain flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 safe-top safe-bottom">
     <h1 class="text-2xl sm:text-3xl mb-8 text-secondary" style="text-shadow: 0 0 8px var(--color-secondary);">{$t.joinAsPlayer}</h1>
     <form on:submit|preventDefault={handleJoin} class="w-full max-w-lg panel-arcade" style="--neon-color: var(--color-secondary); --neon-color-rgb: var(--color-secondary-rgb);">
         {#if $error.message && $view === 'joinPrompt'}

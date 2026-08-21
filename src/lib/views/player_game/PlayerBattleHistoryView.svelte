@@ -117,7 +117,7 @@
     }
 </script>
 
-<div class="w-full max-w-4xl mx-auto text-center flex-grow">
+<div class="w-full max-w-4xl mx-auto text-center flex-grow overflow-y-auto h-full p-4 pb-12">
     <!-- Non-sticky top header as requested -->
     <div class="py-4 px-4 border-b-2 border-primary/50 mb-6">
         <h1 class="text-3xl sm:text-4xl mb-4 text-primary">{$t.battleHistory}</h1>
