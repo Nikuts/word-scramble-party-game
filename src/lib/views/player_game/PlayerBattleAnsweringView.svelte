@@ -487,9 +487,9 @@
                             <span class="text-xs sm:text-sm text-slate-500 italic pl-1">{$t.clickWordsHint || 'Tap words below to build your punchline!'}</span>
                         {/if}
                         {#each battleForm.answerWords as word (word.id)}
-                            <div class="answer-word px-3 py-1 bg-pink-950/80 border border-pink-400/90 text-pink-100 font-bold text-xs sm:text-sm rounded-lg shadow-sm flex items-center gap-1.5">
+                            <div class="answer-word px-3.5 py-1.5 bg-pink-950/90 border-2 border-pink-400 text-pink-100 font-bold text-sm sm:text-base rounded-xl shadow-md flex items-center gap-2">
                                 <span>{word.text}</span>
-                                <button type="button" class="delete-word-btn text-pink-400 hover:text-white font-bold ml-1 cursor-pointer text-sm" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
+                                <button type="button" class="delete-word-btn text-pink-400 hover:text-white font-bold ml-1 cursor-pointer text-base" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
                             </div>
                         {/each}
                     </div>
@@ -498,35 +498,35 @@
 
             <!-- Word Bank Card with Undo & Shuffle (Expansive Natural Flow) -->
             <div class="flex-shrink-0 flex flex-col my-2">
-                <div class="flex items-center justify-between text-xs font-display font-bold uppercase tracking-widest text-cyan-400 mb-1.5">
-                    <span>🔤 {$t.wordBank || 'WORD BANK'}</span>
-                    <div class="flex items-center gap-1.5">
+                <div class="flex items-center justify-between text-xs font-display font-bold uppercase tracking-widest text-cyan-400 mb-2">
+                    <span class="font-bold">🔤 {$t.wordBank || 'WORD BANK'}</span>
+                    <div class="flex items-center gap-2">
                         <button
                             type="button"
                             on:click={() => undoLastWord(battle.id)}
                             disabled={!battleForm.undoStack || battleForm.undoStack.length === 0}
-                            class="px-2.5 py-1 bg-neutral-900 border border-neutral-700 text-slate-200 font-display text-[10px] font-bold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-800 cursor-pointer"
+                            class="px-3 py-1 bg-neutral-900 border border-neutral-700 text-slate-200 font-display text-xs font-bold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-800 cursor-pointer"
                         >
                             {$t.undo || 'Undo'}
                         </button>
                         <button
                             type="button"
                             on:click={() => shuffleBank(battle.id)}
-                            class="px-2.5 py-1 bg-neutral-900 border border-neutral-700 text-slate-200 font-display text-[10px] font-bold rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+                            class="px-3 py-1 bg-neutral-900 border border-neutral-700 text-slate-200 font-display text-xs font-bold rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
                         >
                             {$t.shuffleBank || 'Shuffle'}
                         </button>
                     </div>
                 </div>
 
-                <!-- Word Tiles (Expanded Arcade Cyan Chips with Zero Inner Scroll Trap) -->
-                <div class="p-3 bg-neutral-950/90 border border-neutral-800 rounded-2xl flex flex-wrap content-start gap-2 justify-center">
+                <!-- Word Tiles (Expanded Arcade Cyan Chips) -->
+                <div class="p-3.5 bg-neutral-950/90 border border-neutral-800 rounded-2xl flex flex-wrap content-start gap-2.5 justify-center">
                     {#each battleForm.wordBankWords as word (word.id)}
                         <button
                             type="button"
                             data-testid="word-bank-chip"
                             on:click={() => addWordToAnswer(word, battle.id)}
-                            class="word-bank-chip px-3 py-1.5 bg-cyan-950/70 hover:bg-cyan-900/90 border border-cyan-400/80 text-cyan-200 font-sans font-bold text-xs sm:text-sm rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer"
+                            class="word-bank-chip px-3.5 py-2 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/90 text-cyan-100 font-sans font-bold text-sm sm:text-base rounded-xl shadow-md active:scale-95 transition-all cursor-pointer"
                         >
                             {word.text}
                         </button>
@@ -540,7 +540,7 @@
                     type="button"
                     disabled={!hasAnswerWords}
                     on:click={() => submitBattleAnswer(battle.id)}
-                    class="btn-arcade w-full py-4 px-6 rounded-xl font-display font-black text-sm sm:text-base uppercase tracking-wider transition-all cursor-pointer {
+                    class="btn-arcade w-full py-4 px-6 rounded-2xl font-display font-black text-base sm:text-lg uppercase tracking-wider transition-all cursor-pointer {
                         hasAnswerWords 
                         ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-[0_0_25px_rgba(236,72,153,0.5)] active:scale-98' 
                         : 'bg-neutral-900 border border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed'

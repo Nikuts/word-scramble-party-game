@@ -249,32 +249,32 @@
 
     <!-- Players Arena Grid (Full-Width Responsive Cards Scaling from 3 to 14 Players) -->
     <section class="w-full flex-1 min-h-0 flex flex-col justify-start overflow-hidden my-3">
-        <div class="flex items-center justify-between mb-2 px-1 flex-shrink-0">
-            <span class="text-sm sm:text-base font-display font-bold text-cyan-400 tracking-widest uppercase">
+        <div class="flex items-center justify-between mb-2.5 px-1 flex-shrink-0">
+            <span class="text-sm sm:text-base font-display font-black text-cyan-400 tracking-widest uppercase">
                 👥 {$t.players || 'PLAYERS'} ({$gameState.players.length})
             </span>
-            <span class="text-xs font-mono text-slate-400">
+            <span class="text-xs sm:text-sm font-mono text-slate-300 font-bold">
                 {$gameState.players.filter(p => !!p.socketId).length} / {$gameState.players.length} {$t.connected || 'CONNECTED'}
             </span>
         </div>
 
         <div class="flex-1 min-h-0 overflow-y-auto pr-1">
-            <div class="grid gap-3 {$gameState.players.length <= 4 ? 'grid-cols-2 sm:grid-cols-4' : ($gameState.players.length <= 6 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6' : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-7')}">
+            <div class="grid gap-3 sm:gap-4 {$gameState.players.length <= 4 ? 'grid-cols-2 sm:grid-cols-4' : ($gameState.players.length <= 6 ? 'grid-cols-2 sm:grid-cols-3' : ($gameState.players.length <= 8 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'))}">
                 {#each $gameState.players as p (p.id)}
-                    <div class="panel-arcade {$gameState.players.length <= 6 ? 'p-3 sm:p-4' : 'p-2 sm:p-2.5'} rounded-xl flex items-center gap-3 border-neutral-700/80 bg-neutral-950/85 shadow-md transition-all {p.socketId ? 'opacity-100' : 'opacity-50'}">
-                        <div class="{$gameState.players.length <= 6 ? 'w-10 h-10 sm:w-12 sm:h-12' : 'w-8 h-8 sm:w-9 sm:h-9'} flex-shrink-0">
+                    <div class="panel-arcade {$gameState.players.length <= 6 ? 'p-4 sm:p-5' : 'p-3.5 sm:p-4'} rounded-2xl flex items-center gap-3.5 border-neutral-700/80 bg-neutral-950/90 shadow-lg transition-all {p.socketId ? 'opacity-100' : 'opacity-50'}">
+                        <div class="{$gameState.players.length <= 6 ? 'w-14 h-14 sm:w-16 sm:h-16' : 'w-11 h-11 sm:w-13 sm:h-13'} flex-shrink-0">
                             <PixelAvatar avatar={p.avatar} />
                         </div>
                         <div class="min-w-0 flex-1 text-left">
-                            <p class="font-bold {$gameState.players.length <= 6 ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'} text-slate-100 truncate">{p.name}</p>
-                            <div class="flex items-center gap-1.5 mt-0.5">
+                            <p class="font-bold {$gameState.players.length <= 6 ? 'text-base sm:text-lg' : 'text-sm sm:text-base'} text-slate-100 truncate">{p.name}</p>
+                            <div class="flex items-center gap-2 mt-1">
                                 {#if p.isHost}
-                                    <span class="px-1.5 py-0.5 bg-warning text-black text-[9px] font-display rounded font-bold">{$t.host || 'HOST'}</span>
+                                    <span class="px-2 py-0.5 bg-warning text-black text-[10px] font-display rounded font-black">{$t.host || 'HOST'}</span>
                                 {/if}
                                 {#if p.socketId}
-                                    <span class="text-[10px] font-display text-emerald-400 font-bold">✓ {$t.ready || 'Ready'}</span>
+                                    <span class="text-[11px] sm:text-xs font-display text-emerald-400 font-bold">✓ {$t.ready || 'Ready'}</span>
                                 {:else}
-                                    <span class="text-[10px] font-display text-danger animate-pulse font-bold">{$t.disconnected || 'OFFLINE'}</span>
+                                    <span class="text-[11px] sm:text-xs font-display text-danger animate-pulse font-bold">{$t.disconnected || 'OFFLINE'}</span>
                                 {/if}
                             </div>
                         </div>

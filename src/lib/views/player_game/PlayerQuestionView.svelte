@@ -220,7 +220,7 @@
             </div>
 
             <!-- Question Prompt Text -->
-            <p class="text-sm sm:text-base font-sans font-bold text-slate-100 text-center leading-snug py-1">
+            <p class="text-base sm:text-lg font-sans font-bold text-slate-100 text-center leading-snug py-2">
                 {currentQuestion.text}
             </p>
         </div>
@@ -230,7 +230,7 @@
             <div class="relative select-text mb-2">
                 <textarea
                     rows="4"
-                    class="w-full p-3.5 bg-neutral-950/90 border-2 rounded-2xl text-slate-100 font-sans text-sm sm:text-base resize-none focus:outline-none transition-all duration-200 select-text min-h-[110px] {
+                    class="w-full p-4 bg-neutral-950/90 border-2 rounded-2xl text-slate-100 font-sans text-base sm:text-lg resize-none focus:outline-none transition-all duration-200 select-text min-h-[120px] {
                         isAnswerValid ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-neutral-800 focus:border-cyan-500'
                     }"
                     placeholder={$t.minWordsWarning || 'Type your funny answer here...'}
@@ -240,16 +240,16 @@
             </div>
 
             <!-- Status Badge -->
-            <div class="flex items-center justify-between px-1.5 flex-shrink-0">
+            <div class="flex items-center justify-between px-2 flex-shrink-0">
                 <span class="text-xs sm:text-sm font-mono font-bold {isAnswerValid ? 'text-emerald-400' : 'text-amber-400'}">
                     ✍️ {$t.words || 'Words'}: {currentWordCount} ({$t.minWordsRequirement || 'min 5'})
                 </span>
                 {#if isAnswerValid}
-                    <span class="text-xs font-sans font-bold text-emerald-400 animate-pulse">
+                    <span class="text-xs sm:text-sm font-sans font-bold text-emerald-400 animate-pulse">
                         ✓ {$t.readyToSubmit || 'READY'}
                     </span>
                 {:else}
-                    <span class="text-xs font-sans font-bold text-amber-400">
+                    <span class="text-xs sm:text-sm font-sans font-bold text-amber-400">
                         {MIN_ANSWER_WORDS - currentWordCount} {$t.wordsNeeded || 'more words needed'}
                     </span>
                 {/if}
@@ -262,7 +262,7 @@
                 type="button"
                 disabled={!isAnswerValid}
                 on:click={submitCurrentAnswer}
-                class="btn-arcade w-full py-4 px-6 rounded-2xl font-display font-black text-sm sm:text-base uppercase tracking-wider transition-all cursor-pointer {
+                class="btn-arcade w-full py-4 px-6 rounded-2xl font-display font-black text-base sm:text-lg uppercase tracking-wider transition-all cursor-pointer {
                     isAnswerValid 
                     ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-black shadow-[0_0_25px_rgba(16,185,129,0.5)] active:scale-98' 
                     : 'bg-neutral-900 border border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed'
