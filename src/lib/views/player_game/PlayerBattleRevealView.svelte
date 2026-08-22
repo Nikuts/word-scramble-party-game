@@ -66,8 +66,8 @@
                 {$t.duoLabel || '⚡ 1-ON-1 SHOWDOWN'}
             {/if}
         </span>
-        <div class="flex-shrink-0 scale-75 origin-right">
-            <SevenSegmentDisplay time={timer} showLabel={false} />
+        <div class="flex-shrink-0">
+            <SevenSegmentDisplay time={timer} showLabel={false} size="sm" />
         </div>
     </header>
 

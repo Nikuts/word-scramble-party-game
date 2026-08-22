@@ -17,8 +17,8 @@
             {$t.getReadySubtitle?.replace('{currentRound}', round) || `ROUND ${round} IS COMING UP!`}
         </h2>
         
-        <div class="scale-90 my-2">
-            <SevenSegmentDisplay time={timer} showLabel={false} />
+        <div class="my-2">
+            <SevenSegmentDisplay time={timer} showLabel={false} size="md" />
         </div>
         
         <p class="text-xs font-sans text-slate-300 mt-3 leading-relaxed">

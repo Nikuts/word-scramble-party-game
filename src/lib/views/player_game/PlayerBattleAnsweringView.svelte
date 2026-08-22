@@ -3,6 +3,7 @@
     import Sortable from 'sortablejs';
     import { t, sendMessage, getPartialAnswers, clearConsumedPartialAnswers, gameState, currentPlayer } from '../../../stores.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
+    import PixelAvatar from '../../shared/PixelAvatar.svelte';
 
     export let timer;
     export let battlesToAnswer = [];
@@ -319,6 +320,15 @@
         
         sendMessage('submit-battle-answer', { gameId: gameId, playerId: playerId, battleId, answer });
     }
+
+    function handleSendReaction() {
+        if (!$currentPlayer || !gameId) return;
+        sendMessage('send-emoji', {
+            gameId,
+            playerId,
+            emoji: $currentPlayer.avatar
+        });
+    }
 </script>
 
 <style>
@@ -341,8 +351,8 @@
 
         <!-- Top Header & Timer -->
         <header class="flex flex-col items-center justify-center flex-shrink-0 pt-0.5 mb-2">
-            <div class="scale-90 mb-1">
-                <SevenSegmentDisplay time={timer} showLabel={false} />
+            <div class="mb-1">
+                <SevenSegmentDisplay time={timer} showLabel={false} size="sm" />
             </div>
             
             <!-- Battle Pill Indicator -->
@@ -541,9 +551,27 @@
             </div>
         {/if}
     {:else}
-        <div class="flex-1 flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
-            <SevenSegmentDisplay time={timer} />
-            <p class="mt-12 text-2xl text-warning animate-pulse font-display">{$t.waitingForCompetitors}</p>
+        <div class="flex-1 flex flex-col items-center justify-center p-6 text-center overflow-y-auto my-auto">
+            <SevenSegmentDisplay time={timer} size="md" />
+            <h1 class="text-2xl sm:text-3xl font-display my-3 text-emerald-400">{$t.allAnswersSubmitted || 'READY!'}</h1>
+            <p class="text-sm sm:text-base text-warning animate-pulse font-display mb-6">{$t.waitingForCompetitors}</p>
+
+            <!-- Interactive Live Emoji Reaction Button while waiting -->
+            <div class="flex flex-col items-center gap-2 mt-2">
+                <span class="text-xs font-display text-slate-400 uppercase tracking-widest">
+                    {$t.sendReaction || 'Send Reaction'}
+                </span>
+                <button 
+                    type="button"
+                    class="w-16 h-16 rounded-full border-2 border-pink-500 bg-pink-950/80 shadow-[0_0_25px_rgba(236,72,153,0.7)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all"
+                    on:click={handleSendReaction}
+                    aria-label={$t.sendReaction || 'Send Reaction'}
+                >
+                    <div class="w-10 h-10">
+                        <PixelAvatar avatar={$currentPlayer?.avatar || '🦊'} />
+                    </div>
+                </button>
+            </div>
         </div>
     {/if}
 </div>

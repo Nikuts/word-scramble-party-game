@@ -105,78 +105,73 @@
 <div class="h-screen max-h-[100dvh] w-full flex flex-col justify-between p-2.5 sm:p-3.5 lg:p-4 max-w-7xl mx-auto safe-top safe-bottom relative select-none font-sans overflow-hidden box-border pb-11 host-lobby-container">
     
     <!-- Top Showcase Stage: Brand & Theme on Left + Large Scannable QR Join Tile on Right -->
-    <header class="w-full grid grid-cols-1 lg:grid-cols-12 gap-3 bg-neutral-950/90 border-2 border-cyan-400/80 rounded-2xl p-3 sm:p-4 shadow-[0_0_25px_rgba(6,182,212,0.25)] backdrop-blur-md flex-shrink-0">
+    <header class="w-full grid grid-cols-1 lg:grid-cols-12 gap-3.5 bg-neutral-950/90 border-2 border-cyan-400/80 rounded-2xl p-3.5 sm:p-5 shadow-[0_0_25px_rgba(6,182,212,0.25)] backdrop-blur-md flex-shrink-0">
         
-        <!-- Left Column: Brand & Active Theme Selection (8 cols) -->
-        <div class="lg:col-span-8 flex flex-col justify-between space-y-2">
+        <!-- Left Column: Brand & Active Theme Selection (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col justify-between space-y-2.5">
             <!-- Brand Bar -->
-            <div class="flex items-center justify-between border-b border-neutral-800/80 pb-1.5">
+            <div class="flex items-center justify-between border-b border-neutral-800/80 pb-2">
                 <div>
-                    <h1 class="text-lg sm:text-xl lg:text-2xl font-display font-black text-primary drop-shadow-[0_0_10px_rgba(var(--color-primary-rgb),0.8)] tracking-wide leading-none">
+                    <h1 class="text-xl sm:text-2xl lg:text-3xl font-display font-black text-primary drop-shadow-[0_0_10px_rgba(var(--color-primary-rgb),0.8)] tracking-wide leading-none">
                         {$t.appName}
                     </h1>
-                    <p class="text-[9px] sm:text-[10px] text-slate-400 font-mono tracking-widest uppercase mt-0.5">
+                    <p class="text-[10px] sm:text-xs text-slate-400 font-mono tracking-widest uppercase mt-1">
                         {$t.realTimePartyGame || 'REAL-TIME MULTIPLAYER PARTY GAME'}
                     </p>
                 </div>
-
-                <!-- Theme Control Actions -->
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-2">
                     <button 
-                        type="button" 
+                        type="button"
+                        class="px-2.5 py-1 bg-neutral-900 border border-cyan-500/50 hover:bg-cyan-950/70 text-cyan-300 font-display text-[10px] sm:text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1"
                         on:click={handleReloadTopics}
-                        disabled={$gameState.isGeneratingThemes}
-                        class="px-2 py-0.5 text-[10px] bg-neutral-900 hover:bg-primary hover:text-black border border-primary/60 rounded text-primary transition-all font-display cursor-pointer flex items-center gap-1 disabled:opacity-40"
+                        disabled={$gameState?.isGeneratingThemes}
                     >
-                        <span>🔄</span> {$t.reloadThemes || 'Reload Themes'}
+                        <span>🔄</span>
+                        <span>{$t.reloadThemes || 'Reload Themes'}</span>
                     </button>
                     <button 
-                        type="button" 
+                        type="button"
+                        class="px-2.5 py-1 bg-neutral-900 border border-purple-500/50 hover:bg-purple-950/70 text-purple-300 font-display text-[10px] sm:text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1"
                         on:click={handlePickRandomTheme}
-                        disabled={$gameState.isGeneratingThemes}
-                        class="px-2 py-0.5 text-[10px] bg-neutral-900 hover:bg-accent hover:text-black border border-accent/60 rounded text-accent transition-all font-display cursor-pointer flex items-center gap-1 disabled:opacity-40"
                     >
-                        <span>🎲</span> {$t.randomTheme || 'Random'}
+                        <span>🎲</span>
+                        <span>{$t.randomTheme || 'Random'}</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Theme Display & Chips -->
-            {#if $gameState.isGeneratingThemes}
-                <div class="p-3 bg-black/60 border-2 border-warning/80 rounded-xl text-center shadow-inner">
-                    <p class="text-sm sm:text-base text-warning animate-pulse font-display">{$t.generatingThemes}...</p>
-                </div>
-            {:else}
-                <div class="p-2 sm:p-2.5 bg-neutral-900/90 border border-neutral-700 rounded-xl text-center shadow-inner">
-                    <span class="text-[9px] font-display font-bold uppercase tracking-widest text-cyan-400 block mb-0.5">
-                        ✨ {$t.theme || 'CHOSEN THEME'}:
-                    </span>
-                    <p class="text-base sm:text-lg lg:text-xl text-amber-300 font-display font-bold truncate leading-snug drop-shadow-[0_0_8px_rgba(252,211,77,0.4)]">
-                        {$gameState.theme || ($t.waitingForTheme || 'Waiting for theme selection...')}
-                    </p>
-                </div>
+            <!-- Active Theme Banner -->
+            <div class="bg-neutral-900/90 border border-neutral-700/80 rounded-xl p-3 text-center">
+                <span class="text-[10px] sm:text-xs font-display font-bold text-amber-400 uppercase tracking-widest block mb-1">
+                    ✨ {$t.theme || 'THEME'}:
+                </span>
+                <p class="text-base sm:text-lg lg:text-xl font-display font-black text-amber-300 truncate leading-snug drop-shadow-[0_0_10px_rgba(252,211,77,0.4)]">
+                    {$gameState.theme || ($t.waitingForTheme || 'Waiting for the Host to select ...')}
+                </p>
+            </div>
 
-                <!-- Suggested Theme Chips (Horizontal Pill Grid) -->
-                {#if availableThemes.length > 0}
-                    <div class="grid grid-cols-3 gap-1.5 sm:gap-2">
-                        {#each availableThemes as themeOption}
-                            <button 
-                                type="button"
-                                on:click={() => handleSelectTheme(themeOption)} 
-                                class="p-1.5 sm:p-2 text-[11px] sm:text-xs font-sans font-bold text-center transition-all rounded-lg cursor-pointer border {
-                                    $gameState?.theme === themeOption 
-                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black border-white shadow-[0_0_12px_rgba(6,182,212,0.8)] scale-[1.02]' 
-                                    : 'bg-neutral-900/80 border-neutral-700 hover:border-cyan-400/80 text-slate-200'
-                                }"
-                            >
-                                <span class="truncate block">{themeOption}</span>
-                            </button>
-                        {/each}
-                    </div>
-                {/if}
+            <!-- Pre-Generated Quick-Select Theme Tiles (Desktop/TV) -->
+            {#if availableThemes.length > 0}
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {#each availableThemes.slice(0, 3) as themeOption}
+                        <button
+                            type="button"
+                            class="p-2 sm:p-2.5 text-[11px] sm:text-xs font-sans font-bold rounded-lg border text-center transition-all cursor-pointer truncate {
+                                $gameState.theme === themeOption 
+                                ? 'bg-amber-400/20 border-amber-400 text-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.3)]' 
+                                : 'bg-neutral-900/60 border-neutral-800 text-slate-300 hover:border-cyan-400/60 hover:text-white'
+                            }"
+                            on:click={() => handleSelectTheme(themeOption)}
+                        >
+                            {themeOption}
+                        </button>
+                    {/each}
+                </div>
+            {/if}
 
-                <!-- Custom Theme Input (Clean One-Line) -->
-                <div class="select-text">
+            <!-- Custom Theme Input Option -->
+            {#if $gameState}
+                <div class="w-full">
                     <input 
                         type="text" 
                         class="w-full bg-black/80 border border-cyan-500/60 py-1.5 px-3 text-center focus:outline-none text-xs rounded-lg transition-all font-mono text-cyan-200 select-text placeholder:text-neutral-500" 
@@ -206,33 +201,33 @@
             </div>
         </div>
 
-        <!-- Right Column: Prominent Scannable Join Information & Large QR Tile (4 cols) -->
-        <div class="lg:col-span-4 bg-black/85 border-2 border-cyan-400/90 rounded-xl p-3 flex flex-col items-center justify-between text-center shadow-lg">
+        <!-- Right Column: Prominent Scannable Join Information & Large QR Tile (5 cols) -->
+        <div class="lg:col-span-5 bg-black/85 border-2 border-cyan-400/90 rounded-xl p-3.5 sm:p-4 flex flex-col items-center justify-between text-center shadow-lg">
             
             <div class="w-full">
-                <p class="text-[10px] font-display text-slate-300 uppercase tracking-wider">
+                <p class="text-xs font-display text-slate-300 uppercase tracking-wider">
                     {$t.joinOnYourPhone || $t.openBrowserTo || 'Join on your phone at'}
                 </p>
-                <p class="text-xs font-mono font-bold text-accent break-all leading-tight my-0.5">
+                <p class="text-xs sm:text-sm font-mono font-bold text-accent break-all leading-tight my-1">
                     {connectURL || '...'}
                 </p>
             </div>
 
-            <!-- Prominent Large QR Code Tile (140px-176px) -->
+            <!-- Prominent Large QR Code Tile (Huge & Crisp) -->
             <div 
                 bind:this={qrElement} 
-                class="my-1.5 flex items-center justify-center bg-white p-1.5 border-2 border-cyan-400 rounded-xl w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 aspect-square shadow-[0_0_20px_rgba(6,182,212,0.6)] flex-shrink-0 overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
+                class="my-2 flex items-center justify-center bg-white p-2 border-2 border-cyan-400 rounded-2xl w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56 aspect-square shadow-[0_0_25px_rgba(6,182,212,0.7)] flex-shrink-0 overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
             ></div>
 
             <!-- Room Code Badge -->
-            <div class="w-full flex items-center justify-center gap-2 pt-0.5">
-                <span class="text-[11px] text-slate-400 font-mono">{$t.orEnterId || 'ROOM'}:</span>
-                <span class="font-display font-black text-2xl sm:text-3xl text-amber-300 tracking-widest leading-none drop-shadow-[0_0_10px_rgba(252,211,77,0.8)]" data-testid="game-id">
+            <div class="w-full flex items-center justify-center gap-2 pt-1">
+                <span class="text-xs text-slate-400 font-mono">{$t.orEnterId || 'ROOM'}:</span>
+                <span class="font-display font-black text-3xl sm:text-4xl text-amber-300 tracking-widest leading-none drop-shadow-[0_0_12px_rgba(252,211,77,0.9)]" data-testid="game-id">
                     {$gameState.id}
                 </span>
                 <button 
                     type="button"
-                    class="px-2 py-0.5 bg-neutral-800 hover:bg-primary hover:text-black border border-primary/60 rounded text-[9px] font-display transition-all cursor-pointer"
+                    class="px-2.5 py-1 bg-neutral-800 hover:bg-primary hover:text-black border border-primary/60 rounded text-[10px] font-display transition-all cursor-pointer"
                     on:click={() => {
                         const shareUrl = $gameState?.id ? `${connectURL}/?gameId=${$gameState.id}&lang=${$language}` : connectURL;
                         if (navigator.clipboard) {
@@ -252,34 +247,34 @@
         </div>
     </header>
 
-    <!-- Players Arena Grid (Full-Width Responsive Cards) -->
-    <section class="w-full flex-1 min-h-0 flex flex-col justify-start overflow-hidden my-2">
-        <div class="flex items-center justify-between mb-1.5 px-1 flex-shrink-0">
-            <span class="text-xs sm:text-sm font-display font-bold text-cyan-400 tracking-widest uppercase">
+    <!-- Players Arena Grid (Full-Width Responsive Cards Scaling from 3 to 14 Players) -->
+    <section class="w-full flex-1 min-h-0 flex flex-col justify-start overflow-hidden my-3">
+        <div class="flex items-center justify-between mb-2 px-1 flex-shrink-0">
+            <span class="text-sm sm:text-base font-display font-bold text-cyan-400 tracking-widest uppercase">
                 👥 {$t.players || 'PLAYERS'} ({$gameState.players.length})
             </span>
-            <span class="text-[10px] font-mono text-slate-400">
+            <span class="text-xs font-mono text-slate-400">
                 {$gameState.players.filter(p => !!p.socketId).length} / {$gameState.players.length} {$t.connected || 'CONNECTED'}
             </span>
         </div>
 
         <div class="flex-1 min-h-0 overflow-y-auto pr-1">
-            <div class="grid gap-2 sm:gap-2.5 {$gameState.players.length <= 6 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6' : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-7'}">
+            <div class="grid gap-3 {$gameState.players.length <= 4 ? 'grid-cols-2 sm:grid-cols-4' : ($gameState.players.length <= 6 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6' : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-7')}">
                 {#each $gameState.players as p (p.id)}
-                    <div class="panel-arcade p-2 sm:p-2.5 rounded-xl flex items-center gap-2.5 border-neutral-700/80 bg-neutral-950/80 shadow-md transition-all {p.socketId ? 'opacity-100' : 'opacity-50'}">
-                        <div class="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0">
+                    <div class="panel-arcade {$gameState.players.length <= 6 ? 'p-3 sm:p-4' : 'p-2 sm:p-2.5'} rounded-xl flex items-center gap-3 border-neutral-700/80 bg-neutral-950/85 shadow-md transition-all {p.socketId ? 'opacity-100' : 'opacity-50'}">
+                        <div class="{$gameState.players.length <= 6 ? 'w-10 h-10 sm:w-12 sm:h-12' : 'w-8 h-8 sm:w-9 sm:h-9'} flex-shrink-0">
                             <PixelAvatar avatar={p.avatar} />
                         </div>
                         <div class="min-w-0 flex-1 text-left">
-                            <p class="font-bold text-xs sm:text-sm text-slate-100 truncate">{p.name}</p>
-                            <div class="flex items-center gap-1 mt-0.5">
+                            <p class="font-bold {$gameState.players.length <= 6 ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'} text-slate-100 truncate">{p.name}</p>
+                            <div class="flex items-center gap-1.5 mt-0.5">
                                 {#if p.isHost}
-                                    <span class="px-1 py-0.2 bg-warning text-black text-[8px] font-display rounded font-bold">{$t.host || 'HOST'}</span>
+                                    <span class="px-1.5 py-0.5 bg-warning text-black text-[9px] font-display rounded font-bold">{$t.host || 'HOST'}</span>
                                 {/if}
                                 {#if p.socketId}
-                                    <span class="text-[9px] font-display text-emerald-400 font-bold">✓ {$t.ready || 'Ready'}</span>
+                                    <span class="text-[10px] font-display text-emerald-400 font-bold">✓ {$t.ready || 'Ready'}</span>
                                 {:else}
-                                    <span class="text-[9px] font-display text-danger animate-pulse font-bold">{$t.disconnected || 'OFFLINE'}</span>
+                                    <span class="text-[10px] font-display text-danger animate-pulse font-bold">{$t.disconnected || 'OFFLINE'}</span>
                                 {/if}
                             </div>
                         </div>
