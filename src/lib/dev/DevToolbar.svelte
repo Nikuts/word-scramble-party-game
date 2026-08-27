@@ -3,11 +3,11 @@
     import { createEventDispatcher } from 'svelte';
     import confetti from 'canvas-confetti';
 
-    export let activeScreen = 'player_battle_single';
-    export let language = 'en';
-    export let viewport = 'mobile';
+    export let activeScreen = undefined;
+    export let language = undefined;
+    export let viewport = undefined;
     export let tileCount = 35;
-    export let playerCount = 6;
+    export let playerCount = undefined;
     export let playerIndex = 0;
     export let isTvMode = false;
     export let colorTheme = 'default';

@@ -20,3 +20,8 @@ description: Planning-first workflow, proactive collaboration, and clean enginee
    - Preserve established patterns, conventions, and modularity across `/game/services/`, `/src/`, and `/prompts/`.
    - Never leave orphan feature flags, dead code paths, or unvalidated schema parameters when refactoring or deprecating features.
    - Maintain strict separation of concerns between game state logic, socket event handlers, and UI components.
+
+5. **Git Operations & Background Task Ergonomics:**
+   - **No Unrequested Commits:** Never execute `git commit` or `git push` unless the user explicitly requests it in their prompt.
+   - **Non-Aggressive Execution:** Never poll background tasks in tight loops with `manage_task status`. Launch long-running commands, notify the user, and rely on reactive system messages when finished.
+

@@ -166,7 +166,7 @@
     <main class="h-[100dvh] max-h-[100dvh] w-full overflow-hidden flex flex-col" style="transform: translateZ(0);">
         <div bind:this={mainContentElement} class="w-full h-full flex-1 flex flex-col min-h-0 overflow-hidden">
             {#if $isLoading}
-                <LoadingSpinner message={$error.message || $t.connecting} />
+                <LoadingSpinner message={$error.message || $t.pleaseWait} allowRetry={!!$error.message} />
             {:else if $error.fatal}
                 <ErrorDisplay message={$error.message} on:reset={resetToMenu} />
             {:else}

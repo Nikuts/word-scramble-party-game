@@ -3,23 +3,26 @@
     import { t, reconnectSocket, resetToMenu } from '../../stores.js';
 
     export let message = "Loading...";
+    export let allowRetry = false;
+    export let retryTimeoutMs = 15000;
 
     let showRetry = false;
 
     onMount(() => {
+        if (!allowRetry) return;
         const timeout = setTimeout(() => {
             showRetry = true;
-        }, 3000);
+        }, retryTimeoutMs);
         return () => clearTimeout(timeout);
     });
 </script>
 
-<div class="min-h-screen flex flex-col justify-center items-center p-4">
+<div class="w-full h-full flex-1 flex flex-col justify-center items-center p-4 select-none">
     <div class="neon-spinner"></div>
     {#if message}
-      <p class="mt-6 text-lg text-center text-slate-300 font-display animate-pulse">{message}</p>
+      <p class="mt-6 text-lg sm:text-xl text-center text-slate-300 font-display animate-pulse max-w-md">{message}</p>
     {/if}
-    {#if showRetry}
+    {#if showRetry && allowRetry}
       <div class="mt-6 flex flex-col sm:flex-row gap-3 items-center">
           <button 
               on:click={reconnectSocket}

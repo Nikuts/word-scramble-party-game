@@ -17,6 +17,8 @@ description: Mandatory Vitest unit and Playwright E2E test coverage and verifica
      ```bash
      npx playwright test
      ```
+   - **Multi-Viewport Boundary Matrix:** For all UI layout changes, verify zero horizontal overflow (`scrollWidth <= innerWidth + 2`) and viewport containment across 7 viewports: Desktop TV (`1920x1080`), Laptop (`1366x768`), Laptop 125% DPI (`1228x691`), iPad Landscape (`1024x768`), iPad Portrait (`768x1024`), iPad Air Portrait (`820x1180`), and Phone Portrait (`390x844`).
 
 3. **Green Status Requirement:**
    - Ensure all unit and E2E test suites pass with 100% green status before considering any task complete.
+

@@ -17,6 +17,7 @@
         MOCK_WORD_BANK_UA,
         MOCK_SUPERLATIVES_OBJECT,
         MOCK_SUPERLATIVES,
+        MOCK_ACTIVE_BATTLE_REVEAL,
         createMockGameState
     } from './mockData.js';
 
@@ -109,13 +110,23 @@
         };
 
         let phase = 'lobby';
-        if (activeScreen === 'player_question' || activeScreen === 'host_game_question') phase = 'question';
-        else if (activeScreen.includes('battle')) phase = 'battle_answering';
-        else if (activeScreen.includes('voting')) phase = 'voting';
-        else if (activeScreen.includes('reveal')) phase = 'battle_result_reveal';
-        else if (activeScreen.includes('results') || activeScreen.includes('podium')) phase = 'results';
+        if (activeScreen === 'player_question' || activeScreen === 'host_question' || activeScreen === 'host_game_question') phase = 'question';
+        else if (activeScreen === 'host_answering' || activeScreen === 'player_battle_single' || activeScreen === 'player_battle_movie') phase = 'battle_answering';
+        else if (activeScreen === 'host_voting' || activeScreen === 'player_voting' || activeScreen.includes('voting')) phase = 'battle_voting';
+        else if (activeScreen === 'host_reveal' || activeScreen === 'player_reveal' || activeScreen.includes('reveal')) phase = 'battle_result_reveal';
+        else if (activeScreen.includes('results') || activeScreen.includes('podium') || activeScreen === 'host_podium') phase = 'results';
 
-        const currentBattle = activeScreen === 'player_battle_movie' ? movieBattle : singleBattle;
+        let currentBattle = activeScreen === 'player_battle_movie' ? movieBattle : singleBattle;
+        if (activeScreen === 'host_reveal' || activeScreen === 'player_reveal') {
+            currentBattle = {
+                ...singleBattle,
+                ...MOCK_ACTIVE_BATTLE_REVEAL,
+                royalties: [
+                    { authorName: 'Alice', points: 150 },
+                    { authorName: 'Bob', points: 200 }
+                ]
+            };
+        }
         mockActiveBattle = currentBattle;
         mockBattlesToAnswer = [currentBattle];
 
@@ -131,13 +142,14 @@
             phase,
             language,
             players: selectedPlayers,
-            theme: 'Everyday Objects, Epic Backstories',
+            theme: isUkrainian ? 'Звичайні речі, епічні передісторії' : 'Everyday Objects, Epic Backstories',
             currentRound: activeScreen.includes('movie') || activeScreen.includes('podium') ? 3 : 1,
             battleSchedule: [currentBattle],
+            currentVotingBattleIndex: 0,
             currentBattleIndex: 0,
             activeBattle: currentBattle,
             superlatives: MOCK_SUPERLATIVES_OBJECT,
-            phaseTimer: activeScreen.includes('question') ? 80 : 65,
+            phaseTimer: activeScreen.includes('question') ? 80 : (activeScreen.includes('voting') ? 30 : 65),
             playerAnswers: {
                 p1: { questions: [{ answer: 'a' }, { answer: 'b' }, { answer: 'c' }] },
                 p2: { questions: [{ answer: 'a' }, { answer: 'b' }] },
@@ -165,9 +177,9 @@
     }
 </script>
 
-<div class="min-h-screen flex flex-col items-center justify-center p-2 relative overflow-hidden font-sans">
+<div class="h-screen max-h-screen w-full flex flex-col items-center justify-center {viewport === 'full' ? 'p-0' : 'p-2'} relative overflow-hidden font-sans">
     <!-- Active Viewport Frame -->
-    <div class="transition-all duration-300 relative z-10 w-full flex justify-center items-center">
+    <div class="transition-all duration-300 relative z-10 w-full h-full flex justify-center items-center">
         {#if viewport === 'mobile'}
             <!-- Mobile Phone Shell -->
             <div class="w-[390px] h-[810px] bg-black rounded-[44px] p-3 shadow-[0_0_50px_rgba(217,70,239,0.25)] border-[5px] border-gray-800 flex flex-col relative overflow-hidden">
@@ -237,7 +249,7 @@
             </div>
         {:else}
             <!-- Full Screen / Smart TV View -->
-            <div class="w-full min-h-screen flex flex-col">
+            <div class="w-full h-full max-h-screen flex flex-col overflow-hidden">
                 {#if activeScreen === 'host_lobby'}
                     <HostLobby />
                 {:else if activeScreen.startsWith('host_')}
