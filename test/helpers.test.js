@@ -6,7 +6,8 @@ import {
     generatePlayerToken,
     getSanitizedGameState,
     getChunksFromText,
-    tokenizeText
+    tokenizeText,
+    formatAnswerText
 } from '../game/helpers.js';
 
 describe('Game Helper Functions', () => {
@@ -125,13 +126,13 @@ describe('Game Helper Functions', () => {
             expect(chunks.some(c => c.toLowerCase().includes('toaster exploded'))).toBe(true);
         });
 
-        it('should handle Ukrainian conjunctions and punctuation cleanly', () => {
-            const text = "Я запізнився на роботу, тому що мій кіт з'їв усі бутерброди і випив каву.";
+        it('should handle Ukrainian conjunctions and punctuation cleanly even without commas', () => {
+            const text = "Я запізнився бо мій кіт захворів і не хотів їсти.";
             const chunks = getChunksFromText(text);
             
             expect(chunks.length).toBeGreaterThanOrEqual(2);
-            expect(chunks.some(c => c.includes('роботу'))).toBe(true);
-            expect(chunks.some(c => c.includes('бутерброди'))).toBe(true);
+            expect(chunks.some(c => c.includes('запізнився'))).toBe(true);
+            expect(chunks.some(c => c.includes('захворів'))).toBe(true);
         });
 
         it('should produce single-word atomic tokens with tokenizeText', () => {
@@ -144,5 +145,12 @@ describe('Game Helper Functions', () => {
                 expect(tok.includes(' ')).toBe(false);
             });
         });
+
+        it('should format answer text with natural typographic spacing before punctuation', () => {
+            expect(formatAnswerText('Hello !')).toBe('Hello!');
+            expect(formatAnswerText('Wait , really ?')).toBe('Wait, really?');
+            expect(formatAnswerText('Secret: " amazing " !')).toBe('Secret: "amazing"!');
+        });
     });
 });
+

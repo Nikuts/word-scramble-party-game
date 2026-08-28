@@ -564,10 +564,15 @@ export function calculateBattlePoints(game, battle) {
         const distinctAuthors = new Set();
 
         ansWords.forEach(wordText => {
+            const cleanWord = wordText.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').toLowerCase();
+            if (!cleanWord) return;
+
             const match = bankTokens.find(bt => {
                 const text = (typeof bt === 'object' && bt !== null ? bt.text : bt).toLowerCase();
                 const authorId = typeof bt === 'object' && bt !== null ? bt.authorId : null;
-                return text === wordText && authorId && authorId !== competitorId;
+                const source = typeof bt === 'object' && bt !== null ? bt.source : null;
+                const isPunc = source === 'punctuation' || /^[^\p{L}\p{N}]+$/u.test(text);
+                return !isPunc && text === cleanWord && authorId && authorId !== competitorId;
             });
             if (match && match.authorId) {
                 distinctAuthors.add(match.authorId);
@@ -610,7 +615,9 @@ export function calculateBattlePoints(game, battle) {
                 const match = bankTokens.find(bt => {
                     const bText = (typeof bt === 'object' && bt !== null ? bt.text : bt).toLowerCase();
                     const bAuthor = typeof bt === 'object' && bt !== null ? bt.authorId : null;
-                    return bText === cleanWord && bAuthor && bAuthor !== competitorId;
+                    const bSource = typeof bt === 'object' && bt !== null ? bt.source : null;
+                    const isPunc = bSource === 'punctuation' || /^[^\p{L}\p{N}]+$/u.test(bText);
+                    return !isPunc && bText === cleanWord && bAuthor && bAuthor !== competitorId;
                 });
                 if (match && match.authorId) {
                     if (!authorIndexMap.has(match.authorId)) {

@@ -5,7 +5,8 @@ import {
     distributeChunksToPlayers_Current,
     splitPlayerChunksIntoBattleSets,
     generateWordBanksDirectly,
-    ESSENTIAL_CONNECTORS
+    ESSENTIAL_CONNECTORS,
+    GUARANTEED_PUNCTUATION
 } from '../game/services/wordBankEngine.js';
 
 describe('Word Bank Engine Optimization & Distribution', () => {
@@ -75,7 +76,7 @@ describe('Word Bank Engine Optimization & Distribution', () => {
         });
     });
 
-    it('generates complete word banks within configured size limits directly in-process', () => {
+    it('generates complete word banks with guaranteed punctuation and pure vocabulary words', () => {
         const startTime = performance.now();
         const result = generateWordBanksDirectly({
             language: 'en',
@@ -97,16 +98,30 @@ describe('Word Bank Engine Optimization & Distribution', () => {
             battle.competitors.forEach(cId => {
                 const bank = battle.wordBanks[cId];
                 expect(bank).toBeDefined();
-                expect(bank.length).toBeGreaterThanOrEqual(30);
-                expect(bank.length).toBeLessThanOrEqual(50);
+
+                const vocabTokens = bank.filter(t => t.source !== 'punctuation');
+                const puncTokens = bank.filter(t => t.source === 'punctuation');
+
+                // Vocabulary quota check (Round 1: 30 to 50 words)
+                expect(vocabTokens.length).toBeGreaterThanOrEqual(30);
+                expect(vocabTokens.length).toBeLessThanOrEqual(50);
+
+                // Guaranteed punctuation check
+                expect(puncTokens.map(p => p.text)).toEqual(GUARANTEED_PUNCTUATION);
                 
-                // Verify all bank words have valid structure
+                // Verify all bank words have valid structure and no stray punctuation in vocab
                 bank.forEach(token => {
                     expect(token.text).toBeDefined();
                     expect(typeof token.text).toBe('string');
-                    expect(['answer', 'fallback', 'connector']).toContain(token.source);
+                    expect(['answer', 'fallback', 'connector', 'punctuation']).toContain(token.source);
                     if (token.source === 'answer') {
                         expect(token.authorId).not.toBe(cId); // 0% self words
+                        expect(/^[\p{L}\p{N}'’`ʼ-]+$/u.test(token.text)).toBe(true); // Pure words
+                    } else if (token.source === 'fallback' || token.source === 'connector') {
+                        expect(token.authorId).toBeNull();
+                        expect(/^[\p{L}\p{N}'’`ʼ-]+$/u.test(token.text)).toBe(true); // Pure words
+                    } else if (token.source === 'punctuation') {
+                        expect(token.authorId).toBeNull();
                     }
                 });
             });
@@ -154,7 +169,7 @@ describe('Word Bank Engine Optimization & Distribution', () => {
         expect(sets.p1[0].length + sets.p1[1].length).toBe(4);
     });
 
-    it('supports Ukrainian language and fallback enrichment', () => {
+    it('supports Ukrainian language, fallback enrichment, and guaranteed punctuation', () => {
         const ukPlayerAnswers = {
             p1: { questions: [{ answer: 'Я люблю смачну гарячу піцу з сиром.' }] },
             p2: { questions: [{ answer: 'Таємничий космічний корабель летить далеко.' }] }
@@ -173,14 +188,24 @@ describe('Word Bank Engine Optimization & Distribution', () => {
             playerSeenChunks: {}
         });
 
-        expect(result.battleScheduleWithBanks[0].wordBanks.p1.length).toBeGreaterThanOrEqual(30);
-        expect(result.battleScheduleWithBanks[0].wordBanks.p2.length).toBeGreaterThanOrEqual(30);
+        const bankP1 = result.battleScheduleWithBanks[0].wordBanks.p1;
+        const bankP2 = result.battleScheduleWithBanks[0].wordBanks.p2;
+
+        const vocabP1 = bankP1.filter(t => t.source !== 'punctuation');
+        const vocabP2 = bankP2.filter(t => t.source !== 'punctuation');
+
+        expect(vocabP1.length).toBeGreaterThanOrEqual(30);
+        expect(vocabP2.length).toBeGreaterThanOrEqual(30);
 
         // Check Ukrainian connectors from expanded essential connector set
-        const ukConnectors = result.battleScheduleWithBanks[0].wordBanks.p1.filter(tok =>
+        const ukConnectors = bankP1.filter(tok =>
             ESSENTIAL_CONNECTORS.uk.includes(tok.text.toLowerCase())
         );
         expect(ukConnectors.length).toBeGreaterThanOrEqual(4);
+
+        // Check guaranteed punctuation
+        const puncP1 = bankP1.filter(t => t.source === 'punctuation');
+        expect(puncP1.map(p => p.text)).toEqual(GUARANTEED_PUNCTUATION);
     });
 
     it('correctly tokenizes Ukrainian words with different apostrophe formats (ASCII, curly, typographic modifier ʼ)', async () => {
@@ -189,4 +214,17 @@ describe('Word Bank Engine Optimization & Distribution', () => {
         const tokens = tokenizeText(textWithApostrophes);
         expect(tokens).toEqual(['мʼясо', 'зв’язок', "ім'я", "п'ять", 'сімʼї']);
     });
+
+    it('shuffles classic mixed pool across current and past rounds when using classic algorithm', () => {
+        const chunks = [
+            { chunkText: 'cur1', authorId: 'p1', isCurrentRound: true },
+            { chunkText: 'cur2', authorId: 'p2', isCurrentRound: true },
+            { chunkText: 'past1', authorId: 'p1', isCurrentRound: false },
+            { chunkText: 'past2', authorId: 'p2', isCurrentRound: false }
+        ];
+        const seenMap = new Map([['p1', new Set()], ['p2', new Set()]]);
+        const allotted = distributeChunksToPlayers_Current(chunks, [{ id: 'p1' }, { id: 'p2' }], seenMap);
+        expect(allotted.p1.length + allotted.p2.length).toBe(4);
+    });
 });
+

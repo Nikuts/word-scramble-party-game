@@ -11,6 +11,9 @@ export const ESSENTIAL_CONNECTORS = {
 
 export const MIN_CONNECTOR_COUNT = 4;
 
+/** Guaranteed punctuation set provided at the end of each word bank (excluded from vocabulary limits & royalties). */
+export const GUARANTEED_PUNCTUATION = ['.', ',', '!', '?', ':', '-'];
+
 export function collectAnswerChunks(playerAnswers = {}, answerHistory = []) {
     const allAnswerChunks = [];
     Object.entries(playerAnswers).forEach(([playerId, pa]) => {
@@ -60,7 +63,8 @@ export function distributeChunksToPlayers_Current(chunks, playerList, seenChunks
     shuffleArray(currentRoundChunks);
     shuffleArray(pastRoundChunks);
     
-    const shuffledChunks = [...currentRoundChunks, ...pastRoundChunks]
+    // Classic algorithm: mixes current and past round chunks together into a single large randomized pool
+    const shuffledChunks = shuffleArray([...currentRoundChunks, ...pastRoundChunks])
         .map(c => ({ ...c, wordCount: tokenizeText(c.chunkText).length }));
 
     shuffledChunks.forEach(chunk => {
@@ -87,11 +91,13 @@ export function distributeChunksToPlayers_Current(chunks, playerList, seenChunks
 export function distributeChunksToPlayers_New(chunks, playerList, seenChunksByPlayer) {
     const playerWordCounts = {};
     const playerAllottedChunks = {};
+    const playerAuthorSets = {};
     const competitors = playerList.map(p => p.id);
 
     competitors.forEach(id => {
         playerWordCounts[id] = 0;
         playerAllottedChunks[id] = [];
+        playerAuthorSets[id] = new Set();
         if (!seenChunksByPlayer.has(id)) seenChunksByPlayer.set(id, new Set());
     });
 
@@ -110,7 +116,18 @@ export function distributeChunksToPlayers_New(chunks, playerList, seenChunksByPl
             // STRICT RULE: Player NEVER gets their own words (id !== chunk.authorId)
             const potentialRecipients = competitors
                 .filter(id => id !== chunk.authorId && !seenChunksByPlayer.get(id).has(chunk.chunkText))
-                .sort((a, b) => playerWordCounts[a] - playerWordCounts[b]);
+                .sort((a, b) => {
+                    // Primary: Balance total allotted word count
+                    const wordDiff = playerWordCounts[a] - playerWordCounts[b];
+                    if (Math.abs(wordDiff) > 3) return wordDiff;
+                    
+                    // Secondary: Prioritize player who does not yet have words from this chunk's author (Rainbow Variety Boost)
+                    const aHasAuthor = chunk.authorId && playerAuthorSets[a].has(chunk.authorId) ? 1 : 0;
+                    const bHasAuthor = chunk.authorId && playerAuthorSets[b].has(chunk.authorId) ? 1 : 0;
+                    if (aHasAuthor !== bHasAuthor) return aHasAuthor - bHasAuthor;
+                    
+                    return wordDiff;
+                });
             
             if (potentialRecipients.length > 0) {
                 const targetPlayerId = potentialRecipients[0];
@@ -121,6 +138,7 @@ export function distributeChunksToPlayers_New(chunks, playerList, seenChunksByPl
                     isCurrentRound: chunk.isCurrentRound
                 });
                 playerWordCounts[targetPlayerId] += chunk.wordCount;
+                if (chunk.authorId) playerAuthorSets[targetPlayerId].add(chunk.authorId);
                 seenChunksByPlayer.get(targetPlayerId).add(chunk.chunkText);
             }
         });
@@ -202,24 +220,29 @@ export function generateWordBanksDirectly({
             chunkSet.forEach(chunk => {
                 const chunkText = typeof chunk === 'string' ? chunk : chunk.chunkText;
                 const authorId = typeof chunk === 'object' && chunk !== null ? chunk.authorId : null;
-                const words = tokenizeText(chunkText);
-                words.forEach(tok => {
-                    finalWordBank.push({
-                        text: tok,
-                        authorId: authorId,
-                        source: 'answer'
-                    });
+                const rawTokens = tokenizeText(chunkText);
+                rawTokens.forEach(tok => {
+                    // Extract pure vocabulary words, stripping edge punctuation and filtering out pure punctuation tokens
+                    const cleaned = tok.replace(/^[.,!?;:—–"()\[\]{}-]+|[.,!?;:—–"()\[\]{}-]+$/gu, '').trim();
+                    if (cleaned && /^[\p{L}\p{N}'’`ʼ-]+$/u.test(cleaned)) {
+                        finalWordBank.push({
+                            text: cleaned,
+                            authorId: authorId,
+                            source: 'answer'
+                        });
+                    }
                 });
             });
 
             // 🛡️ Smart Word Bank Balance Guard: Guarantee minimum essential connectors
             const langKey = (language === 'ua' || language === 'uk') ? 'ua' : 'en';
-            const connectorSet = new Set((ESSENTIAL_CONNECTORS[langKey] || ESSENTIAL_CONNECTORS.en).map(w => w.toLowerCase()));
+            const connectorList = (ESSENTIAL_CONNECTORS[langKey] || ESSENTIAL_CONNECTORS.en);
+            const connectorSet = new Set(connectorList.map(w => w.toLowerCase()));
             const currentConnectors = finalWordBank.filter(tok => connectorSet.has(tok.text.toLowerCase()));
             
             if (currentConnectors.length < MIN_CONNECTOR_COUNT) {
                 const missingCount = MIN_CONNECTOR_COUNT - currentConnectors.length;
-                const availableConnectors = shuffleArray([...(ESSENTIAL_CONNECTORS[langKey] || ESSENTIAL_CONNECTORS.en)])
+                const availableConnectors = shuffleArray([...connectorList])
                     .filter(conn => !finalWordBank.some(tok => tok.text.toLowerCase() === conn.toLowerCase()));
                 
                 for (let i = 0; i < missingCount && i < availableConnectors.length; i++) {
@@ -245,16 +268,36 @@ export function generateWordBanksDirectly({
                     if (finalWordBank.length >= minBankSize) break;
                     const wordsInPhrase = tokenizeText(phrase);
                     wordsInPhrase.forEach(tok => {
-                        finalWordBank.push({
-                            text: tok,
-                            authorId: null,
-                            source: 'fallback'
-                        });
+                        const cleaned = tok.replace(/^[.,!?;:—–"()\[\]{}-]+|[.,!?;:—–"()\[\]{}-]+$/gu, '').trim();
+                        if (cleaned && /^[\p{L}\p{N}'’`ʼ-]+$/u.test(cleaned)) {
+                            finalWordBank.push({
+                                text: cleaned,
+                                authorId: null,
+                                source: 'fallback'
+                            });
+                        }
                     });
                 }
             }
 
-            battle.wordBanks[c_id] = finalWordBank.slice(0, maxBankSize);
+            // Cap the vocabulary bank at maxBankSize while guaranteeing injected connectors are preserved
+            if (finalWordBank.length > maxBankSize) {
+                const connectors = finalWordBank.filter(tok => tok.source === 'connector');
+                const nonConnectors = finalWordBank.filter(tok => tok.source !== 'connector');
+                const maxNonConnectors = Math.max(0, maxBankSize - connectors.length);
+                finalWordBank = [...nonConnectors.slice(0, maxNonConnectors), ...connectors];
+            } else {
+                finalWordBank = finalWordBank.slice(0, maxBankSize);
+            }
+
+            // Append Guaranteed Punctuation Set (not counted in word bank limits or bonus royalties)
+            const punctuationTokens = GUARANTEED_PUNCTUATION.map(punc => ({
+                text: punc,
+                authorId: null,
+                source: 'punctuation'
+            }));
+
+            battle.wordBanks[c_id] = [...finalWordBank, ...punctuationTokens];
         });
     });
 
@@ -268,3 +311,4 @@ export function generateWordBanksDirectly({
         updatedPlayerSeenChunks
     };
 }
+

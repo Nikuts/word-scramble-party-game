@@ -476,13 +476,23 @@
                                     {@const annotated = battle.annotatedAnswers[c_id]}
                                     {#if annotated.isFinal}
                                         <div class="text-left w-full space-y-1">
-                                            <div><span class="font-bold text-primary mr-1 text-xs md:text-sm">Title:</span>{#each annotated.title as tok}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}{/each}</div>
-                                            <div><span class="font-bold text-primary mr-1 text-xs md:text-sm">Tagline:</span>{#each annotated.tagline as tok}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}{/each}</div>
+                                            <div>
+                                                <span class="font-bold text-primary mr-1 text-xs md:text-sm">Title:</span>
+                                                {#each annotated.title as tok, i}
+                                                    {#if i > 0 && !/^[.,!?:;…]+$/.test(tok.text)}{' '}{/if}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>
+                                                {/each}
+                                            </div>
+                                            <div>
+                                                <span class="font-bold text-primary mr-1 text-xs md:text-sm">Tagline:</span>
+                                                {#each annotated.tagline as tok, i}
+                                                    {#if i > 0 && !/^[.,!?:;…]+$/.test(tok.text)}{' '}{/if}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>
+                                                {/each}
+                                            </div>
                                         </div>
                                     {:else}
                                         <p class="text-center w-full">
-                                            {#each annotated.words as tok}
-                                                <span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>{' '}
+                                            {#each annotated.words as tok, i}
+                                                {#if i > 0 && !/^[.,!?:;…]+$/.test(tok.text)}{' '}{/if}<span class="{getWordColorClass(tok.authorIndex)}">{tok.text}</span>
                                             {/each}
                                         </p>
                                     {/if}

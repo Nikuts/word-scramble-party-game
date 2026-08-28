@@ -175,14 +175,24 @@ export function assignHostPlayer(game) {
 
 // --- Text Processing Helpers ---
 
-// A new, language-agnostic function to correctly tokenize text.
+// A language-agnostic function to correctly tokenize text.
 // It uses a Unicode-aware regex to handle both English and Ukrainian text.
 export function tokenizeText(text) {
     if (!text) return [];
     // This Unicode-aware regex captures sequences of letters (including numbers and apostrophes/hyphens),
     // sequences of 3 or more underscores, or any standalone punctuation. The 'u' flag is for Unicode.
-    const tokenizerRegex = /[\p{L}\p{N}'’`ʼ-]+|_{3,}|[.,!?;:()"]/gu;
+    const tokenizerRegex = /[\p{L}\p{N}'’`ʼ-]+|_{3,}|[.,!?;:()"-]/gu;
     return text.match(tokenizerRegex) || [];
+}
+
+/** Formats answer string to ensure natural typographic spacing before punctuation. */
+export function formatAnswerText(text) {
+    if (!text || typeof text !== 'string') return text || '';
+    return text
+        .replace(/\s+([.,!?:;…])/gu, '$1')
+        .replace(/(^|\s)(["'“‘(\[])\s+/gu, '$1$2')
+        .replace(/\s+(["'”’)\],.:;!?…])(\s|$|[.,!?:;…])/gu, '$1$2')
+        .trim();
 }
 
 /** Helper function to split text into sentence and clause-like chunks. */
@@ -198,11 +208,11 @@ export function getChunksFromText(text) {
         if (!trimmedChunk) return;
 
         // Also split within the chunk if it contains strong subordinate conjunctions
-        // using lookahead or splitting on conjunction boundaries
-        const subParts = trimmedChunk.split(/\s+(?=(?:because|although|however|when|while|бо|тому що|якщо|коли|хоча|але)\b)/i);
+        // using Unicode-aware boundary (?=[^\p{L}\p{N}]|$) to handle Cyrillic and English conjunctions
+        const subParts = trimmedChunk.split(/\s+(?=(?:because|although|however|when|while|бо|тому що|якщо|коли|хоча|але)(?:[^\p{L}\p{N}]|$))/iu);
 
         subParts.forEach(part => {
-            const cleanChunk = part.replace(/^[.,!?;:—–-]+\s*|\s*[.,!?;:—–-]+$/g, '').trim();
+            const cleanChunk = part.replace(/^[.,!?;:—–"()\[\]{}-]+\s*|\s*[.,!?;:—–"()\[\]{}-]+$/gu, '').trim();
             if (!cleanChunk) return;
 
             const words = cleanChunk.split(/\s+/).filter(w => w.length > 0);

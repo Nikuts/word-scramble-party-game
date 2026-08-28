@@ -168,14 +168,22 @@ export function triggerConfetti(options = {}) {
     }
 }
 
-/**
- * A language-agnostic function to correctly tokenize text into words and punctuation.
- * It uses a Unicode-aware regex to handle both English and Ukrainian text.
- * @param {string} text The text to tokenize.
- * @returns {string[]} An array of words and punctuation.
- */
 export function tokenizeText(text) {
     if (!text) return [];
-    const tokenizerRegex = /[\p{L}\p{N}'’`-]+|_{3,}|[.,!?;:()"]/gu;
+    const tokenizerRegex = /[\p{L}\p{N}'’`ʼ-]+|_{3,}|[.,!?;:()"-]/gu;
     return text.match(tokenizerRegex) || [];
+}
+
+/**
+ * Formats answer text with clean typographic spacing before punctuation marks.
+ * @param {string} text The text to format.
+ * @returns {string} The formatted text.
+ */
+export function formatAnswerText(text) {
+    if (!text || typeof text !== 'string') return text || '';
+    return text
+        .replace(/\s+([.,!?:;…])/gu, '$1')
+        .replace(/(^|\s)(["'“‘(\[])\s+/gu, '$1$2')
+        .replace(/\s+(["'”’)\],.:;!?…])(\s|$|[.,!?:;…])/gu, '$1$2')
+        .trim();
 }

@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import Sortable from 'sortablejs';
     import { t, sendMessage, getPartialAnswers, clearConsumedPartialAnswers, gameState, currentPlayer } from '../../../stores.js';
+    import { formatAnswerText } from '../../utils.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
     import PixelAvatar from '../../shared/PixelAvatar.svelte';
 
@@ -51,8 +52,18 @@
 
     function tokenizeSimple(text) {
         if (!text) return [];
-        const regex = /[\p{L}\p{N}'’`-]+|_{3,}|[.,!?;:()"]/gu;
+        const regex = /[\p{L}\p{N}'’`ʼ-]+|_{3,}|[.,!?;:()"-]/gu;
         return text.match(regex) || [];
+    }
+
+    function countVocabularyWords(words) {
+        return (words || []).filter(w => w && /[\p{L}\p{N}]/u.test(w.text)).length;
+    }
+
+    function formatWordTokens(tokens) {
+        if (!tokens || tokens.length === 0) return '';
+        const raw = tokens.filter(Boolean).map(w => w.text).join(' ');
+        return formatAnswerText(raw);
     }
     
     function ensureBattleFormsInitialized(battles, pId) {
@@ -285,14 +296,14 @@
             payload = {
                 type: 'final_battle',
                 battleId: battleId,
-                title: form.titleWords.filter(Boolean).map(w => w.text).join(' '),
-                tagline: form.taglineWords.filter(Boolean).map(w => w.text).join(' '),
+                title: formatWordTokens(form.titleWords),
+                tagline: formatWordTokens(form.taglineWords),
             };
         } else {
             payload = {
                 type: 'battle',
                 battleId: battleId,
-                answer: form.answerWords.filter(Boolean).map(w => w.text).join(' '),
+                answer: formatWordTokens(form.answerWords),
             };
         }
 
@@ -309,13 +320,13 @@
             const taglineWords = form.taglineWords.filter(Boolean);
             if (titleWords.length === 0 && taglineWords.length === 0) return;
             answer = {
-                title: titleWords.map(w => w.text).join(' '),
-                tagline: taglineWords.map(w => w.text).join(' '),
+                title: formatWordTokens(titleWords),
+                tagline: formatWordTokens(taglineWords),
             };
         } else {
              const answerWords = form.answerWords.filter(Boolean);
              if (answerWords.length === 0) return;
-             answer = answerWords.map(w => w.text).join(' ');
+             answer = formatWordTokens(answerWords);
         }
         
         sendMessage('submit-battle-answer', { gameId: gameId, playerId: playerId, battleId, answer });
@@ -472,7 +483,7 @@
                     <div class="flex items-center justify-between text-xs font-display font-bold uppercase tracking-widest text-slate-400 mb-1">
                         <span class="text-pink-400 font-bold">⚔️ {$t.yourAnswer || 'YOUR ANSWER'}</span>
                         <div class="flex items-center gap-2">
-                            <span class="text-xs text-slate-400 font-mono">{battleForm.answerWords.length} {$t.words || 'WORDS'}</span>
+                            <span class="text-xs text-slate-400 font-mono">{countVocabularyWords(battleForm.answerWords)} {$t.words || 'WORDS'}</span>
                             {#if battleForm.answerWords.length > 0}
                                 <button type="button" class="text-red-400 hover:text-red-300 font-sans text-xs cursor-pointer font-bold" on:click={() => clearLine(battle.id)}>✕ {$t.clear || 'Clear'}</button>
                             {/if}
