@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { calculateBattlePoints } from '../game/services/battleService.js';
 import { 
-    POINTS_PER_VOTE, 
+    POINTS_PER_ROUND, 
     VICTORY_BONUS_PER_ROUND, 
     CLEAN_SWEEP_BONUS_PER_ROUND, 
     FLAT_ROYALTY_PER_ROUND, 
     RAINBOW_BONUS_PER_ROUND 
 } from '../src/lib/config.js';
 
-describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', () => {
+describe('Scoring Algorithms (Vote-Share Pool A1, Stopwords A5, Tie Split A7)', () => {
     function createMockGame(round = 1, playerCount = 4) {
         const players = Array.from({ length: playerCount }, (_, i) => ({
             id: `p${i + 1}`,
@@ -24,7 +24,7 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
         };
     }
 
-    describe('4-Player Battle Voting Outcomes', () => {
+    describe('Vote-Share Pool Battle Outcomes (A1)', () => {
         it('calculates 4-player 2-0 unanimous vote with Clean Sweep bonus in Round 1', () => {
             const game = createMockGame(1, 4); // p1, p2 competing; p3, p4 voting
             const battle = {
@@ -43,17 +43,35 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
 
             calculateBattlePoints(game, battle);
 
-            // In Round 1:
-            // p1 gets: 2 votes * 300 + 200 (win) + 150 (clean sweep) = 950
-            // p2 gets: 0 votes = 0
+            // In Round 1 (pool = 1000, win = 200, sweep = 150, totalVotes = 2 >= 2):
+            // p1 gets: 1000 + 200 + 150 = 1350
+            // p2 gets: 0
             expect(battle.winnerId).toBe('p1');
-            expect(battle.pointsAwarded['p1']).toBe(950);
+            expect(battle.pointsAwarded['p1']).toBe(1350);
             expect(battle.pointsAwarded['p2']).toBe(0);
-            expect(game.players.find(p => p.id === 'p1').score).toBe(950);
+            expect(game.players.find(p => p.id === 'p1').score).toBe(1350);
             expect(game.players.find(p => p.id === 'p2').score).toBe(0);
         });
 
-        it('calculates 4-player 1-1 split tie with split victory bonus and NO clean sweep in Round 1', () => {
+        it('does NOT award Clean Sweep when totalVotes < 2 (e.g. 3-player game with 1 voter)', () => {
+            const game = createMockGame(1, 3); // p1, p2 competing; only p3 voting
+            const battle = {
+                id: 'b_3p',
+                competitors: ['p1', 'p2'],
+                answers: { p1: 'Ans A', p2: 'Ans B' },
+                votes: { p3: 'p1' },
+                wordBanks: { p1: [], p2: [] }
+            };
+
+            calculateBattlePoints(game, battle);
+
+            // p1 gets 100% of 1000 pool + 200 winBonus, but 0 sweepBonus because totalVotes === 1
+            expect(battle.winnerId).toBe('p1');
+            expect(battle.scoreBreakdown['p1'].sweepBonus).toBe(0);
+            expect(battle.pointsAwarded['p1']).toBe(1200);
+        });
+
+        it('calculates 4-player 1-1 split tie with Math.floor split victory bonus and NO clean sweep in Round 1', () => {
             const game = createMockGame(1, 4);
             const battle = {
                 id: 'b2',
@@ -72,16 +90,16 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
             calculateBattlePoints(game, battle);
 
             // In Round 1 tie:
+            // Vote share: Math.floor((1/2) * 1000) = 500 each
             // winBonus (200) split evenly = 100 each
-            // p1: 1 vote * 300 + 100 = 400
-            // p2: 1 vote * 300 + 100 = 400
+            // Total = 600 each
             expect(battle.winnerId).toBeNull();
-            expect(battle.pointsAwarded['p1']).toBe(400);
-            expect(battle.pointsAwarded['p2']).toBe(400);
+            expect(battle.pointsAwarded['p1']).toBe(600);
+            expect(battle.pointsAwarded['p2']).toBe(600);
         });
 
-        it('scales points appropriately in Round 2 and Round 3', () => {
-            // Test Round 2 (points per vote = 600, win = 400, sweep = 300)
+        it('scales pool and bonuses appropriately in Round 2 and Round 3', () => {
+            // Test Round 2 (pool = 2000, win = 400, sweep = 300)
             const gameR2 = createMockGame(2, 4);
             const battleR2 = {
                 id: 'b_r2',
@@ -91,10 +109,10 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
                 wordBanks: { p1: [], p2: [] }
             };
             calculateBattlePoints(gameR2, battleR2);
-            // 2 * 600 + 400 + 300 = 1900
-            expect(battleR2.pointsAwarded['p1']).toBe(1900);
+            // 2000 + 400 + 300 = 2700
+            expect(battleR2.pointsAwarded['p1']).toBe(2700);
 
-            // Test Round 3 (points per vote = 1200, win = 800, sweep = 600)
+            // Test Round 3 (pool = 4000, win = 800, sweep = 600)
             const gameR3 = createMockGame(3, 4);
             const battleR3 = {
                 id: 'b_r3',
@@ -107,12 +125,12 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
                 wordBanks: { p1: [], p2: [] }
             };
             calculateBattlePoints(gameR3, battleR3);
-            // 2 * 1200 + 800 + 600 = 3800
-            expect(battleR3.pointsAwarded['p1']).toBe(3800);
+            // 4000 + 800 + 600 = 5400
+            expect(battleR3.pointsAwarded['p1']).toBe(5400);
         });
     });
 
-    describe('Word Usage Royalties (Word Authorship Bonuses)', () => {
+    describe('Word Usage Royalties & Stopword Filtering (A5)', () => {
         it('awards flat royalties to original word authors when answer receives votes', () => {
             const game = createMockGame(1, 4);
             const battle = {
@@ -136,17 +154,45 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
 
             calculateBattlePoints(game, battle);
 
-            // p1 used words authored by p2, p3, p4
-            // Each author gets FLAT_ROYALTY_PER_ROUND[0] = 50 pts
             expect(game.players.find(p => p.id === 'p2').score).toBe(50);
             expect(game.players.find(p => p.id === 'p3').score).toBe(50);
             expect(game.players.find(p => p.id === 'p4').score).toBe(50);
 
-            // Battle royalties records
             expect(battle.royalties).toHaveLength(3);
             expect(battle.royalties.some(r => r.authorId === 'p2' && r.points === 50)).toBe(true);
             expect(battle.royalties.some(r => r.authorId === 'p3' && r.points === 50)).toBe(true);
             expect(battle.royalties.some(r => r.authorId === 'p4' && r.points === 50)).toBe(true);
+        });
+
+        it('excludes stopwords and connectors (e.g. "I", "a", "the", "is", "and") from royalties and Rainbow Bonus (A5)', () => {
+            const game = createMockGame(1, 4);
+            const battle = {
+                id: 'b_stopwords',
+                competitors: ['p1', 'p2'],
+                answers: {
+                    p1: 'I am a cat and the dog is here',
+                    p2: 'Other answer'
+                },
+                votes: { p3: 'p1', p4: 'p1' },
+                wordBanks: {
+                    p1: [
+                        { text: 'I', authorId: 'p2', source: 'answer' },
+                        { text: 'the', authorId: 'p3', source: 'answer' },
+                        { text: 'is', authorId: 'p4', source: 'answer' },
+                        { text: 'and', authorId: 'p2', source: 'answer' }
+                    ],
+                    p2: []
+                }
+            };
+
+            calculateBattlePoints(game, battle);
+
+            // Stopwords must not award royalties or trigger Rainbow Bonus
+            expect(battle.royalties).toHaveLength(0);
+            expect(battle.scoreBreakdown['p1'].rainbowBonus).toBe(0);
+            expect(game.players.find(p => p.id === 'p2').score).toBe(0);
+            expect(game.players.find(p => p.id === 'p3').score).toBe(0);
+            expect(game.players.find(p => p.id === 'p4').score).toBe(0);
         });
 
         it('does NOT award royalties if the answer receives 0 votes', () => {
@@ -170,10 +216,10 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
 
             calculateBattlePoints(game, battle);
 
-            // p1 received 0 votes, so p3 and p4 get NO royalties from p1's answer
             expect(game.players.find(p => p.id === 'p3').score).toBe(0);
             expect(game.players.find(p => p.id === 'p4').score).toBe(0);
         });
+
         it('does NOT award duplicate royalties if multiple words from the same author are used', () => {
             const game = createMockGame(1, 4);
             const battle = {
@@ -198,7 +244,6 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
 
             calculateBattlePoints(game, battle);
 
-            // p2 contributed 5 words, but should receive flat royalty ONCE (50 pts, not 250 pts)
             expect(game.players.find(p => p.id === 'p2').score).toBe(50);
             expect(battle.royalties).toHaveLength(1);
             expect(battle.royalties[0]).toEqual({
@@ -216,29 +261,27 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
                 competitors: ['p1', 'p2', 'p3'],
                 answers: {
                     p1: 'Answer using words from p4',
-                    p2: 'Answer using words from p5 and p6',
+                    p2: 'Answer using words and galaxy from p6',
                     p3: 'Unused words'
                 },
                 votes: { p4: 'p1', p5: 'p2', p6: 'p2' },
                 wordBanks: {
                     p1: [{ text: 'words', authorId: 'p4' }],
-                    p2: [{ text: 'words', authorId: 'p5' }, { text: 'and', authorId: 'p6' }],
+                    p2: [{ text: 'words', authorId: 'p5' }, { text: 'galaxy', authorId: 'p6' }],
                     p3: []
                 }
             };
 
             calculateBattlePoints(game, battle);
 
-            // p4 earned royalty from p1's vote (50 pts)
             expect(game.players.find(p => p.id === 'p4').score).toBe(50);
-            // p5 and p6 earned royalties from p2's votes (50 pts each)
             expect(game.players.find(p => p.id === 'p5').score).toBe(50);
             expect(game.players.find(p => p.id === 'p6').score).toBe(50);
         });
     });
 
     describe('Rainbow Variety Bonus', () => {
-        it('awards Rainbow Bonus (+100 in R1) when an answer combines words from 3+ distinct other authors', () => {
+        it('awards Rainbow Bonus (+100 in R1) when an answer combines non-stopword words from 3+ distinct other authors', () => {
             const game = createMockGame(1, 4);
             const battle = {
                 id: 'b_rainbow',
@@ -261,35 +304,29 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
             calculateBattlePoints(game, battle);
 
             // p1 gets:
-            // 2 votes * 300 = 600
+            // Pool share (2/2 of 1000) = 1000
             // winBonus = 200
             // sweepBonus = 150
             // Rainbow Bonus = 100
-            // Total = 1050
-            expect(battle.pointsAwarded['p1']).toBe(1050);
-            expect(game.players.find(p => p.id === 'p1').score).toBe(1050);
+            // Total = 1450
+            expect(battle.pointsAwarded['p1']).toBe(1450);
+            expect(game.players.find(p => p.id === 'p1').score).toBe(1450);
 
-            // Verify structured score breakdown
             expect(battle.scoreBreakdown['p1']).toEqual({
                 votes: 2,
-                votePoints: 600,
+                votePoints: 1000,
                 winBonus: 200,
                 sweepBonus: 150,
                 rainbowBonus: 100,
-                total: 1050
+                total: 1450
             });
 
-            // Verify anonymous word highlighting annotations
             expect(battle.annotatedAnswers['p1'].isFinal).toBe(false);
             const annotatedWords = battle.annotatedAnswers['p1'].words;
             expect(annotatedWords).toHaveLength(5);
-            // "Quantum" -> author p2 (authorIndex: 0)
             expect(annotatedWords[0]).toEqual({ text: 'Quantum', authorIndex: 0 });
-            // "laser" -> author p3 (authorIndex: 1)
             expect(annotatedWords[1]).toEqual({ text: 'laser', authorIndex: 1 });
-            // "penguin" -> author p4 (authorIndex: 2)
             expect(annotatedWords[2]).toEqual({ text: 'penguin', authorIndex: 2 });
-            // "strikes" & "back" -> neutral (-1)
             expect(annotatedWords[3]).toEqual({ text: 'strikes', authorIndex: -1 });
             expect(annotatedWords[4]).toEqual({ text: 'back', authorIndex: -1 });
         });
@@ -312,10 +349,10 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
                 }
             };
             calculateBattlePoints(gameR2, battleR2);
-            // 3 votes * 600 (1800) + win (400) + sweep (300) + rainbow R2 (200) = 2700
-            expect(battleR2.pointsAwarded['p1']).toBe(2700);
+            // Pool (2000) + win (400) + sweep (300) + rainbow R2 (200) = 2900
+            expect(battleR2.pointsAwarded['p1']).toBe(2900);
 
-            // Round 3 (Final Round Movie Title & Tagline object)
+            // Round 3
             const gameR3 = createMockGame(3, 5);
             const battleR3 = {
                 id: 'b_rainbow_r3',
@@ -335,9 +372,8 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
                 }
             };
             calculateBattlePoints(gameR3, battleR3);
-            // 3 votes * 1200 (3600) + win (800) + sweep (600) + rainbow R3 (400) = 5400
-            expect(battleR3.pointsAwarded['p1']).toBe(5400);
-            // Each author earns flat royalty in R3 = 100 pts (FLAT_ROYALTY_PER_ROUND[2])
+            // Pool (4000) + win (800) + sweep (600) + rainbow R3 (400) = 5800
+            expect(battleR3.pointsAwarded['p1']).toBe(5800);
             expect(gameR3.players.find(p => p.id === 'p3').score).toBe(100);
             expect(gameR3.players.find(p => p.id === 'p4').score).toBe(100);
             expect(gameR3.players.find(p => p.id === 'p5').score).toBe(100);
@@ -349,7 +385,7 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
                 id: 'b_no_rainbow',
                 competitors: ['p1', 'p2'],
                 answers: {
-                    p1: 'Quantum laser from two authors',
+                    p1: 'Quantum laser rocket authors',
                     p2: 'Normal answer'
                 },
                 votes: { p3: 'p1', p4: 'p1' },
@@ -357,7 +393,7 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
                     p1: [
                         { text: 'quantum', authorId: 'p2' },
                         { text: 'laser', authorId: 'p2' },
-                        { text: 'from', authorId: 'p3' }
+                        { text: 'rocket', authorId: 'p3' }
                     ],
                     p2: []
                 }
@@ -365,14 +401,13 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
 
             calculateBattlePoints(game, battle);
 
-            // Only 2 distinct authors (p2, p3) -> NO rainbow bonus (+0)
-            // Total = 600 + 200 + 150 = 950
-            expect(battle.pointsAwarded['p1']).toBe(950);
+            // Pool (1000) + win (200) + sweep (150) = 1350
+            expect(battle.pointsAwarded['p1']).toBe(1350);
         });
     });
 
-    describe('Auto-Win and Timeout Scenarios', () => {
-        it('awards full 2-vote equivalent + victory + clean sweep to single active competitor', () => {
+    describe('Auto-Win and Timeout Scenarios (A1)', () => {
+        it('awards average pool share + victory bonus (no sweep bonus) to single active competitor so auto-win never beats a real win', () => {
             const game = createMockGame(1, 4);
             const battle = {
                 id: 'b_autowin',
@@ -390,10 +425,11 @@ describe('Scoring Algorithms, 4-Player Battles, Royalties & Rainbow Bonuses', ()
 
             calculateBattlePoints(game, battle);
 
-            // Auto-win treated as 2 votes: (2 * 300) + 200 (win) + 150 (sweep) = 950
+            // Auto-win in 2-competitor battle: Math.floor(1000 / 2) + 200 (win) + 0 (sweep) = 700
             expect(battle.winnerId).toBe('p1');
-            expect(battle.pointsAwarded['p1']).toBe(950);
+            expect(battle.pointsAwarded['p1']).toBe(700);
             expect(battle.pointsAwarded['p2']).toBe(0);
+            expect(battle.scoreBreakdown['p1'].sweepBonus).toBe(0);
             // Royalties are also awarded in auto-win
             expect(game.players.find(p => p.id === 'p3').score).toBe(50);
         });

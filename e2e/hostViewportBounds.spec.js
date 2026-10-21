@@ -53,6 +53,18 @@ test.describe('Host Screen Viewport Bounds & Tablet/Mobile Usability Audit', () 
                         // 2. On Landscape TV/Laptops (width >= 1024), assert 100% viewport containment (zero vertical overflow)
                         if (vp.isLandscape && vp.width >= 1024) {
                             expect(overflow.overflowY, `Page vertically overflowed by ${overflow.overflowY}px on ${screen.name} (${vp.name}, ${count}P)`).toBeLessThanOrEqual(2);
+
+                            // Also verify internal scroll containers do not overflow on standard & scaled laptops/TVs
+                            const internalOverflows = await page.evaluate(() => {
+                                const els = Array.from(document.querySelectorAll('main, .overflow-y-auto'));
+                                return els.map(el => ({
+                                    tag: el.tagName,
+                                    className: el.className,
+                                    overflowY: el.scrollHeight - el.clientHeight,
+                                    overflowX: el.scrollWidth - el.clientWidth
+                                })).filter(x => x.overflowY > 4 || x.overflowX > 2);
+                            });
+                            expect(internalOverflows, `Internal container overflow on ${screen.name} (${vp.name}, ${count}P)`).toEqual([]);
                         }
 
                         // 3. Top Utility Controls (TV MODE, Close Lobby, END GAME)

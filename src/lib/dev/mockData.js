@@ -12,7 +12,7 @@ export const MOCK_PLAYERS_6 = [
     { id: 'p2', name: 'Bob', avatar: '🐸', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p2', score: 2400 },
     { id: 'p3', name: 'Charlie', avatar: '🤖', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p3', score: 1950 },
     { id: 'p4', name: 'Diana', avatar: '🧙', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p4', score: 2200 },
-    { id: 'p5', name: 'Evan', avatar: '🦁', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p5', score: 1800 },
+    { id: 'p5', name: 'Evan', avatar: '🐶', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p5', score: 1800 },
     { id: 'p6', name: 'Fiona', avatar: '🐱', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p6', score: 2100 }
 ];
 
@@ -21,15 +21,15 @@ export const MOCK_PLAYERS_14 = [
     { id: 'p2', name: 'Bob', avatar: '🐸', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p2', score: 2400 },
     { id: 'p3', name: 'Charlie', avatar: '🤖', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p3', score: 1950 },
     { id: 'p4', name: 'Diana', avatar: '🧙', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p4', score: 2200 },
-    { id: 'p5', name: 'Evan', avatar: '🦁', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p5', score: 1800 },
+    { id: 'p5', name: 'Evan', avatar: '🐶', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p5', score: 1800 },
     { id: 'p6', name: 'Fiona', avatar: '🐱', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p6', score: 2100 },
-    { id: 'p7', name: 'George', avatar: '🐵', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p7', score: 1650 },
-    { id: 'p8', name: 'Hannah', avatar: '🐼', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p8', score: 2300 },
-    { id: 'p9', name: 'Ivan', avatar: '🐯', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p9', score: 1900 },
-    { id: 'p10', name: 'Julia', avatar: '🦄', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p10', score: 2750 },
-    { id: 'p11', name: 'Kevin', avatar: '🐲', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p11', score: 1400 },
-    { id: 'p12', name: 'Luna', avatar: '👾', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p12', score: 2150 },
-    { id: 'p13', name: 'Max', avatar: '👻', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p13', score: 1750 },
+    { id: 'p7', name: 'George', avatar: '👽', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p7', score: 1650 },
+    { id: 'p8', name: 'Hannah', avatar: '🦆', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p8', score: 2300 },
+    { id: 'p9', name: 'Ivan', avatar: '⚒️', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p9', score: 1900 },
+    { id: 'p10', name: 'Julia', avatar: '👺', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p10', score: 2750 },
+    { id: 'p11', name: 'Kevin', avatar: '🛡️', isHost: false, isReady: false, isConnected: true, socketId: 'sock_p11', score: 1400 },
+    { id: 'p12', name: 'Luna', avatar: '🍄', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p12', score: 2150 },
+    { id: 'p13', name: 'Max', avatar: '🦜', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p13', score: 1750 },
     { id: 'p14', name: 'Nora', avatar: '🐧', isHost: false, isReady: true, isConnected: true, socketId: 'sock_p14', score: 2050 }
 ];
 

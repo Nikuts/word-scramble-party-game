@@ -2,7 +2,7 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 
-const ARTIFACT_DIR = 'C:/Users/nikku/.gemini/antigravity-ide/brain/8524da66-c512-4769-b6d9-4b0a4fb99c88';
+const ARTIFACT_DIR = 'C:/Users/nikku/.gemini/antigravity/brain/384590c5-3b22-4f96-89e2-7e50f2b5b4c3';
 
 const MOBILE_VIEWPORTS = [
     { name: 'iPhone 13/14 (390x844)', width: 390, height: 844 },
@@ -34,20 +34,34 @@ test.describe('Mobile Viewport Bounds & Usability Audit', () => {
                     await page.goto(url);
                     await page.waitForTimeout(300);
 
-                    // 1. Assert No Disconnected or Tap to Reconnect buttons shown
+                    // 1. Assert zero horizontal overflow on all mobile viewports
+                    const overflow = await page.evaluate(() => {
+                        const doc = document.documentElement;
+                        return {
+                            overflowX: doc.scrollWidth - window.innerWidth,
+                            overflowY: doc.scrollHeight - window.innerHeight
+                        };
+                    });
+                    expect(overflow.overflowX, `Horizontal overflow on ${screen.name} (${vp.name})`).toBeLessThanOrEqual(2);
+
+                    // 2. Assert No Disconnected or Tap to Reconnect buttons shown
                     const retryBtn = page.locator('button:has-text("Tap to Reconnect")');
                     await expect(retryBtn).not.toBeVisible();
 
-                    // 2. Assert interactive elements are clickable on input screens
+                    // 3. Assert interactive elements are clickable on input screens
                     if (screen.id !== 'player_reveal') {
                         const buttons = page.locator('button:visible');
                         const btnCount = await buttons.count();
                         expect(btnCount).toBeGreaterThanOrEqual(1);
                     }
 
-                    // Capture screenshot on 390x844 for visual inspection
+                    // Capture screenshot on 390x844 and 375x667 for visual inspection
                     if (vp.width === 390) {
                         const filename = `mobile_${screen.id}.png`;
+                        const outPath = path.join(ARTIFACT_DIR, filename);
+                        await page.screenshot({ path: outPath, fullPage: false });
+                    } else if (vp.width === 375 && (screen.id === 'player_lobby' || screen.id === 'player_reveal' || screen.id === 'player_results')) {
+                        const filename = `mobile_${screen.id}_375.png`;
                         const outPath = path.join(ARTIFACT_DIR, filename);
                         await page.screenshot({ path: outPath, fullPage: false });
                     }

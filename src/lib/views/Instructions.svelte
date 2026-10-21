@@ -65,7 +65,7 @@
                             <div class="flex items-baseline gap-1.5 flex-wrap">
                                 <span class="text-amber-300 font-bold font-display text-xs sm:text-sm">{$t.powerupRerollTitle || 'Question Re-Roll'}</span>
                                 <span class="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-amber-950/90 text-amber-400 border border-amber-500/40">
-                                    {$t.oneTimePerGame || '1x per game'}
+                                    {$t.oneTimePerRound || '1x per round'}
                                 </span>
                             </div>
                             <span class="text-slate-300 block text-xs mt-0.5 leading-tight">

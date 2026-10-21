@@ -19,5 +19,5 @@
 </script>
 
 <div class="aspect-square {className}">
-    <img {src} alt="Avatar {avatar}" class="w-full h-full object-contain" draggable="false" loading="lazy" decoding="async" width="64" height="64" />
+    <img {src} alt="Avatar {avatar}" class="w-full h-full object-contain" draggable="false" width="64" height="64" />
 </div>

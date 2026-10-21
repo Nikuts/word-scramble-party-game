@@ -9,17 +9,27 @@
     export let gameId;
     export let players = [];
     
-    $: isMyTurnToVote = battle && !battle.competitors.includes(player?.id) && !battle.votes[player?.id];
-    $: amIWatching = battle && (battle.competitors.includes(player?.id) || !!battle.votes[player?.id]);
+    $: isCompetitor = Boolean(battle && (battle.isCompetitor !== undefined ? battle.isCompetitor : battle.competitors?.includes(player?.id)));
+    $: hasVoted = Boolean(battle && (battle.hasVoted !== undefined ? battle.hasVoted : Boolean(battle.votes?.[player?.id])));
+    $: isMyTurnToVote = Boolean(battle && !isCompetitor && !hasVoted);
+    $: amIWatching = Boolean(battle && (isCompetitor || hasVoted));
+    $: compCount = battle?.competitorCount || battle?.votingOptions?.length || battle?.competitors?.length || 2;
+    $: votedCount = battle?.votedCount ?? Object.keys(battle?.votes || {}).length;
+    $: totalVoters = battle?.totalVoters ?? Math.max(0, players.length - compCount);
+    $: votingOptions = battle?.votingOptions || (battle?.competitors || []).map(c_id => ({
+        optionId: c_id,
+        answer: battle?.answers?.[c_id]
+    }));
 
-    function castVote(battleId, voteForPlayerId) {
-        if (!battle || !player) return;
+    function castVote(battleId, optionId) {
+        if (!battle || !player || !optionId) return;
         
         sendMessage('vote', {
             gameId: gameId,
             playerId: player.id,
             battleId,
-            voteForPlayerId
+            optionId,
+            voteForPlayerId: optionId
         });
     }
 
@@ -61,9 +71,9 @@
     <!-- Top Header: Bounded Format Badge & Mini Timer -->
     <header class="flex items-center justify-between gap-2 mb-2 flex-shrink-0 bg-neutral-950/90 border border-neutral-800 rounded-xl px-3 py-1.5 backdrop-blur-md">
         <span class="inline-flex items-center justify-center px-3 py-0.5 rounded-full text-[11px] font-display font-black uppercase tracking-wider bg-purple-950 text-purple-300 border border-purple-500/50 flex-shrink-0">
-            {#if battle?.competitors?.length === 4}
+            {#if compCount === 4}
                 {$t.quadLabel || '🔥 4-WAY BRAWL'}
-            {:else if battle?.competitors?.length === 3}
+            {:else if compCount === 3}
                 {$t.brawlLabel || '💥 3-WAY BRAWL'}
             {:else}
                 {$t.duoLabel || '⚡ 1-ON-1 SHOWDOWN'}
@@ -74,25 +84,28 @@
         </div>
     </header>
 
-    {#if battle && isMyTurnToVote}
+    {#if battle && (battle.prompt || battle.premise)}
         {@const isFinalRound = !!battle.genre}
-        
-        <!-- Prompt Box -->
+        <!-- Prompt Box (U6: visible on voting phone) -->
         <div class="bg-neutral-950/90 border border-neutral-800 rounded-2xl p-3 mb-2.5 text-center shadow-md flex-shrink-0">
             <span class="text-xs font-display font-bold text-cyan-400 uppercase tracking-widest block mb-1">
                 {isFinalRound ? ($t.moviePitch || 'MOVIE PREMISE') : ($t.battlePrompt || 'BATTLE PROMPT')}
             </span>
+            {#if isFinalRound && battle.genre}
+                <p class="text-xs font-display font-bold text-amber-300 uppercase tracking-wider mb-0.5">{battle.genre}</p>
+            {/if}
             <p class="text-sm sm:text-base font-bold text-slate-100 leading-snug">
                 {isFinalRound ? (battle.premise || battle.prompt) : battle.prompt}
             </p>
         </div>
+    {/if}
 
-        <!-- Vertical Single-Column Stack of Full-Width Voting Cards -->
-        <div class="flex-1 overflow-y-auto space-y-3 pr-0.5">
-            {#each battle.competitors as c_id, i (c_id)}
-                {@const c = players.find(p => p.id === c_id)}
+    {#if battle && isMyTurnToVote}
+        <!-- Vertical Single-Column Stack of Full-Width Anonymous Voting Cards -->
+        <div class="flex-1 min-h-0 overflow-y-auto space-y-3 pr-0.5">
+            {#each votingOptions as opt, i (opt.optionId)}
                 {@const style = cardStyles[i % cardStyles.length]}
-                {@const answer = c ? renderAnswer(battle.answers[c.id]) : `(${$t.disconnected})`}
+                {@const answer = renderAnswer(opt.answer)}
                 
                 <div class="bg-neutral-950/90 border-2 {style.cardBorder} rounded-2xl p-3.5 shadow-md flex flex-col justify-between transition-all">
                     <div>
@@ -109,9 +122,8 @@
                     <!-- Dedicated Vote Button -->
                     <button
                         type="button"
-                        disabled={!c}
-                        on:click={() => c && castVote(battle.id, c.id)}
-                        class="btn-arcade mt-3 w-full py-3.5 bg-gradient-to-r {style.btnBg} text-white font-display font-black text-sm tracking-wider uppercase rounded-xl active:scale-98 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        on:click={() => castVote(battle.id, opt.optionId)}
+                        class="btn-arcade mt-3 w-full py-3.5 bg-gradient-to-r {style.btnBg} text-white font-display font-black text-sm tracking-wider uppercase rounded-xl active:scale-98 transition-all cursor-pointer"
                         style="box-shadow: 0 0 15px {style.btnShadow};"
                     >
                         🗳️ {$t.voteForThisAnswer || 'VOTE FOR THIS ANSWER'}
@@ -121,10 +133,10 @@
         </div>
 
     {:else if battle && amIWatching}
-        <!-- Competitor or Voted Spectator State -->
-        <div class="flex-1 flex flex-col justify-center items-center text-center p-4 bg-neutral-950/80 border border-neutral-800 rounded-2xl my-auto">
+        <!-- Competitor or Voted Spectator State (U8: shows live vote tally) -->
+        <div class="flex-1 min-h-0 flex flex-col justify-center items-center text-center p-4 bg-neutral-950/80 border border-neutral-800 rounded-2xl my-auto overflow-y-auto">
             <div class="w-16 h-16 rounded-full bg-purple-950/60 border border-purple-400 flex items-center justify-center text-3xl mb-3 shadow-[0_0_20px_rgba(168,85,247,0.4)] animate-bounce">
-                {#if battle.competitors.includes(player?.id)}
+                {#if isCompetitor}
                     ⚔️
                 {:else}
                     🗳️
@@ -132,19 +144,22 @@
             </div>
             
             <h2 class="text-base sm:text-lg font-display font-black text-white uppercase tracking-wider mb-1">
-                {#if battle.competitors.includes(player?.id)}
-                    {$t.youAreCompeting || 'YOU ARE IN THIS BATTLE!'}
+                {#if isCompetitor}
+                    {$t.youAreCompeting || 'YOUR BATTLE!'}
                 {:else}
                     {$t.voteSubmitted || 'VOTE SUBMITTED!'}
                 {/if}
             </h2>
-            <p class="text-xs text-slate-400 font-sans max-w-xs animate-pulse">
-                {#if battle.competitors.includes(player?.id)}
+            <p class="text-xs text-slate-400 font-sans max-w-xs mb-3 animate-pulse">
+                {#if isCompetitor}
                     {$t.waitingForVotes || 'Other players are voting on your punchline...'}
                 {:else}
                     {$t.waitingForOtherVotes || 'Waiting for remaining votes to be locked in...'}
                 {/if}
             </p>
+            <div class="px-3.5 py-1.5 rounded-full bg-cyan-950/90 border border-cyan-500/60 text-cyan-300 font-mono text-xs sm:text-sm font-bold shadow-sm">
+                🗳️ {votedCount} / {totalVoters} {$t.voters || 'VOTED'}
+            </div>
         </div>
 
         <!-- Docked Live Floating Emoji Reaction Bar -->

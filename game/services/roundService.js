@@ -1,4 +1,4 @@
-import { generateRoundData } from '../../geminiService.js';
+import { generateRoundData, generateFinalRoundData } from '../../geminiService.js';
 import * as helpers from '../helpers.js';
 import * as manager from '../manager.js';
 import * as timerService from './timerService.js';
@@ -64,17 +64,19 @@ export function prefetchNextRoundData(game) {
     })();
 
     // If next round is final round, also prefetch final round movie battle prompts in background!
-    if (nextRoundIndex === QUESTIONS_PER_ROUND.length && !game.prefetchedFinalRoundPrompts) {
-        (async () => {
+    if (nextRoundIndex === QUESTIONS_PER_ROUND.length && !game.prefetchedFinalRoundPrompts && !game.prefetchedFinalRoundPromise) {
+        game.prefetchedFinalRoundPromise = (async () => {
             try {
                 const finalPrompts = await generateFinalRoundData(game.theme, game.language, numPlayers, game.is18PlusMode);
                 if (finalPrompts) {
                     game.prefetchedFinalRoundPrompts = finalPrompts;
                     console.log(`[Game ${game.id}] ✅ Pre-fetch completed for Final Round Movie Prompts`);
+                    return finalPrompts;
                 }
             } catch (err) {
                 console.warn(`[Game ${game.id}] Background prefetch for Final Round Movie Prompts failed:`, err);
             }
+            return null;
         })();
     }
 }
@@ -230,22 +232,29 @@ export async function startNextRound(io, game) {
     timerService.startPhaseTimer(io, game, 'get_ready', getReadyDuration, (io, g) => startQuestionPhase(io, g, numQuestionsPerPlayer));
 }
 
+export function finalizeMissingQuestionAnswers(game) {
+    if (!game?.playerAnswers) return;
+    Object.values(game.playerAnswers).forEach(pa => {
+        if (pa.submittedAll) return;
+        pa.questions?.forEach(q => {
+            if (!q.answer) {
+                const partial = game.partialAnswers?.[q.id];
+                q.answer = (partial && partial.trim() !== '') ? partial : '::TIMEOUT::';
+            }
+        });
+        pa.submittedAll = true;
+    });
+}
+
+export async function expireQuestionPhase(io, game) {
+    finalizeMissingQuestionAnswers(game);
+    const { prepareBattlePhase } = await import('./battleService.js');
+    await prepareBattlePhase(io, game);
+}
+
 export function startQuestionPhase(io, game, numQuestionsPerPlayer) {
     const timePerQuestion = timerService.getTimerValue(game, SECONDS_PER_QUESTION, SLOWPOKE_SECONDS_PER_QUESTION);
     const questionTime = numQuestionsPerPlayer * timePerQuestion;
     
-    timerService.startPhaseTimer(io, game, 'question', questionTime, async (io, g) => {
-        const { prepareBattlePhase } = await import('./battleService.js');
-        Object.values(g.playerAnswers).forEach(pa => {
-            if (pa.submittedAll) return;
-            pa.questions.forEach(q => {
-                if (!q.answer) {
-                    const partial = g.partialAnswers?.[q.id];
-                    q.answer = (partial && partial.trim() !== '') ? partial : '::TIMEOUT::';
-                }
-            });
-            pa.submittedAll = true;
-        });
-        await prepareBattlePhase(io, g);
-    });
+    timerService.startPhaseTimer(io, game, 'question', questionTime, expireQuestionPhase);
 }

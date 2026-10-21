@@ -99,10 +99,7 @@ export function handleReconnectPlayer(io, socket, { gameId, playerId, playerToke
 
         player.socketId = socket.id;
         socket.join(gameId);
-        if (socket) {
-            socket.data = socket.data || {};
-            socket.data.gameId = gameId;
-        }
+        helpers.bindSocketToGame(socket, gameId, { playerId: player.id });
         helpers.assignHostPlayer(game);
         
         const partialAnswersForPlayer = {};
@@ -122,7 +119,7 @@ export function handleReconnectPlayer(io, socket, { gameId, playerId, playerToke
         }
 
         socket.emit('player-reconnected', { 
-            gameState: helpers.getSanitizedGameState(game),
+            gameState: helpers.getSanitizedGameState(game, { role: 'player', playerId: player.id }),
             partialAnswers: partialAnswersForPlayer 
         });
         helpers.broadcastGameState(io, gameId);
@@ -135,12 +132,9 @@ export function handleJoinAsHostDisplay(io, socket, { gameId }) {
     const game = manager.getGame(gameId);
     if (game) {
         socket.join(gameId);
-        if (socket) {
-            socket.data = socket.data || {};
-            socket.data.gameId = gameId;
-        }
+        helpers.bindSocketToGame(socket, gameId, { isHostDisplay: true });
         game.hostDisplaySocketId = socket.id;
-        socket.emit('player-reconnected', { gameState: helpers.getSanitizedGameState(game) });
+        socket.emit('player-reconnected', { gameState: helpers.getSanitizedGameState(game, { role: 'hostDisplay' }) });
         helpers.broadcastGameState(io, gameId);
     } else {
         socket.emit('reconnect-failed');
@@ -151,7 +145,10 @@ export function handleLeaveGame(io, socket, { gameId, playerId }) {
     const game = manager.getGame(gameId);
     if (!game) return;
 
-    const playerIndex = game.players.findIndex(p => p.id === playerId);
+    const player = helpers.getAuthenticatedPlayer(game, socket, playerId);
+    if (!player) return;
+
+    const playerIndex = game.players.findIndex(p => p.id === player.id);
     if (playerIndex > -1) {
         const removedPlayer = game.players.splice(playerIndex, 1)[0];
         if (game.playerReconnectionTimers?.[removedPlayer.id]) {
@@ -169,9 +166,7 @@ export function handleLeaveGame(io, socket, { gameId, playerId }) {
 
 export function handlePlayAgain(io, socket, { gameId }) {
     const game = manager.getGame(gameId);
-    const player = game?.players.find(p => p.socketId === socket.id);
-
-    if (game && player && player.isHost) {
+    if (game && helpers.isHostOrHostDisplay(game, socket)) {
         gameService.resetGameForRestart(game);
         helpers.broadcastGameState(io, gameId);
         generateInitialThemes(io, game);

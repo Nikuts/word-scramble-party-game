@@ -151,6 +151,14 @@ export function playSound(soundId, options = {}) {
     soundEngine.play(soundId, options);
 }
 
+export function playMusic(_trackId) {
+    // Background music hook (safe no-op if no BGM asset is loaded)
+}
+
+export function stopMusic() {
+    // Stop background music hook (safe no-op)
+}
+
 export function triggerConfetti(options = {}) {
     if (typeof confetti === 'function') {
         const isTvMode = typeof document !== 'undefined' && document.body?.getAttribute('data-tv-mode') === 'true';

@@ -77,18 +77,61 @@
         uninitialized.forEach(battle => {
             const partialKey = `b-${battle.id}-${pId}`;
             const partialAnswer = partials[partialKey];
-            
-            const promptWords = (battle.promptTokens || []).map((item, i) => {
-                const text = typeof item === 'object' && item !== null ? item.text : item;
-                return { id: `pt-${battle.id}-${i}`, text, authorId: null, isPrompt: true };
-            });
+            const isMultiLine = Boolean(battle.genre || battle.formatConfig?.formatType === 'multi_line');
+
+            let promptWords = [];
+            if (battle.promptTokens && battle.promptTokens.length > 0) {
+                promptWords = battle.promptTokens.map((item, i) => {
+                    const isObj = typeof item === 'object' && item !== null;
+                    const text = isObj ? item.text : String(item);
+                    const tileId = isObj && item.id ? item.id : `p_${i}`;
+                    return { id: `pt-${battle.id}-${i}`, tileId, text, authorId: null, isPrompt: true };
+                });
+            } else {
+                const premiseText = battle.formatConfig?.premise || battle.premise || '';
+                const headerText = battle.formatConfig?.genre || battle.genre || '';
+                const fallbackPrompt = isMultiLine ? `${headerText} ${premiseText}`.trim() : (battle.prompt || '');
+                promptWords = tokenizeSimple(fallbackPrompt).map((tok, i) => ({
+                    id: `pt-${battle.id}-${i}`,
+                    tileId: `p_${i}`,
+                    text: tok,
+                    authorId: null,
+                    isPrompt: true
+                }));
+            }
 
             const rawBank = battle.wordBanks?.[pId] || [];
             const bankWords = rawBank.map((item, i) => {
-                const text = typeof item === 'object' && item !== null ? item.text : item;
-                const authorId = typeof item === 'object' && item !== null ? item.authorId : null;
-                return { id: `wb-${battle.id}-${i}`, text, authorId, isPrompt: false };
+                const isObj = typeof item === 'object' && item !== null;
+                const text = isObj ? (item.text ?? item.word) : String(item);
+                const tileId = isObj && item.id ? item.id : `b_${i}`;
+                const authorId = isObj ? item.authorId : null;
+                return { id: `wb-${battle.id}-${i}`, tileId, text, authorId, isPrompt: false };
             });
+
+            const allSourceTiles = [...promptWords, ...bankWords];
+            const hydrateWordsArray = (rawSource) => {
+                if (!rawSource) return [];
+                if (Array.isArray(rawSource)) {
+                    return rawSource.map((tid, i) => {
+                        const found = allSourceTiles.find(t => t.tileId === tid);
+                        return found
+                            ? { ...found, id: `ans-${Math.random().toString(36).substring(2, 9)}-${i}` }
+                            : null;
+                    }).filter(Boolean);
+                }
+                if (typeof rawSource === 'string' && rawSource.trim()) {
+                    return rawSource.split(' ').filter(Boolean).map((wordText, i) => {
+                        const found = allSourceTiles.find(t => String(t.text).toLowerCase() === wordText.toLowerCase());
+                        return {
+                            id: `ans-${Math.random().toString(36).substring(2, 9)}-${i}`,
+                            tileId: found?.tileId || null,
+                            text: wordText
+                        };
+                    });
+                }
+                return [];
+            };
 
             const baseForm = {
                 promptWords,
@@ -96,31 +139,24 @@
                 undoStack: [],
             };
 
-            const createWordsArray = (text) => text.split(' ').filter(Boolean).map((wordText, i) => ({ id: `ans-${Math.random()}-${i}`, text: wordText }));
-
-            if (battle.genre || battle.formatConfig?.formatType === 'multi_line') { // Multi-line / Final battle format
-                const premiseText = battle.formatConfig?.premise || battle.premise || '';
-                const headerText = battle.formatConfig?.genre || battle.genre || '';
-                const finalPromptTokens = tokenizeSimple(`${headerText} ${premiseText}`).map((tok, i) => ({
-                    id: `fpt-${battle.id}-${i}`,
-                    text: tok,
-                    authorId: null,
-                    isPrompt: true
-                }));
-
+            if (isMultiLine) {
+                const titleSource = partialAnswer?.tileIds?.title ?? partialAnswer?.title;
+                const taglineSource = partialAnswer?.tileIds?.tagline ?? partialAnswer?.tagline;
                 battleForms[battle.id] = {
                     ...baseForm,
-                    promptWords: finalPromptTokens,
                     isFinal: true,
-                    titleWords: partialAnswer?.title ? createWordsArray(partialAnswer.title) : [],
-                    taglineWords: partialAnswer?.tagline ? createWordsArray(partialAnswer.tagline) : [],
+                    titleWords: hydrateWordsArray(titleSource),
+                    taglineWords: hydrateWordsArray(taglineSource),
                     activeLine: 'title',
                 };
             } else {
+                const singleSource = Array.isArray(partialAnswer)
+                    ? partialAnswer
+                    : (partialAnswer?.tileIds ?? partialAnswer?.answer ?? partialAnswer);
                 battleForms[battle.id] = {
                     ...baseForm,
                     isFinal: false,
-                    answerWords: partialAnswer ? createWordsArray(partialAnswer) : [],
+                    answerWords: hydrateWordsArray(singleSource),
                 };
             }
             if (partialAnswer) consumedPartials = true;
@@ -293,16 +329,21 @@
         
         let payload;
         if (form.isFinal) {
+            const titleIds = (form.titleWords || []).map(w => w?.tileId).filter(Boolean);
+            const taglineIds = (form.taglineWords || []).map(w => w?.tileId).filter(Boolean);
             payload = {
                 type: 'final_battle',
                 battleId: battleId,
+                tileIds: { title: titleIds, tagline: taglineIds },
                 title: formatWordTokens(form.titleWords),
                 tagline: formatWordTokens(form.taglineWords),
             };
         } else {
+            const tileIds = (form.answerWords || []).map(w => w?.tileId).filter(Boolean);
             payload = {
                 type: 'battle',
                 battleId: battleId,
+                tileIds,
                 answer: formatWordTokens(form.answerWords),
             };
         }
@@ -315,21 +356,27 @@
         if (!form) return;
         
         let answer;
+        let tileIds;
         if (form.isFinal) {
             const titleWords = form.titleWords.filter(Boolean);
             const taglineWords = form.taglineWords.filter(Boolean);
             if (titleWords.length === 0 && taglineWords.length === 0) return;
+            tileIds = {
+                title: titleWords.map(w => w.tileId).filter(Boolean),
+                tagline: taglineWords.map(w => w.tileId).filter(Boolean),
+            };
             answer = {
                 title: formatWordTokens(titleWords),
                 tagline: formatWordTokens(taglineWords),
             };
         } else {
-             const answerWords = form.answerWords.filter(Boolean);
-             if (answerWords.length === 0) return;
-             answer = formatWordTokens(answerWords);
+            const answerWords = form.answerWords.filter(Boolean);
+            if (answerWords.length === 0) return;
+            tileIds = answerWords.map(w => w.tileId).filter(Boolean);
+            answer = formatWordTokens(answerWords);
         }
         
-        sendMessage('submit-battle-answer', { gameId: gameId, playerId: playerId, battleId, answer });
+        sendMessage('submit-battle-answer', { gameId: gameId, playerId: playerId, battleId, tileIds, answer });
     }
 
     function handleSendReaction() {

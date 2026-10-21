@@ -31,6 +31,67 @@ export function getTimerValue(game, normalKey, slowpokeKey) {
 }
 
 /**
+ * Unified phase configuration table (R1).
+ * Centralizes durations, expiry callbacks, and boost eligibility.
+ */
+export const PHASES = {
+    get_ready: {
+        duration: (game) => getTimerValue(game, GET_READY_SECONDS, SLOWPOKE_GET_READY_SECONDS),
+        onExpire: (io, game) => roundService.startQuestionPhase(io, game, QUESTIONS_PER_ROUND[(game.currentRound || 1) - 1]),
+        boostable: false,
+    },
+    question: {
+        duration: (game) => {
+            const numQ = QUESTIONS_PER_ROUND[(game.currentRound || 1) - 1] || QUESTIONS_PER_ROUND[0];
+            return numQ * getTimerValue(game, SECONDS_PER_QUESTION, SLOWPOKE_SECONDS_PER_QUESTION);
+        },
+        onExpire: (io, game) => roundService.expireQuestionPhase(io, game),
+        boostable: true,
+    },
+    preparing_battles: {
+        duration: () => 0,
+        onExpire: () => {},
+        boostable: false,
+    },
+    battle_get_ready: {
+        duration: (game) => getTimerValue(game, BATTLE_GET_READY_SECONDS, SLOWPOKE_BATTLE_GET_READY_SECONDS),
+        onExpire: (io, game) => battleService.startBattleAnsweringPhase(io, game),
+        boostable: false,
+    },
+    battle_answering: {
+        duration: (game) => {
+            const isFinal = game.currentRound === QUESTIONS_PER_ROUND.length;
+            const perBattle = isFinal
+                ? getTimerValue(game, FINAL_BATTLE_SECONDS_PER_ANSWER, SLOWPOKE_FINAL_BATTLE_SECONDS_PER_ANSWER)
+                : getTimerValue(game, SECONDS_PER_BATTLE_ANSWER, SLOWPOKE_SECONDS_PER_BATTLE_ANSWER);
+            return perBattle * 2;
+        },
+        onExpire: (io, game) => battleService.expireBattleAnsweringPhase(io, game),
+        boostable: true,
+    },
+    voting_get_ready: {
+        duration: (game) => getTimerValue(game, VOTING_GET_READY_SECONDS, SLOWPOKE_VOTING_GET_READY_SECONDS),
+        onExpire: (io, game) => battleService.startVotingPhase(io, game),
+        boostable: false,
+    },
+    battle_voting: {
+        duration: (game) => {
+            const isFinal = game.currentRound === QUESTIONS_PER_ROUND.length;
+            return isFinal
+                ? getTimerValue(game, FINAL_BATTLE_SECONDS_PER_VOTE, SLOWPOKE_FINAL_BATTLE_SECONDS_PER_VOTE)
+                : getTimerValue(game, SECONDS_PER_VOTE, SLOWPOKE_SECONDS_PER_VOTE);
+        },
+        onExpire: (io, game) => battleService.processVoteAndStartReveal(io, game, false),
+        boostable: false,
+    },
+    battle_result_reveal: {
+        duration: (game) => getTimerValue(game, SINGLE_BATTLE_REVEAL_SECONDS, SLOWPOKE_SINGLE_BATTLE_REVEAL_SECONDS),
+        onExpire: (io, game) => battleService.advanceToNextBattleOrRound(io, game),
+        boostable: false,
+    }
+};
+
+/**
  * A helper function to safely clear the compound timer object.
  * This is critical for preventing memory leaks from orphaned timers.
  * @param {object} game The game object.
@@ -48,10 +109,18 @@ export function clearPhaseTimer(game) {
  * automatically advance the game state. This implementation uses a precise server
  * timeout for logic and a robust setInterval for broadcasting updates.
  */
-export function startPhaseTimer(io, game, phase, duration, nextStateFn) {
+export function startPhaseTimer(io, game, phase, duration, nextStateFn, { preserveInitialDuration = false } = {}) {
     clearPhaseTimer(game);
+    const resolvedOnExpire = nextStateFn || PHASES[phase]?.onExpire;
+    const isSamePhase = game.phase === phase;
+
     game.phase = phase;
+    if (!preserveInitialDuration || !isSamePhase || !game.phaseInitialDuration) {
+        game.phaseInitialDuration = duration;
+    }
+    game.phaseOnExpire = resolvedOnExpire;
     game.phaseEndTime = Date.now() + (duration * 1000);
+    game.pausedRemainingMs = null;
     game.isPaused = false;
 
     // The server-side logic timer. This must be a setTimeout.
@@ -63,7 +132,9 @@ export function startPhaseTimer(io, game, phase, duration, nextStateFn) {
             }
             clearPhaseTimer(currentGame); // Clears the broadcast interval
             console.log(`[Game ${game.id}] Server timer for phase '${phase}' ended.`);
-            nextStateFn(io, currentGame);
+            if (resolvedOnExpire) {
+                resolvedOnExpire(io, currentGame);
+            }
         } catch (e) {
             console.error(`Error in timer timeout for game ${game.id}, phase ${phase}:`, e);
         }
@@ -91,6 +162,7 @@ export function startPhaseTimer(io, game, phase, duration, nextStateFn) {
 export function pauseTimer(game) {
     if (!game || !game.phaseTimerId || game.isPaused) return;
     
+    game.pausedRemainingMs = game.phaseEndTime ? Math.max(0, game.phaseEndTime - Date.now()) : 0;
     clearPhaseTimer(game);
     game.isPaused = true;
     console.log(`[Game ${game.id}] Timer paused.`);
@@ -99,40 +171,36 @@ export function pauseTimer(game) {
 export function resumeTimer(io, game) {
     if (!game || !game.isPaused) return;
     
-    let nextFn;
-    switch(game.phase) {
-        case 'question': nextFn = battleService.prepareBattlePhase; break;
-        case 'get_ready': nextFn = (io, g) => roundService.startQuestionPhase(io, g, QUESTIONS_PER_ROUND[g.currentRound - 1]); break;
-        case 'battle_get_ready': nextFn = battleService.startBattleAnsweringPhase; break;
-        case 'battle_answering': nextFn = battleService.startVotingGetReadyPhase; break;
-        case 'voting_get_ready': nextFn = battleService.startVotingPhase; break;
-        case 'battle_voting': nextFn = (io, g) => battleService.processVoteAndStartReveal(io, g, false); break;
-        case 'battle_result_reveal': nextFn = battleService.advanceToNextBattleOrRound; break;
-        default:
-            console.log(`[Game ${game.id}] No resume action for phase ${game.phase}`);
-            return;
+    const nextFn = game.phaseOnExpire || PHASES[game.phase]?.onExpire;
+    if (!nextFn) {
+        console.log(`[Game ${game.id}] No resume action for phase ${game.phase}`);
+        return;
     }
     
-    const remainingSeconds = Math.max(0, Math.round((game.phaseEndTime - Date.now()) / 1000));
-    console.log(`[Game ${game.id}] Timer resumed.`);
-    startPhaseTimer(io, game, game.phase, remainingSeconds, nextFn);
+    const remainingMs = (typeof game.pausedRemainingMs === 'number')
+        ? game.pausedRemainingMs
+        : Math.max(0, (game.phaseEndTime || Date.now()) - Date.now());
+    const remainingSeconds = Math.max(0, Math.round(remainingMs / 1000));
+    console.log(`[Game ${game.id}] Timer resumed (${remainingSeconds}s remaining).`);
+    startPhaseTimer(io, game, game.phase, remainingSeconds, nextFn, { preserveInitialDuration: true });
 }
 
 export function extendPhaseTimer(io, game, extraSeconds = 30) {
     if (!game || !game.phaseEndTime || game.isPaused) return;
 
-    const MAX_ALLOWED_REMAINING = 180; // Cap to 3 minutes max
+    const phaseSpec = PHASES[game.phase];
+    if (!phaseSpec?.boostable) return;
+
     const currentRemaining = Math.max(0, Math.round((game.phaseEndTime - Date.now()) / 1000));
-    const newRemaining = Math.min(MAX_ALLOWED_REMAINING, currentRemaining + extraSeconds);
-    
-    let nextFn;
-    switch(game.phase) {
-        case 'question': nextFn = battleService.prepareBattlePhase; break;
-        case 'battle_answering': nextFn = battleService.startVotingGetReadyPhase; break;
-        default:
-            return;
-    }
+    const baseInitial = Math.max(
+        180,
+        game.phaseInitialDuration || 0,
+        phaseSpec.duration ? phaseSpec.duration(game) : 0
+    );
+    const maxAllowedRemaining = baseInitial + 120;
+    const newRemaining = Math.max(currentRemaining, Math.min(maxAllowedRemaining, currentRemaining + extraSeconds));
+    const nextFn = game.phaseOnExpire || phaseSpec.onExpire;
     
     console.log(`[Game ${game.id}] Extended phase timer for '${game.phase}' by ${extraSeconds}s (new total: ${newRemaining}s).`);
-    startPhaseTimer(io, game, game.phase, newRemaining, nextFn);
+    startPhaseTimer(io, game, game.phase, newRemaining, nextFn, { preserveInitialDuration: true });
 }

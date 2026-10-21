@@ -57,11 +57,13 @@ describe('Superlatives, FormatConfig & Question Re-Roll Mechanics', () => {
             expect(superlatives.ammoFactory.playerId).toBe('p3');
             expect(superlatives.ammoFactory.value).toBe(150);
 
-            // Clean Sweeper: p1 and p2 both have sweeps
+            // Clean Sweeper: p1 and p2 both have 1 sweep -> both are in playerIds (A7)
             expect(superlatives.cleanSweeper).toBeDefined();
+            expect(superlatives.cleanSweeper.playerIds).toEqual(['p1', 'p2']);
 
-            // Rainbow Alchemist: p1 and p2 both have 1
+            // Rainbow Alchemist: p1 and p2 both have 1 -> both are in playerIds (A7)
             expect(superlatives.rainbowAlchemist).toBeDefined();
+            expect(superlatives.rainbowAlchemist.playerIds).toEqual(['p1', 'p2']);
 
             // Minimalist: shortest winning answer is 'I love cats and dogs.' (5 words)
             expect(superlatives.minimalist).toBeDefined();
@@ -121,7 +123,7 @@ describe('Superlatives, FormatConfig & Question Re-Roll Mechanics', () => {
     describe('handleRerollQuestion', () => {
         it('swaps question with reserve and decrements rerollsLeft', () => {
             const mockIo = { to: () => ({ emit: () => {} }) };
-            const mockSocket = {};
+            const mockSocket = { id: 's1', data: { gameId: 'RROL', playerId: 'p1' } };
             const gameId = 'RROL';
             const game = {
                 id: gameId,

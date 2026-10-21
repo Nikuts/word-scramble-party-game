@@ -140,10 +140,22 @@
             </div>
         </div>
 
-        <!-- Room Code Badge (Compact & Aligned) -->
-        <div class="bg-black/80 border border-neutral-700 px-3 py-1.5 rounded-lg text-right flex-shrink-0">
-            <span class="text-[8px] font-display text-slate-400 block uppercase">{isUkrainian ? 'КОД' : 'ROOM'}</span>
-            <span class="font-mono font-black text-sm text-amber-300">#{game?.id || '----'}</span>
+        <!-- Right Side: Reaction Trigger + Room Code Badge (Compact & Aligned) -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+            <button
+                type="button"
+                on:click={sendEmoji}
+                disabled={!canSendEmoji || !player}
+                class="w-9 h-9 rounded-full flex justify-center items-center p-1 bg-secondary/90 border border-white/80 shadow-[0_0_10px_rgba(255,0,168,0.5)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-60 cursor-pointer"
+                title={$t.sendReaction || 'Send Reaction'}
+                aria-label={$t.sendReaction || 'Send Reaction'}
+            >
+                <span class="text-base leading-none">🎉</span>
+            </button>
+            <div class="bg-black/80 border border-neutral-700 px-2.5 py-1.5 rounded-lg text-right flex-shrink-0">
+                <span class="text-[8px] font-display text-slate-400 block uppercase">{isUkrainian ? 'КОД' : 'ROOM'}</span>
+                <span class="font-mono font-black text-sm text-amber-300">#{game?.id || '----'}</span>
+            </div>
         </div>
     </header>
 
@@ -270,14 +282,14 @@
                         <button
                             type="button"
                             on:click={handleToggleSilly}
-                            class="p-2 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center cursor-pointer {
+                            class="p-1.5 sm:p-2 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center cursor-pointer min-w-0 {
                                 game?.sillyMode 
                                 ? 'bg-purple-950/80 border-purple-400 text-purple-200 shadow-[0_0_10px_rgba(168,85,247,0.4)]' 
                                 : 'bg-neutral-900 border-neutral-800 text-slate-400 hover:border-slate-600'
                             }"
                         >
                             <span class="text-base mb-0.5">🤡</span>
-                            <span class="font-display font-bold text-[10px] uppercase leading-tight">{$t.sillyMode || 'Silly'}</span>
+                            <span class="font-sans font-extrabold text-[10px] sm:text-xs uppercase leading-tight break-words w-full">{$t.sillyMode || 'Silly'}</span>
                             <span class="text-[8px] font-mono font-bold mt-0.5 {game?.sillyMode ? 'text-purple-300' : 'text-slate-500'}">{game?.sillyMode ? 'ON' : 'OFF'}</span>
                         </button>
 
@@ -285,14 +297,14 @@
                         <button
                             type="button"
                             on:click={handleToggle18Plus}
-                            class="p-2 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center cursor-pointer {
+                            class="p-1.5 sm:p-2 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center cursor-pointer min-w-0 {
                                 game?.is18PlusMode 
                                 ? 'bg-red-950/80 border-red-400 text-red-200 shadow-[0_0_10px_rgba(239,68,68,0.4)]' 
                                 : 'bg-neutral-900 border-neutral-800 text-slate-400 hover:border-slate-600'
                             }"
                         >
                             <span class="text-base mb-0.5">🌶️</span>
-                            <span class="font-display font-bold text-[10px] uppercase leading-tight">{$t.is18PlusMode || '18+'}</span>
+                            <span class="font-sans font-extrabold text-[10px] sm:text-xs uppercase leading-tight break-words w-full">{$t.is18PlusMode || '18+'}</span>
                             <span class="text-[8px] font-mono font-bold mt-0.5 {game?.is18PlusMode ? 'text-red-300' : 'text-slate-500'}">{game?.is18PlusMode ? 'ON' : 'OFF'}</span>
                         </button>
 
@@ -300,14 +312,14 @@
                         <button
                             type="button"
                             on:click={handleToggleSlowpoke}
-                            class="p-2 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center cursor-pointer {
+                            class="p-1.5 sm:p-2 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center cursor-pointer min-w-0 {
                                 game?.slowpokeMode 
                                 ? 'bg-cyan-950/80 border-cyan-400 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.4)]' 
                                 : 'bg-neutral-900 border-neutral-800 text-slate-400 hover:border-slate-600'
                             }"
                         >
                             <span class="text-base mb-0.5">🐌</span>
-                            <span class="font-display font-bold text-[10px] uppercase leading-tight">{$t.slowpokeMode || 'Slowpoke'}</span>
+                            <span class="font-sans font-extrabold text-[10px] sm:text-xs uppercase leading-tight break-words w-full">{$t.slowpokeMode || 'Slowpoke'}</span>
                             <span class="text-[8px] font-mono font-bold mt-0.5 {game?.slowpokeMode ? 'text-cyan-300' : 'text-slate-500'}">{game?.slowpokeMode ? 'ON' : 'OFF'}</span>
                         </button>
                     </div>
@@ -387,22 +399,6 @@
             </div>
         </footer>
     {/if}
-</div>
-
-<!-- Floating Reaction Emoji Button (Bottom Right) -->
-<div class="fixed bottom-4 right-4 z-20">
-    <button 
-        type="button" 
-        on:click={sendEmoji} 
-        disabled={!canSendEmoji || !player} 
-        class="w-12 h-12 rounded-full flex justify-center items-center p-1.5 bg-secondary border-2 border-white shadow-[0_0_15px_rgba(255,0,168,0.7)] transition-transform transform hover:scale-110 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
-        title={$t.sendReaction || 'Send Reaction'}
-        aria-label={$t.sendReaction || 'Send Reaction'}
-    >
-        {#if player?.avatar}
-            <PixelAvatar avatar={player.avatar} className="w-full h-full" />
-        {/if}
-    </button>
 </div>
 
 <!-- Flying Live Emoji Reactions Overlay -->

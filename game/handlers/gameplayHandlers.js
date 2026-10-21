@@ -8,7 +8,10 @@ export function handleSubmitAnswer(io, socket, { gameId, playerId, questionId, a
     const game = manager.getGame(gameId);
     if (game?.phase !== 'question') return;
 
-    const pa = game.playerAnswers[playerId];
+    const player = helpers.getAuthenticatedPlayer(game, socket, playerId);
+    if (!player) return;
+
+    const pa = game.playerAnswers[player.id];
     if (!pa) return;
     
     const question = pa.questions.find(q => q.id === questionId);
@@ -34,25 +37,30 @@ export function handleSubmitAnswer(io, socket, { gameId, playerId, questionId, a
 export function handleUpdatePartialAnswer(io, socket, { gameId, playerId, payload }) {
     const game = manager.getGame(gameId);
     if (!game) return;
-    const player = game.players.find(p => p.id === playerId);
+    const player = helpers.getAuthenticatedPlayer(game, socket, playerId);
     if (!player) return;
     
     let key, data;
     switch (payload.type) {
         case 'question':
             if (game.phase !== 'question') return;
+            if (!game.playerAnswers[player.id]?.questions?.some(q => q.id === payload.questionId)) return;
             key = payload.questionId;
             data = payload.text;
             break;
         case 'battle':
              if (game.phase !== 'battle_answering') return;
-             key = `b-${payload.battleId}-${playerId}`;
-             data = payload.answer;
+             key = `b-${payload.battleId}-${player.id}`;
+             data = payload.tileIds !== undefined
+                 ? (payload.answer !== undefined ? { tileIds: payload.tileIds, answer: payload.answer } : payload.tileIds)
+                 : payload.answer;
              break;
         case 'final_battle':
             if (game.phase !== 'battle_answering') return;
-            key = `b-${payload.battleId}-${playerId}`;
-            data = { title: payload.title, tagline: payload.tagline };
+            key = `b-${payload.battleId}-${player.id}`;
+            data = payload.tileIds !== undefined
+                ? { tileIds: payload.tileIds, title: payload.title || '', tagline: payload.tagline || '' }
+                : { title: payload.title, tagline: payload.tagline };
             break;
         default:
             return;
@@ -62,14 +70,25 @@ export function handleUpdatePartialAnswer(io, socket, { gameId, playerId, payloa
     }
 }
 
-export function handleSubmitBattleAnswer(io, socket, { gameId, playerId, battleId, answer }) {
+export function handleSubmitBattleAnswer(io, socket, { gameId, playerId, battleId, tileIds, answer }) {
     const game = manager.getGame(gameId);
     if (game?.phase !== 'battle_answering') return;
 
+    const player = helpers.getAuthenticatedPlayer(game, socket, playerId);
+    if (!player) return;
+
     const battle = game.battleSchedule.find(b => b.id === battleId);
     // Idempotency check: only update if answer doesn't exist.
-    if (battle && battle.competitors.includes(playerId) && !battle.answers[playerId]) {
-        battle.answers[playerId] = answer;
+    if (battle && battle.competitors.includes(player.id) && !battle.answers[player.id]) {
+        const resolved = battleService.resolveBattleSubmission(game, battle, player.id, { tileIds, answer });
+        if (!resolved) return;
+
+        battle.answers[player.id] = resolved.answer;
+        if (!battle.answerTileIds) battle.answerTileIds = {};
+        if (resolved.tileIds) {
+            battle.answerTileIds[player.id] = resolved.tileIds;
+        }
+        battleService.recordPlayerUsedBundles(game, player.id, resolved.usedBundles);
         
         const allCompetitors = new Set(game.battleSchedule.flatMap(b => b.competitors));
         const allAnswered = [...allCompetitors].every(cId => 
@@ -86,21 +105,37 @@ export function handleSubmitBattleAnswer(io, socket, { gameId, playerId, battleI
     }
 }
 
-export function handleVote(io, socket, { gameId, playerId, battleId, voteForPlayerId }) {
+export function handleVote(io, socket, { gameId, playerId, battleId, voteForPlayerId, optionId }) {
     const game = manager.getGame(gameId);
     if (game?.phase !== 'battle_voting') return;
 
+    const player = helpers.getAuthenticatedPlayer(game, socket, playerId);
+    if (!player) return;
+
     const battle = game.battleSchedule.find(b => b.id === battleId);
     // Idempotency and validity checks
-    if (!battle || battle.competitors.includes(playerId) || battle.votes[playerId]) return;
+    if (!battle || battle.competitors.includes(player.id) || battle.votes[player.id]) return;
 
-    battle.votes[playerId] = voteForPlayerId;
+    const rawTarget = optionId || voteForPlayerId;
+    let resolvedTargetId = null;
+    const optMatch = typeof rawTarget === 'string' ? rawTarget.match(/^opt_(\d+)$/) : null;
+    if (optMatch) {
+        const idx = parseInt(optMatch[1], 10);
+        const order = battle.optionOrder || battle.competitors || [];
+        resolvedTargetId = order[idx] || null;
+    } else if (battle.competitors.includes(rawTarget)) {
+        resolvedTargetId = rawTarget;
+    }
+    if (!resolvedTargetId || !battle.competitors.includes(resolvedTargetId)) return;
+
+    battle.votes[player.id] = resolvedTargetId;
 
     const votersForThisBattle = game.players.filter(p => p.socketId && !battle.competitors.includes(p.id));
     const votesCastForThisBattle = Object.keys(battle.votes).length;
     
     if (votersForThisBattle.length === votesCastForThisBattle) {
         console.log(`[Game ${game.id}] All votes are in for battle ${battle.id}. Advancing.`);
+        io.to(game.id).emit('all-votes-in', { battleId: battle.id });
         battleService.processVoteAndStartReveal(io, game, false);
     } else {
         helpers.broadcastGameState(io, gameId);
@@ -111,13 +146,16 @@ export function handleRerollQuestion(io, socket, { gameId, playerId, questionId 
     const game = manager.getGame(gameId);
     if (game?.phase !== 'question') return;
 
-    const pa = game.playerAnswers[playerId];
+    const player = helpers.getAuthenticatedPlayer(game, socket, playerId);
+    if (!player) return;
+
+    const pa = game.playerAnswers[player.id];
     if (!pa || (pa.rerollsLeft || 0) <= 0) return;
 
     const question = pa.questions.find(q => q.id === questionId);
     if (!question || question.answer) return; // Cannot reroll answered question
 
-    const reservePool = game.reserveQuestions?.[playerId] || [];
+    const reservePool = game.reserveQuestions?.[player.id] || [];
     let newQuestionText = reservePool.shift();
 
     if (!newQuestionText) {
@@ -140,7 +178,7 @@ export function handleUseTimeBoost(io, socket, { gameId, playerId }) {
     if (!game) return;
     if (game.phase !== 'question' && game.phase !== 'battle_answering') return;
 
-    const player = game.players.find(p => p.id === playerId);
+    const player = helpers.getAuthenticatedPlayer(game, socket, playerId);
     if (!player || player.hasUsedTimeBoost) return;
 
     player.hasUsedTimeBoost = true;

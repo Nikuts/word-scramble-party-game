@@ -1,7 +1,4 @@
-
-
-
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -10,7 +7,72 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let ai = null;
-const primaryModel = process.env.GEMINI_MODEL || "gemini-3.7-flash";
+const primaryModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+export const GEMINI_REQUEST_TIMEOUT_MS = 8000;
+
+export const THEMES_RESPONSE_SCHEMA = {
+    type: Type.OBJECT,
+    properties: {
+        themes: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+        }
+    },
+    required: ['themes']
+};
+
+export const ROUND_DATA_RESPONSE_SCHEMA = {
+    type: Type.OBJECT,
+    properties: {
+        playerQuestions: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+            }
+        },
+        battlePrompts: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+        },
+        fallbackWords: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+        }
+    },
+    required: ['playerQuestions', 'battlePrompts', 'fallbackWords']
+};
+
+export const FINAL_ROUND_RESPONSE_SCHEMA = {
+    type: Type.OBJECT,
+    properties: {
+        finalPrompts: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    genre: { type: Type.STRING },
+                    premise: { type: Type.STRING }
+                },
+                required: ['genre', 'premise']
+            }
+        }
+    },
+    required: ['finalPrompts']
+};
+
+/**
+ * Wraps a user/game theme as quoted data and strips control characters to mitigate prompt injection.
+ * @param {string} rawTheme
+ * @returns {string}
+ */
+export function sanitizeThemeForPrompt(rawTheme) {
+    const cleaned = String(rawTheme || '')
+        .replace(/[\r\n\t]+/g, ' ')
+        .trim()
+        .slice(0, 100);
+    return JSON.stringify(cleaned);
+}
 
 /**
  * Initializes or returns the Gemini client. Supports both GEMINI_API_KEY and API_KEY.
@@ -48,10 +110,10 @@ function getAiClient() {
 }
 
 /**
- * Executes a Gemini generateContent request with multi-model fallback and exponential backoff retry.
- * Handles transient 503 (High Demand/Service Unavailable), 429 (Resource Exhausted), and 500 errors.
+ * Executes a Gemini generateContent request with multi-model fallback, structured output, timeout, and exponential backoff retry.
+ * Handles transient 503 (High Demand/Service Unavailable), 429 (Resource Exhausted), 500, and timeout errors.
  * @param {string} prompt The text prompt.
- * @param {object} customConfig Optional model configuration.
+ * @param {object} customConfig Optional model configuration (including responseSchema).
  * @returns {Promise<string | null>} The raw response text or null if all attempts fail.
  */
 async function generateContentWithFallback(prompt, customConfig = {}) {
@@ -61,24 +123,39 @@ async function generateContentWithFallback(prompt, customConfig = {}) {
     // Supported modern model fallback chain
     const candidateModels = Array.from(new Set([
         primaryModel,
-        "gemini-flash-latest",
+        "gemini-3.5-flash-lite",
         "gemini-3.1-flash-lite"
     ]));
+
+    const timeoutMs = customConfig.timeoutMs || GEMINI_REQUEST_TIMEOUT_MS;
+    const { timeoutMs: _omitTimeout, ...sdkConfig } = customConfig;
 
     for (let mIndex = 0; mIndex < candidateModels.length; mIndex++) {
         const candidateModel = candidateModels[mIndex];
         const maxRetries = 2;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            const controller = new AbortController();
+            let timeoutId = null;
             try {
-                const response = await client.models.generateContent({
+                const timeoutPromise = new Promise((_, reject) => {
+                    timeoutId = setTimeout(() => {
+                        controller.abort();
+                        reject(new Error(`Gemini request timed out after ${timeoutMs}ms`));
+                    }, timeoutMs);
+                });
+
+                const requestPromise = client.models.generateContent({
                     model: candidateModel,
                     contents: prompt,
                     config: {
                         responseMimeType: "application/json",
-                        ...customConfig
+                        abortSignal: controller.signal,
+                        ...sdkConfig
                     },
                 });
+
+                const response = await Promise.race([requestPromise, timeoutPromise]);
 
                 if (response?.text) {
                     return response.text;
@@ -90,7 +167,9 @@ async function generateContentWithFallback(prompt, customConfig = {}) {
                                          errorMessage.includes('high demand') ||
                                          errorMessage.includes('429') ||
                                          errorMessage.includes('RESOURCE_EXHAUSTED') ||
-                                         errorMessage.includes('500');
+                                         errorMessage.includes('500') ||
+                                         errorMessage.includes('timed out') ||
+                                         errorMessage.includes('AbortError');
 
                 if (isTransientError) {
                     console.warn(`[Gemini] Transient error on '${candidateModel}' (attempt ${attempt}/${maxRetries}): ${errorMessage.slice(0, 100)}...`);
@@ -105,6 +184,8 @@ async function generateContentWithFallback(prompt, customConfig = {}) {
                     console.error(`[Gemini] Non-transient error with model '${candidateModel}':`, error);
                     break;
                 }
+            } finally {
+                if (timeoutId) clearTimeout(timeoutId);
             }
         }
     }
@@ -214,8 +295,8 @@ export async function generateThemes(is18PlusMode = false, sillyMode = false) {
     ]);
 
     const [rawTextEn, rawTextUa] = await Promise.all([
-      generateContentWithFallback(promptEn),
-      generateContentWithFallback(promptUa)
+      generateContentWithFallback(promptEn, { responseSchema: THEMES_RESPONSE_SCHEMA }),
+      generateContentWithFallback(promptUa, { responseSchema: THEMES_RESPONSE_SCHEMA })
     ]);
 
     const parsedEn = rawTextEn ? parseJsonResponse(rawTextEn) : null;
@@ -308,7 +389,7 @@ export async function generateRoundData(theme, language, numPlayers, numQuestion
 
   const prompt = await getPrompt('roundData', {
       numPlayers,
-      theme,
+      theme: sanitizeThemeForPrompt(theme),
       is18PlusMode: is18PlusMode ? 'ON' : 'OFF',
       sillyMode: sillyMode ? 'ON' : 'OFF',
       numQuestionSetsToGenerate,
@@ -319,7 +400,7 @@ export async function generateRoundData(theme, language, numPlayers, numQuestion
       numBattlePrompts
   }, language);
 
-  const rawText = await generateContentWithFallback(prompt);
+  const rawText = await generateContentWithFallback(prompt, { responseSchema: ROUND_DATA_RESPONSE_SCHEMA });
   if (!rawText) return null;
 
   const data = parseJsonResponse(rawText);
@@ -367,12 +448,12 @@ export async function generateFinalRoundData(theme, language, numPrompts, is18Pl
   }
 
   const prompt = await getPrompt('finalRound', {
-      theme,
+      theme: sanitizeThemeForPrompt(theme),
       toneInstruction,
       numPrompts
   }, language);
 
-  const rawText = await generateContentWithFallback(prompt);
+  const rawText = await generateContentWithFallback(prompt, { responseSchema: FINAL_ROUND_RESPONSE_SCHEMA });
   if (!rawText) return null;
 
   const data = parseJsonResponse(rawText);

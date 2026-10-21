@@ -97,10 +97,7 @@ export async function handleCreateGame(io, socket, { language }) {
     };
     manager.addGame(gameId, game);
     socket.join(gameId);
-    if (socket) {
-        socket.data = socket.data || {};
-        socket.data.gameId = gameId;
-    }
+    helpers.bindSocketToGame(socket, gameId, { isHostDisplay: true });
     socket.emit('game-created', { gameId });
     
     const INACTIVITY_TIMEOUT = 1 * 60 * 60 * 1000; // 1 hour
@@ -148,17 +145,14 @@ export function handleJoinGame(io, socket, { gameId, playerName, language, avata
 
     game.players.push(player);
     socket.join(gameId);
-    if (socket) {
-        socket.data = socket.data || {};
-        socket.data.gameId = gameId;
-    }
+    helpers.bindSocketToGame(socket, gameId, { playerId: player.id });
     
     socket.emit('player-joined', {
         playerId: player.id,
         playerToken: player.token,
         gameId: game.id,
         isHost: player.isHost,
-        initialGameState: helpers.getSanitizedGameState(game)
+        initialGameState: helpers.getSanitizedGameState(game, { role: 'player', playerId: player.id })
     });
     
     helpers.broadcastGameState(io, gameId);
@@ -167,7 +161,7 @@ export function handleJoinGame(io, socket, { gameId, playerName, language, avata
 export function handleChangeAvatar(io, socket, { gameId, avatar }) {
     const game = manager.getGame(gameId);
     if (!game || game.phase !== 'lobby') return;
-    const player = game.players.find(p => p.socketId === socket.id);
+    const player = helpers.getAuthenticatedPlayer(game, socket);
     if (!player) return;
 
     const takenAvatars = game.players.filter(p => p.id !== player.id).map(p => p.avatar);
@@ -183,7 +177,7 @@ export function handleChangeAvatar(io, socket, { gameId, avatar }) {
 export function handleChangeName(io, socket, { gameId, newName }) {
     const game = manager.getGame(gameId);
     if (!game || game.phase !== 'lobby') return;
-    const player = game.players.find(p => p.socketId === socket.id);
+    const player = helpers.getAuthenticatedPlayer(game, socket);
     if (!player) return;
 
     const trimmedName = (newName || '').trim();
@@ -201,7 +195,7 @@ export function handleChangeName(io, socket, { gameId, newName }) {
 
 export function handleSetTheme(io, socket, { gameId, theme }) {
     const game = manager.getGame(gameId);
-    if (game?.phase === 'lobby') {
+    if (game?.phase === 'lobby' && helpers.isHostOrHostDisplay(game, socket)) {
         game.theme = theme;
         helpers.broadcastGameState(io, gameId);
     }
@@ -209,7 +203,7 @@ export function handleSetTheme(io, socket, { gameId, theme }) {
 
 export function handleSetColorTheme(io, socket, { gameId, theme }) {
     const game = manager.getGame(gameId);
-    if (game?.phase === 'lobby') {
+    if (game?.phase === 'lobby' && helpers.isHostOrHostDisplay(game, socket)) {
         game.colorTheme = theme;
         helpers.broadcastGameState(io, gameId);
     }
@@ -217,7 +211,7 @@ export function handleSetColorTheme(io, socket, { gameId, theme }) {
 
 export async function handleSetSillyMode(io, socket, { gameId, sillyMode }) {
     const game = manager.getGame(gameId);
-    if (game?.phase === 'lobby') {
+    if (game?.phase === 'lobby' && helpers.isHostOrHostDisplay(game, socket)) {
         const modeChanged = game.sillyMode !== sillyMode;
         game.sillyMode = sillyMode;
         if (sillyMode) {
@@ -235,7 +229,7 @@ export async function handleSetSillyMode(io, socket, { gameId, sillyMode }) {
 
 export async function handleReloadThemes(io, socket, { gameId }) {
     const game = manager.getGame(gameId);
-    if (game?.phase === 'lobby' && !game.isGeneratingThemes) {
+    if (game?.phase === 'lobby' && !game.isGeneratingThemes && helpers.isHostOrHostDisplay(game, socket)) {
         const now = Date.now();
         const lastReload = game.playerActionCooldowns.get('reload-themes') || 0;
         if (now - lastReload < 1500) return; // 1.5s cooldown to prevent API hammering
@@ -247,7 +241,7 @@ export async function handleReloadThemes(io, socket, { gameId }) {
 
 export function handleSetSlowpokeMode(io, socket, { gameId, slowpokeMode }) {
     const game = manager.getGame(gameId);
-    if (game?.phase === 'lobby') {
+    if (game?.phase === 'lobby' && helpers.isHostOrHostDisplay(game, socket)) {
         game.slowpokeMode = slowpokeMode;
         helpers.broadcastGameState(io, gameId);
     }
@@ -255,7 +249,7 @@ export function handleSetSlowpokeMode(io, socket, { gameId, slowpokeMode }) {
 
 export async function handleSet18PlusMode(io, socket, { gameId, is18PlusMode }) {
     const game = manager.getGame(gameId);
-    if (game?.phase === 'lobby') {
+    if (game?.phase === 'lobby' && helpers.isHostOrHostDisplay(game, socket)) {
         const modeChanged = game.is18PlusMode !== is18PlusMode;
         game.is18PlusMode = is18PlusMode;
         if (is18PlusMode) {
@@ -273,7 +267,7 @@ export async function handleSet18PlusMode(io, socket, { gameId, is18PlusMode }) 
 
 export function handleStartGame(io, socket, { gameId }) {
     const game = manager.getGame(gameId);
-    if (!game) return;
+    if (!game || !helpers.isHostOrHostDisplay(game, socket)) return;
     
     if (game.inactivityTimeoutId) {
         clearTimeout(game.inactivityTimeoutId);

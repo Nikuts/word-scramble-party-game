@@ -33,6 +33,7 @@
     import HostGameView from '../views/HostGameView.svelte';
     import AvatarGalleryView from './AvatarGalleryView.svelte';
     import Instructions from '../views/Instructions.svelte';
+
     // URL Query Params parser
     const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     let activeScreen = urlParams.get('debug') || urlParams.get('screen') || 'player_question';
@@ -63,7 +64,7 @@
             id: 'p1',
             name: 'Alice',
             avatar: '🦊',
-            isHost: activeScreen.startsWith('host_'),
+            isHost: activeScreen.startsWith('host_') || playerIndex === 0,
             isReady: true,
             isConnected: true,
             score: 2800,
@@ -72,6 +73,7 @@
 
         currentPlayer.set(activePlayer);
 
+        const isQuadBattle = playerCount >= 10;
         const singleBattle = {
             id: 'b-1-0',
             prompt: isUkrainian ? 'Що войовнича білка вимагала в обмін на ключі від вашої машини:' : 'What the militant squirrel demanded in exchange for your car keys:',
@@ -79,21 +81,22 @@
                 ? ['Що', 'войовнича', 'білка', 'вимагала', 'в', 'обмін', 'на', 'ключі', 'від', 'вашої', 'машини:'] 
                 : ['What', 'the', 'militant', 'squirrel', 'demanded', 'in', 'exchange', 'for', 'your', 'car', 'keys:']
             ).map((t, i) => ({ id: `pt-${i}`, text: t, isPrompt: true })),
-            competitors: ['p1', 'p2', 'p3'],
+            competitors: isQuadBattle ? ['p1', 'p2', 'p3', 'p4'] : ['p1', 'p2', 'p3'],
             formatConfig: { type: 'single_line' },
             answers: {
                 p1: isUkrainian ? 'лазерна картопля кричить у подушку' : 'nut ammo for his revolution',
                 p2: isUkrainian ? 'пухнастий борсук викрав усю піцу' : 'screaming fluffy badger disco champion',
-                p3: isUkrainian ? 'ніколи не вибачатися за сир' : 'never apologize with hot pizzas'
+                p3: isUkrainian ? 'ніколи не вибачатися за сир' : 'never apologize with hot pizzas',
+                ...(isQuadBattle ? { p4: isUkrainian ? 'турбо качки захопили всесвіт' : 'unleash turbo ducks across the universe' } : {})
             },
             wordBanks: {
-                p1: [
-                    'nut', 'ammo', 'pistol', 'truck', 'cage', 'seed', 'for', 'his',
-                    'revolution', 'branch', 'squirrel', 'militant', 'exchange', 'keys', 'your'
-                ].map((w, i) => ({ id: `wb-${i}`, text: w, authorId: 'p2', isPrompt: false }))
+                p1: (isUkrainian
+                    ? ['горіх', 'патрони', 'пістолет', 'вантажівка', 'клітка', 'насіння', 'для', 'його', 'революції', 'гілка', 'білка', 'войовнича', 'обмін', 'ключі', 'ваші']
+                    : ['nut', 'ammo', 'pistol', 'truck', 'cage', 'seed', 'for', 'his', 'revolution', 'branch', 'squirrel', 'militant', 'exchange', 'keys', 'your']
+                ).map((w, i) => ({ id: `wb-${i}`, text: w, authorId: 'p2', isPrompt: false }))
             },
-            votes: { p1: ['p4'], p2: ['p5', 'p6'], p3: [] },
-            scores: { p1: 300, p2: 1200, p3: 0 },
+            votes: { p1: ['p5'], p2: ['p6', 'p7'], p3: [], ...(isQuadBattle ? { p4: ['p8'] } : {}) },
+            scores: { p1: 300, p2: 1200, p3: 0, ...(isQuadBattle ? { p4: 250 } : {}) },
             winnerIds: ['p2'],
             winningAnswer: isUkrainian ? 'пухнастий борсук викрав усю піцу' : 'screaming fluffy badger disco champion',
             wordBank: slicedBank
@@ -121,6 +124,34 @@
             currentBattle = {
                 ...singleBattle,
                 ...MOCK_ACTIVE_BATTLE_REVEAL,
+                competitors: isQuadBattle ? ['p1', 'p2', 'p3', 'p4'] : ['p1', 'p2', 'p3'],
+                answers: {
+                    ...MOCK_ACTIVE_BATTLE_REVEAL.answers,
+                    ...(isQuadBattle ? { p4: isUkrainian ? 'турбо качки захопили всесвіт' : 'unleash turbo ducks across the universe' } : {})
+                },
+                annotatedAnswers: {
+                    ...MOCK_ACTIVE_BATTLE_REVEAL.annotatedAnswers,
+                    ...(isQuadBattle ? {
+                        p4: {
+                            words: [
+                                { text: 'unleash', authorIndex: 1 },
+                                { text: 'turbo', authorIndex: 2 },
+                                { text: 'ducks', authorIndex: 0 },
+                                { text: 'across', authorIndex: 3 },
+                                { text: 'the', authorIndex: 1 },
+                                { text: 'universe', authorIndex: 4 }
+                            ]
+                        }
+                    } : {})
+                },
+                pointsAwarded: {
+                    ...MOCK_ACTIVE_BATTLE_REVEAL.pointsAwarded,
+                    ...(isQuadBattle ? { p4: 250 } : {})
+                },
+                scoreBreakdown: {
+                    ...MOCK_ACTIVE_BATTLE_REVEAL.scoreBreakdown,
+                    ...(isQuadBattle ? { p4: { votes: 1, votePoints: 250, winBonus: 0, sweepBonus: 0, rainbowBonus: 0 } } : {})
+                },
                 royalties: [
                     { authorName: 'Alice', points: 150 },
                     { authorName: 'Bob', points: 200 }
@@ -151,12 +182,12 @@
             superlatives: MOCK_SUPERLATIVES_OBJECT,
             phaseTimer: activeScreen.includes('question') ? 80 : (activeScreen.includes('voting') ? 30 : 65),
             playerAnswers: {
-                p1: { questions: [{ answer: 'a' }, { answer: 'b' }, { answer: 'c' }] },
-                p2: { questions: [{ answer: 'a' }, { answer: 'b' }] },
-                p3: { questions: [] },
-                p4: { questions: [{ answer: 'a' }, { answer: 'b' }, { answer: 'c' }] },
-                p5: { questions: [{ answer: 'a' }] },
-                p6: { questions: [] }
+                p1: { questions: [{ answer: 'a' }, { answer: 'b' }, { answer: 'c' }], rerollsLeft: 1 },
+                p2: { questions: [{ answer: 'a' }, { answer: 'b' }], rerollsLeft: 1 },
+                p3: { questions: [], rerollsLeft: 1 },
+                p4: { questions: [{ answer: 'a' }, { answer: 'b' }, { answer: 'c' }], rerollsLeft: 1 },
+                p5: { questions: [{ answer: 'a' }], rerollsLeft: 1 },
+                p6: { questions: [], rerollsLeft: 1 }
             }
         }));
     }
@@ -177,19 +208,21 @@
     }
 </script>
 
-<div class="h-screen max-h-screen w-full flex flex-col items-center justify-center {viewport === 'full' ? 'p-0' : 'p-2'} relative overflow-hidden font-sans">
+<div class="h-[100dvh] max-h-[100dvh] w-full flex flex-col items-center justify-center {viewport === 'full' || hideToolbar ? 'p-0' : 'p-2'} relative overflow-hidden font-sans">
     <!-- Active Viewport Frame -->
     <div class="transition-all duration-300 relative z-10 w-full h-full flex justify-center items-center">
         {#if viewport === 'mobile'}
-            <!-- Mobile Phone Shell -->
-            <div class="w-[390px] h-[810px] bg-black rounded-[44px] p-3 shadow-[0_0_50px_rgba(217,70,239,0.25)] border-[5px] border-gray-800 flex flex-col relative overflow-hidden">
-                <!-- Phone Speaker / Dynamic Island -->
-                <div class="w-28 h-4 bg-gray-900 rounded-full mx-auto mb-2 flex-shrink-0"></div>
+            <!-- Mobile Phone Shell (Full-bleed when hideToolbar is true for exact viewport testing, framed on desktop preview) -->
+            <div class="{hideToolbar ? 'w-full h-full rounded-none p-0 border-0 shadow-none' : 'w-[390px] h-[810px] rounded-[44px] p-3 shadow-[0_0_50px_rgba(217,70,239,0.25)] border-[5px] border-gray-800'} bg-black flex flex-col relative overflow-hidden">
+                {#if !hideToolbar}
+                    <!-- Phone Speaker / Dynamic Island -->
+                    <div class="w-28 h-4 bg-gray-900 rounded-full mx-auto mb-2 flex-shrink-0"></div>
+                {/if}
 
                 <!-- Screen Content Area -->
-                <div class="flex-1 w-full overflow-y-auto rounded-[32px] flex flex-col relative">
+                <div class="flex-1 w-full min-h-0 overflow-y-auto {hideToolbar ? 'rounded-none' : 'rounded-[32px]'} flex flex-col relative">
                     <div class="synthwave-grid-background !absolute"></div>
-                    <div class="relative z-10 flex-1 flex flex-col">
+                    <div class="relative z-10 flex-1 min-h-0 flex flex-col">
                     {#if activeScreen === 'player_lobby'}
                         <PlayerLobby />
                     {:else if activeScreen === 'player_avatar'}
@@ -199,7 +232,7 @@
                     {:else if activeScreen === 'player_battle_single' || activeScreen === 'player_battle_movie'}
                         <PlayerBattleAnsweringView timer={mockTimer} battlesToAnswer={mockBattlesToAnswer} gameId="TEST" playerId="p1" />
                     {:else if activeScreen === 'player_voting'}
-                        <PlayerBattleVotingView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p4', name: 'David', avatar: '💀' }} gameId="TEST" players={MOCK_PLAYERS} />
+                        <PlayerBattleVotingView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p5', name: 'Evan', avatar: '🐶' }} gameId="TEST" players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_reveal'}
                         <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_results'}
@@ -212,8 +245,10 @@
                     </div>
                 </div>
 
-                <!-- Home Bar -->
-                <div class="w-32 h-1 bg-gray-700 rounded-full mx-auto mt-2 flex-shrink-0"></div>
+                {#if !hideToolbar}
+                    <!-- Home Bar -->
+                    <div class="w-32 h-1 bg-gray-700 rounded-full mx-auto mt-2 flex-shrink-0"></div>
+                {/if}
             </div>
         {:else if viewport === 'tablet'}
             <!-- Tablet Shell -->
@@ -230,7 +265,7 @@
                     {:else if activeScreen === 'player_battle_single' || activeScreen === 'player_battle_movie'}
                         <PlayerBattleAnsweringView timer={mockTimer} battlesToAnswer={mockBattlesToAnswer} gameId="TEST" playerId="p1" />
                     {:else if activeScreen === 'player_voting'}
-                        <PlayerBattleVotingView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p4', name: 'David', avatar: '💀' }} gameId="TEST" players={MOCK_PLAYERS} />
+                        <PlayerBattleVotingView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p5', name: 'Evan', avatar: '🐶' }} gameId="TEST" players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_reveal'}
                         <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_results'}
@@ -265,7 +300,7 @@
                         {:else if activeScreen === 'player_question'}
                             <PlayerQuestionView timer={mockTimer} questions={mockQuestions} />
                         {:else if activeScreen === 'player_voting'}
-                            <PlayerBattleVotingView timer={mockTimer} battle={mockActiveBattle} voterId="p4" allPlayers={MOCK_PLAYERS} />
+                            <PlayerBattleVotingView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p5', name: 'Evan', avatar: '🐶' }} gameId="TEST" players={MOCK_PLAYERS} />
                         {:else}
                             <PlayerLobby />
                         {/if}

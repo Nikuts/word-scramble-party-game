@@ -93,7 +93,8 @@ describe('Time Boost & Lobby Enhancements', () => {
             const now = Date.now();
             game.phaseEndTime = now + 30000; // 30s left
 
-            gameplayHandlers.handleUseTimeBoost(io, socket, { gameId: 'TEST', playerId: 'p2' });
+            const p2Socket = { id: 'socket-p2', emit: vi.fn(), join: vi.fn() };
+            gameplayHandlers.handleUseTimeBoost(io, p2Socket, { gameId: 'TEST', playerId: 'p2' });
 
             expect(game.players[1].hasUsedTimeBoost).toBe(true);
             const remaining = Math.round((game.phaseEndTime - Date.now()) / 1000);
@@ -138,7 +139,8 @@ describe('Time Boost & Lobby Enhancements', () => {
             game.phase = 'battle_voting';
             game.phaseEndTime = Date.now() + 30000;
 
-            gameplayHandlers.handleUseTimeBoost(io, socket, { gameId: 'TEST', playerId: 'p3' });
+            const p3Socket = { id: 'socket-p3', emit: vi.fn(), join: vi.fn() };
+            gameplayHandlers.handleUseTimeBoost(io, p3Socket, { gameId: 'TEST', playerId: 'p3' });
 
             expect(game.players[2].hasUsedTimeBoost).toBe(false);
         });

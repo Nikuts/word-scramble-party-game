@@ -11,7 +11,7 @@ export const gameIdSchema = z.object({
 
 export const playerAndGameIdSchema = z.object({
     gameId: gameIdSchemaBase,
-    playerId: playerIdSchemaBase,
+    playerId: playerIdSchemaBase.optional(),
 });
 
 export const createGameSchema = z.object({
@@ -58,34 +58,47 @@ export const setBooleanOptionSchema = (optionName) => z.object({
 
 export const submitAnswerSchema = z.object({
     gameId: gameIdSchemaBase,
-    playerId: playerIdSchemaBase,
+    playerId: playerIdSchemaBase.optional(),
     questionId: z.string().min(1),
     answer: z.string().max(500)
 });
 
+const tileIdArraySchema = z.array(z.string().min(1).max(32)).max(200);
+const multiLineTileIdsSchema = z.object({
+    title: tileIdArraySchema,
+    tagline: tileIdArraySchema
+});
+
 export const submitBattleAnswerSchema = z.object({
     gameId: gameIdSchemaBase,
-    playerId: playerIdSchemaBase,
+    playerId: playerIdSchemaBase.optional(),
     battleId: z.string().min(1),
+    tileIds: z.union([tileIdArraySchema, multiLineTileIdsSchema]).optional(),
     answer: z.union([
-        z.string().max(1000), // Regular answer
-        z.object({ // Final round answer
-            title: z.string().max(500),
-            tagline: z.string().max(500)
+        z.string().max(1000),
+        tileIdArraySchema,
+        z.object({
+            title: z.union([z.string().max(500), tileIdArraySchema]),
+            tagline: z.union([z.string().max(500), tileIdArraySchema])
         })
-    ])
+    ]).optional()
+}).refine(data => data.tileIds !== undefined || data.answer !== undefined, {
+    message: "Either tileIds or answer is required."
 });
 
 export const voteSchema = z.object({
     gameId: gameIdSchemaBase,
-    playerId: playerIdSchemaBase,
+    playerId: playerIdSchemaBase.optional(),
     battleId: z.string().min(1),
-    voteForPlayerId: playerIdSchemaBase
+    voteForPlayerId: playerIdSchemaBase.optional(),
+    optionId: z.string().min(1).optional()
+}).refine(data => Boolean(data.voteForPlayerId || data.optionId), {
+    message: "Either voteForPlayerId or optionId is required."
 });
 
 export const updatePartialAnswerSchema = z.object({
     gameId: gameIdSchemaBase,
-    playerId: playerIdSchemaBase,
+    playerId: playerIdSchemaBase.optional(),
     payload: z.union([
         z.object({
             type: z.literal('question'),
@@ -95,20 +108,22 @@ export const updatePartialAnswerSchema = z.object({
         z.object({
             type: z.literal('battle'),
             battleId: z.string().min(1),
-            answer: z.string().max(1000)
+            tileIds: tileIdArraySchema.optional(),
+            answer: z.string().max(1000).optional()
         }),
         z.object({
             type: z.literal('final_battle'),
             battleId: z.string().min(1),
-            title: z.string().max(500),
-            tagline: z.string().max(500),
+            tileIds: multiLineTileIdsSchema.optional(),
+            title: z.string().max(500).optional(),
+            tagline: z.string().max(500).optional(),
         })
     ])
 });
 
 export const rerollQuestionSchema = z.object({
     gameId: gameIdSchemaBase,
-    playerId: playerIdSchemaBase,
+    playerId: playerIdSchemaBase.optional(),
     questionId: z.string().min(1)
 });
 

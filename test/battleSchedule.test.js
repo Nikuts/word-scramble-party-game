@@ -123,5 +123,51 @@ describe('Battle Scheduling & Pairing Algorithms', () => {
             const combinedTrioPlayers = new Set([...trioPlayersRound1, ...trioPlayersRound2, ...trioPlayersRound3]);
             expect(combinedTrioPlayers.size).toBeGreaterThanOrEqual(8);
         });
+
+        it('rotates opponent pairs across rounds for 4 through 14 players (including N=4 and N=6, fixing B6)', () => {
+            const pairSetForRound = (pairings) => {
+                const set = new Set();
+                pairings.forEach(group => {
+                    for (let i = 0; i < group.length; i++) {
+                        for (let j = i + 1; j < group.length; j++) {
+                            const a = group[i];
+                            const b = group[j];
+                            set.add(a < b ? `${a}|${b}` : `${b}|${a}`);
+                        }
+                    }
+                });
+                return set;
+            };
+
+            for (let count = 4; count <= 14; count++) {
+                const playerIds = Array.from({ length: count }, (_, i) => `p_${i + 1}`);
+                const r1 = pairSetForRound(generateBattlePairings(playerIds, 1));
+                const r2 = pairSetForRound(generateBattlePairings(playerIds, 2));
+                const r3 = pairSetForRound(generateBattlePairings(playerIds, 3));
+
+                // Pair sets must differ across consecutive rounds for all N in [4, 14]
+                expect([...r1].sort().join(',')).not.toBe([...r2].sort().join(','));
+                expect([...r2].sort().join(',')).not.toBe([...r3].sort().join(','));
+
+                // For 2-player duos (N <= 8), each round has exactly N distinct pairs
+                if (count <= 8) {
+                    expect(r1.size).toBe(count);
+                    expect(r2.size).toBe(count);
+                    expect(r3.size).toBe(count);
+                }
+
+                // For N in [5, 8], Round 1 and Round 2 should be 100% edge-disjoint (0 repeated pairs)
+                if (count >= 5 && count <= 8) {
+                    const overlap12 = [...r1].filter(p => r2.has(p));
+                    expect(overlap12).toHaveLength(0);
+                }
+
+                // For N = 4, all 6 possible pairs must be covered across the 3 rounds
+                if (count === 4) {
+                    const allCovered = new Set([...r1, ...r2, ...r3]);
+                    expect(allCovered.size).toBe(6);
+                }
+            }
+        });
     });
 });

@@ -36,15 +36,15 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
 
             calculateBattlePoints(game, trioBattle);
 
-            // In Round 1 (300/vote, 200 win, 150 sweep):
-            // p1: 6 votes * 300 + 200 (win) + 150 (clean sweep) = 2150
+            // In Round 1 (pool 1000, 200 win, 150 sweep):
+            // p1: 1000 + 200 (win) + 150 (clean sweep) = 1350
             // p2: 0 votes = 0
             // p3: 0 votes = 0
             expect(trioBattle.winnerId).toBe('p1');
-            expect(trioBattle.pointsAwarded['p1']).toBe(2150);
+            expect(trioBattle.pointsAwarded['p1']).toBe(1350);
             expect(trioBattle.pointsAwarded['p2']).toBe(0);
             expect(trioBattle.pointsAwarded['p3']).toBe(0);
-            expect(game.players.find(p => p.id === 'p1').score).toBe(2150);
+            expect(game.players.find(p => p.id === 'p1').score).toBe(1350);
         });
 
         it('splits victory bonus fairly between top 2 tied competitors in a 3-way brawl', () => {
@@ -63,17 +63,17 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
 
             calculateBattlePoints(game, trioBattle);
 
-            // In Round 1 (winBonus 200 split between top 2 = 100 each):
-            // p1: 3 votes * 300 + 100 = 1000
-            // p2: 3 votes * 300 + 100 = 1000
+            // In Round 1 (pool 1000 -> 500 each; winBonus 200 split between top 2 = 100 each):
+            // p1: 500 + 100 = 600
+            // p2: 500 + 100 = 600
             // p3: 0 votes = 0
             expect(trioBattle.winnerId).toBeNull();
-            expect(trioBattle.pointsAwarded['p1']).toBe(1000);
-            expect(trioBattle.pointsAwarded['p2']).toBe(1000);
+            expect(trioBattle.pointsAwarded['p1']).toBe(600);
+            expect(trioBattle.pointsAwarded['p2']).toBe(600);
             expect(trioBattle.pointsAwarded['p3']).toBe(0);
         });
 
-        it('splits victory bonus 3 ways in a 3-way tie in a 3-way brawl', () => {
+        it('splits victory bonus 3 ways with Math.floor in a 3-way tie in a 3-way brawl', () => {
             const game = createLobby(9, 1);
             // 6 voters: 2 vote p1, 2 vote p2, 2 vote p3
             const trioBattle = {
@@ -90,14 +90,13 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
 
             calculateBattlePoints(game, trioBattle);
 
-            // Round 1 winBonus 200 split 3 ways: Math.round(200 / 3) = 67
-            // p1: 2 * 300 + 67 = 667
-            // p2: 2 * 300 + 67 = 667
-            // p3: 2 * 300 + 67 = 667
+            // Round 1 pool 1000 split 3 ways: Math.floor((2/6)*1000) = 333
+            // winBonus 200 split 3 ways: Math.floor(200 / 3) = 66
+            // Each gets 333 + 66 = 399
             expect(trioBattle.winnerId).toBeNull();
-            expect(trioBattle.pointsAwarded['p1']).toBe(667);
-            expect(trioBattle.pointsAwarded['p2']).toBe(667);
-            expect(trioBattle.pointsAwarded['p3']).toBe(667);
+            expect(trioBattle.pointsAwarded['p1']).toBe(399);
+            expect(trioBattle.pointsAwarded['p2']).toBe(399);
+            expect(trioBattle.pointsAwarded['p3']).toBe(399);
         });
 
         it('handles 4-competitor brawl (Answer A vs B vs C vs D) with distributed votes and victory bonus', () => {
@@ -119,15 +118,15 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
 
             calculateBattlePoints(game, quadBattle);
 
-            // p1 wins outright (4 votes): 4 * 300 + 200 (win) = 1400 (no sweep bonus because maxVotes != totalVotes)
-            // p2: 2 * 300 = 600
-            // p3: 1 * 300 = 300
-            // p4: 1 * 300 = 300
+            // p1 wins outright (4/8 of 1000 = 500 + 200 win = 700)
+            // p2 (2/8 of 1000) = 250
+            // p3 (1/8 of 1000) = 125
+            // p4 (1/8 of 1000) = 125
             expect(quadBattle.winnerId).toBe('p1');
-            expect(quadBattle.pointsAwarded['p1']).toBe(1400);
-            expect(quadBattle.pointsAwarded['p2']).toBe(600);
-            expect(quadBattle.pointsAwarded['p3']).toBe(300);
-            expect(quadBattle.pointsAwarded['p4']).toBe(300);
+            expect(quadBattle.pointsAwarded['p1']).toBe(700);
+            expect(quadBattle.pointsAwarded['p2']).toBe(250);
+            expect(quadBattle.pointsAwarded['p3']).toBe(125);
+            expect(quadBattle.pointsAwarded['p4']).toBe(125);
         });
 
         it('awards clean sweep to a dominant single winner in a 4-way brawl when getting 100% of votes', () => {
@@ -145,9 +144,9 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
 
             calculateBattlePoints(game, quadBattle);
 
-            // 8 votes * 300 + 200 (win) + 150 (clean sweep) = 2750
+            // 1000 (pool) + 200 (win) + 150 (clean sweep) = 1350
             expect(quadBattle.winnerId).toBe('p1');
-            expect(quadBattle.pointsAwarded['p1']).toBe(2750);
+            expect(quadBattle.pointsAwarded['p1']).toBe(1350);
             expect(quadBattle.pointsAwarded['p2']).toBe(0);
             expect(quadBattle.pointsAwarded['p3']).toBe(0);
             expect(quadBattle.pointsAwarded['p4']).toBe(0);
@@ -170,13 +169,13 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
 
             calculateBattlePoints(game, quadBattle);
 
-            // In Round 1 (winBonus 200 split 4 ways: Math.round(200 / 4) = 50):
-            // Each gets 2 votes * 300 + 50 = 650
+            // In Round 1 (pool 1000 -> 250 each; winBonus 200 split 4 ways: 50 each):
+            // Each gets 250 + 50 = 300
             expect(quadBattle.winnerId).toBeNull();
-            expect(quadBattle.pointsAwarded['p1']).toBe(650);
-            expect(quadBattle.pointsAwarded['p2']).toBe(650);
-            expect(quadBattle.pointsAwarded['p3']).toBe(650);
-            expect(quadBattle.pointsAwarded['p4']).toBe(650);
+            expect(quadBattle.pointsAwarded['p1']).toBe(300);
+            expect(quadBattle.pointsAwarded['p2']).toBe(300);
+            expect(quadBattle.pointsAwarded['p3']).toBe(300);
+            expect(quadBattle.pointsAwarded['p4']).toBe(300);
         });
 
         it('handles a 2-way tie for 1st in a 4-way brawl by splitting victory bonus 2 ways', () => {
@@ -196,16 +195,16 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
 
             calculateBattlePoints(game, quadBattle);
 
-            // In Round 1 (winBonus 200 split between top 2 = 100 each):
-            // p1: 3 * 300 + 100 = 1000
-            // p2: 3 * 300 + 100 = 1000
-            // p3: 1 * 300 = 300
-            // p4: 1 * 300 = 300
+            // In Round 1 (totalVotes = 8, pool = 1000, winBonus 200 split between top 2 = 100 each):
+            // p1: Math.floor((3/8)*1000) + 100 = 375 + 100 = 475
+            // p2: Math.floor((3/8)*1000) + 100 = 375 + 100 = 475
+            // p3: Math.floor((1/8)*1000) = 125
+            // p4: Math.floor((1/8)*1000) = 125
             expect(quadBattle.winnerId).toBeNull();
-            expect(quadBattle.pointsAwarded['p1']).toBe(1000);
-            expect(quadBattle.pointsAwarded['p2']).toBe(1000);
-            expect(quadBattle.pointsAwarded['p3']).toBe(300);
-            expect(quadBattle.pointsAwarded['p4']).toBe(300);
+            expect(quadBattle.pointsAwarded['p1']).toBe(475);
+            expect(quadBattle.pointsAwarded['p2']).toBe(475);
+            expect(quadBattle.pointsAwarded['p3']).toBe(125);
+            expect(quadBattle.pointsAwarded['p4']).toBe(125);
         });
     });
 
@@ -338,11 +337,11 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
             };
 
             calculateBattlePoints(game11, quadBattle);
-            // player_1 gets 4 votes * 300 + 200 = 1400; player_2 gets 2 * 300 = 600; player_3 gets 1 * 300 = 300; player_4 gets 0
+            // player_1 gets Math.floor(4000/7) + 200 = 571 + 200 = 771; player_2 gets Math.floor(2000/7) = 285; player_3 gets Math.floor(1000/7) = 142; player_4 gets 0
             expect(quadBattle.winnerId).toBe('player_1');
-            expect(quadBattle.pointsAwarded['player_1']).toBe(1400);
-            expect(quadBattle.pointsAwarded['player_2']).toBe(600);
-            expect(quadBattle.pointsAwarded['player_3']).toBe(300);
+            expect(quadBattle.pointsAwarded['player_1']).toBe(771);
+            expect(quadBattle.pointsAwarded['player_2']).toBe(285);
+            expect(quadBattle.pointsAwarded['player_3']).toBe(142);
             expect(quadBattle.pointsAwarded['player_4']).toBe(0);
 
             // Trio battle: 3 competitors, 8 voters (11 - 3 = 8 votes total)
@@ -359,11 +358,11 @@ describe('Multi-Competitor Brawls (3-Way & 4-Player Battles) and 11-Player Hybri
             };
 
             calculateBattlePoints(game11, trioBattle);
-            // player_5 gets 4 votes * 300 + 200 = 1400; player_6 gets 2 * 300 = 600; player_7 gets 2 * 300 = 600
+            // player_5 gets Math.floor(4000/8) + 200 = 500 + 200 = 700; player_6 gets 250; player_7 gets 250
             expect(trioBattle.winnerId).toBe('player_5');
-            expect(trioBattle.pointsAwarded['player_5']).toBe(1400);
-            expect(trioBattle.pointsAwarded['player_6']).toBe(600);
-            expect(trioBattle.pointsAwarded['player_7']).toBe(600);
+            expect(trioBattle.pointsAwarded['player_5']).toBe(700);
+            expect(trioBattle.pointsAwarded['player_6']).toBe(250);
+            expect(trioBattle.pointsAwarded['player_7']).toBe(250);
         });
 
         it('guarantees 13-player hybrid matrix partitions into 5 quads + 2 trios with balanced 3-round allocation', () => {

@@ -1,5 +1,5 @@
 <script>
-    import { t, showBattleHistory, gamePhase, phaseTimer, currentRound, myPlayerQuestions, myBattlesToAnswer, currentVotingBattle, currentPlayerDetails, gameState, flyingEmojis } from '../../../stores.js';
+    import { t, showBattleHistory, gamePhase, phaseTimer, currentRound, myPlayerQuestions, myBattlesToAnswer, currentVotingBattle, currentPlayerDetails, gameState, flyingEmojis, activeAllVotesInNotice } from '../../../stores.js';
     import { tweened } from 'svelte/motion';
     import { cubicOut } from 'svelte/easing';
     import LoadingSpinner from '../../shared/LoadingSpinner.svelte';
@@ -28,7 +28,7 @@
     });
     $: animatedScore.set($currentPlayerDetails?.score || 0);
     
-    $: if ($gamePhase === 'generating_round') {
+    $: if ($gamePhase === 'generating_round' || $gamePhase === 'preparing_battles') {
         if (!loadingMessage) {
             const messages = $t.generatingRoundMessages || [$t.pleaseWait];
             loadingMessage = messages[Math.floor(Math.random() * messages.length)];
@@ -39,6 +39,12 @@
 </script>
 
 <div class="h-[100dvh] max-h-[100dvh] w-full flex flex-col justify-between overflow-hidden select-none font-sans box-border relative">
+    {#if $activeAllVotesInNotice}
+        <div class="fixed top-14 left-1/2 -translate-x-1/2 z-50 animate-bounce bg-emerald-400 text-black px-4 py-1.5 rounded-full font-display font-black tracking-wider shadow-[0_0_20px_rgba(52,211,153,0.9)] border-2 border-white flex items-center gap-1.5 text-xs sm:text-sm pointer-events-none">
+            <span>{$t.allVotesIn || '🗳️ ALL VOTES IN!'}</span>
+        </div>
+    {/if}
+
     {#if $currentPlayerDetails}
         <header class="flex-shrink-0 bg-neutral-950/95 px-3.5 py-1.5 z-10 border-b-2 pt-[max(6px,env(safe-area-inset-top))]" style="border-color: var(--color-secondary); box-shadow: 0 0 10px var(--color-secondary);">
             <div class="w-full max-w-md mx-auto flex items-center justify-between gap-3">
@@ -66,7 +72,7 @@
     <main class="flex-1 min-h-0 w-full flex flex-col overflow-hidden relative">
         {#if $showBattleHistory && $gamePhase === 'results'}
             <PlayerBattleHistoryView game={$gameState} player={$currentPlayerDetails} />
-        {:else if $gamePhase === 'generating_round'}
+        {:else if $gamePhase === 'generating_round' || $gamePhase === 'preparing_battles'}
             <LoadingSpinner message={loadingMessage} />
         {:else if $gamePhase === 'get_ready'}
             <PlayerGetReadyView timer={$phaseTimer} round={$currentRound} />

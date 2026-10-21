@@ -1,6 +1,6 @@
 import { writable, get, derived } from 'svelte/store';
 import { io } from 'socket.io-client';
-import { playSound } from './lib/utils.js';
+import { playSound, playMusic, stopMusic } from './lib/utils.js';
 import { UI_TEXT } from './ui_text.js';
 
 // --- Individual, Granular Stores for Better Performance ---
@@ -15,6 +15,8 @@ export const joinForm = writable({ gameId: '', playerName: '', avatar: '' });
 export const showBattleHistory = writable(false);
 export const flyingEmojis = writable([]);
 export const activeTimeBoostNotice = writable(null);
+export const activeAllVotesInNotice = writable(false);
+export const hasConfirmedAvatar = writable(false);
 
 // --- Smart TV & Low Power Display Store ---
 function detectInitialTvMode() {
@@ -105,6 +107,30 @@ let socket;
 let lastTickSecond = -1; // Persists across game state updates to track ticking for sounds
 let partialAnswers = {}; // Client-side cache for partial answers
 const initialErrorState = { message: null, fatal: false, context: null };
+const TIMER_PHASES_FOR_TICK = ['question', 'battle_answering', 'battle_voting'];
+
+export function handleCountdownTick(phase, remaining, soundsOnHostOnly = true) {
+    const _isHostDisplay = get(isHostDisplay);
+
+    if (TIMER_PHASES_FOR_TICK.includes(phase) && remaining <= 10 && remaining > 0) {
+        if (remaining !== lastTickSecond) {
+            if (!soundsOnHostOnly || _isHostDisplay) {
+                const pitch = remaining <= 5 ? (1.0 + (5 - remaining) * 0.06) : 1.0;
+                playSound('sfx_timer_tick', { pitch });
+            }
+            if (!_isHostDisplay && remaining <= 5) {
+                try {
+                    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+                        navigator.vibrate(40);
+                    }
+                } catch (e) {}
+            }
+            lastTickSecond = remaining;
+        }
+    } else {
+        lastTickSecond = -1;
+    }
+}
 
 // --- Actions and Socket Logic ---
 
@@ -163,6 +189,14 @@ export function initializeSocket() {
             }
         }
         
+        const previousPhase = get(gameState)?.phase;
+        if (newGameState.phase && newGameState.phase !== 'lobby') {
+            hasConfirmedAvatar.set(true);
+        } else if (previousPhase && previousPhase !== 'lobby' && newGameState.phase === 'lobby') {
+            // Returning to lobby via Play Again
+            hasConfirmedAvatar.set(true);
+        }
+
         isLoading.set(false);
         error.set({ ...initialErrorState });
         gameState.set(newGameState);
@@ -192,21 +226,7 @@ export function initializeSocket() {
             showBattleHistory.set(false);
         }
         
-        const remaining = newGameState.phaseTimer;
-        const _isHostDisplay = get(isHostDisplay);
-        const timerPhasesForTick = ['question', 'battle_answering', 'battle_voting'];
-
-        if (timerPhasesForTick.includes(newGameState.phase) && remaining <= 10 && remaining > 0) {
-            if (remaining !== lastTickSecond) {
-                if (!newGameState.soundsOnHostOnly || _isHostDisplay) {
-                    const pitch = remaining <= 5 ? (1.0 + (5 - remaining) * 0.06) : 1.0;
-                    playSound('sfx_timer_tick', { pitch });
-                }
-                lastTickSecond = remaining;
-            }
-        } else {
-            lastTickSecond = -1;
-        }
+        handleCountdownTick(newGameState.phase, newGameState.phaseTimer, newGameState.soundsOnHostOnly);
     });
 
     socket.on('timer-tick', ({ phaseTimer: remaining, phase }) => {
@@ -216,20 +236,7 @@ export function initializeSocket() {
         });
 
         const currentGameState = get(gameState);
-        const _isHostDisplay = get(isHostDisplay);
-        const timerPhasesForTick = ['question', 'battle_answering', 'battle_voting'];
-
-        if (timerPhasesForTick.includes(phase) && remaining <= 10 && remaining > 0) {
-            if (remaining !== lastTickSecond) {
-                if (!currentGameState?.soundsOnHostOnly || _isHostDisplay) {
-                    const pitch = remaining <= 5 ? (1.0 + (5 - remaining) * 0.06) : 1.0;
-                    playSound('sfx_timer_tick', { pitch });
-                }
-                lastTickSecond = remaining;
-            }
-        } else {
-            lastTickSecond = -1;
-        }
+        handleCountdownTick(phase, remaining, currentGameState?.soundsOnHostOnly);
     });
     
     socket.on('game-created', ({ gameId }) => {
@@ -253,6 +260,7 @@ export function initializeSocket() {
     socket.on('player-joined', ({ playerId, playerToken, gameId, isHost, initialGameState }) => {
         const session = { playerId, playerToken, gameId };
         localStorage.setItem('wordScrambleSession', JSON.stringify(session));
+        hasConfirmedAvatar.set(false);
         isLoading.set(false);
         view.set('playerGame');
         currentPlayer.set({ id: playerId, isHost, token: playerToken });
@@ -281,6 +289,7 @@ export function initializeSocket() {
              }
         }
         
+        hasConfirmedAvatar.set(true);
         isHostDisplay.set(_isHostDisplay);
         view.set(newView);
         gameState.set(newGameState);
@@ -379,6 +388,13 @@ export function initializeSocket() {
             activeTimeBoostNotice.update(current => current?.playerId === data.playerId ? null : current);
         }, 4000);
     });
+
+    socket.on('all-votes-in', () => {
+        activeAllVotesInNotice.set(true);
+        setTimeout(() => {
+            activeAllVotesInNotice.set(false);
+        }, 1800);
+    });
     
     socket.on('play-sound', ({ soundId }) => {
         playSound(soundId);
@@ -449,6 +465,8 @@ export function resetToMenu() {
      view.set('mainMenu');
      gameState.set(null);
      currentPlayer.set(null);
+     hasConfirmedAvatar.set(false);
+     lastTickSecond = -1;
      isLoading.set(false);
      error.set({ ...initialErrorState });
      isHostDisplay.set(false);

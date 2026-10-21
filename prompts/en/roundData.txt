@@ -35,7 +35,6 @@ Follow these strict rules for each key:
    - Battle Prompt Structure: ${battlePromptStructureInstruction}
 
 3. "fallbackWords":
-   - Generate a list of at least 20 unique, theme-related phrases (each 2 to 4 words long).
-   - In addition to themed nouns and verbs, include helpful connector and modifier words (e.g., words like "and", "but", "always", "never", "because", "secretly", "very", "without", "our") so players can easily link tiles together if their bank needs top-up words.
+   - Generate a list of 25 to 35 unique, varied thematic helper phrases (each 2 to 5 words long) containing active verbs, evocative nouns, quirky adjectives, and natural connectors (e.g., "and", "but", "always", "never", "because", "secretly", "very", "without", "our", "suddenly") so players can easily link tiles together if their bank needs top-up words.
 
 CRITICAL: Do not include any extra text, comments, or markdown outside of the main JSON object. The response must be parsable as-is.

@@ -1,5 +1,6 @@
 import * as helpers from '../helpers.js';
 import * as timerService from './timerService.js';
+import { TIMEOUT_ANSWER_PLACEHOLDER } from '../../shared/config.js';
 
 export function calculateGameSuperlatives(game) {
     const allBattles = [...(game.battleHistory || []), ...(game.battleSchedule || [])];
@@ -22,7 +23,7 @@ export function calculateGameSuperlatives(game) {
         if (Array.isArray(battle.royalties)) {
             battle.royalties.forEach(r => {
                 if (r.authorId && r.authorId in royaltiesByPlayer) {
-                    royaltiesByPlayer[r.authorId] += (r.royalty || 0);
+                    royaltiesByPlayer[r.authorId] += (r.points ?? r.royalty ?? 0);
                 }
             });
         }
@@ -43,9 +44,9 @@ export function calculateGameSuperlatives(game) {
         if (battle.winnerId && battle.answers?.[battle.winnerId]) {
             const rawAns = battle.answers[battle.winnerId];
             let ansText = '';
-            if (typeof rawAns === 'string' && rawAns !== '::TIMEOUT::') {
+            if (typeof rawAns === 'string' && rawAns !== TIMEOUT_ANSWER_PLACEHOLDER) {
                 ansText = rawAns;
-            } else if (typeof rawAns === 'object' && rawAns !== null) {
+            } else if (typeof rawAns === 'object' && rawAns !== null && rawAns.title !== TIMEOUT_ANSWER_PLACEHOLDER) {
                 ansText = `${rawAns.title || ''} ${rawAns.tagline || ''}`.trim();
             }
 
@@ -53,25 +54,31 @@ export function calculateGameSuperlatives(game) {
             if (wordTokens.length > 0) {
                 const count = wordTokens.length;
                 if (!shortestWin || count < shortestWin.count) {
-                    shortestWin = { playerId: battle.winnerId, count, snippet: ansText };
+                    shortestWin = { playerId: battle.winnerId, playerIds: [battle.winnerId], count, snippet: ansText };
+                } else if (count === shortestWin.count && !shortestWin.playerIds.includes(battle.winnerId)) {
+                    shortestWin.playerIds.push(battle.winnerId);
                 }
                 if (!longestWin || count > longestWin.count) {
-                    longestWin = { playerId: battle.winnerId, count, snippet: ansText };
+                    longestWin = { playerId: battle.winnerId, playerIds: [battle.winnerId], count, snippet: ansText };
+                } else if (count === longestWin.count && !longestWin.playerIds.includes(battle.winnerId)) {
+                    longestWin.playerIds.push(battle.winnerId);
                 }
             }
         }
     });
 
     const getTopPlayer = (statsMap) => {
-        let topId = null;
+        let topIds = [];
         let topVal = 0;
         Object.entries(statsMap).forEach(([pid, val]) => {
             if (val > topVal) {
                 topVal = val;
-                topId = pid;
+                topIds = [pid];
+            } else if (val > 0 && val === topVal) {
+                topIds.push(pid);
             }
         });
-        return topVal > 0 ? { playerId: topId, value: topVal } : null;
+        return topVal > 0 ? { playerId: topIds[0], playerIds: topIds, value: topVal } : null;
     };
 
     const superlatives = {};
@@ -128,10 +135,19 @@ export function resetGameForRestart(game) {
         isGeneratingThemes: false,
         geminiApiErrorCount: 0,
         answerHistory: [],
+        battleHistory: [],
+        superlatives: null,
+        pairHistory: {},
+        playerUsedBundles: {},
+        reserveQuestions: {},
         playerAnswers: {},
         battleSchedule: [],
+        preGeneratedBattlePrompts: [],
         finalRoundData: null,
         phaseEndTime: null,
+        phaseInitialDuration: null,
+        phaseOnExpire: null,
+        pausedRemainingMs: null,
         isPaused: false,
         usedFallbackThemes: [],
         partialAnswers: {},
@@ -140,6 +156,7 @@ export function resetGameForRestart(game) {
         prefetchedRoundData: null,
         prefetchedRoundPromise: null,
         prefetchedFinalRoundPrompts: null,
+        prefetchedFinalRoundPromise: null,
         currentVotingBattleIndex: 0,
         playerReconnectionTimers: {},
         hostReassignmentTimerId: null,

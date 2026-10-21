@@ -40,14 +40,14 @@
         if (!superlatives) return [];
         if (Array.isArray(superlatives)) {
             return superlatives
-                .filter(s => s?.playerId === playerId)
+                .filter(s => (Array.isArray(s?.playerIds) ? s.playerIds.includes(playerId) : s?.playerId === playerId))
                 .map(s => ({
                     title: s.title || s.title_uk || s.name || '',
                     desc: s.description || s.description_uk || s.desc || ''
                 }));
         }
         return Object.entries(superlatives)
-            .filter(([k, v]) => v?.playerId === playerId)
+            .filter(([k, v]) => (Array.isArray(v?.playerIds) ? v.playerIds.includes(playerId) : v?.playerId === playerId))
             .map(([k, v]) => ({
                 title: dict[`${k}Title`] || k,
                 desc: dict[`${k}Desc`] || (v?.value ? `+${v.value} pts` : '')
@@ -60,44 +60,44 @@
     }
 </script>
 
-<div class="w-full h-full flex flex-col p-3 pb-8 max-w-md mx-auto select-none font-sans overflow-y-auto overscroll-contain box-border">
+<div class="w-full h-full flex flex-col p-3 pb-3 max-w-md mx-auto select-none font-sans overflow-y-auto overscroll-contain box-border">
     
     <!-- 1. Main Card: Scrollable Content with Clean Inline Spacing -->
-    <div class="flex-1 flex flex-col justify-between bg-neutral-950/95 border-2 {currentRankStyle.border} {currentRankStyle.glow} rounded-2xl p-4 mb-2 space-y-3">
+    <div class="flex-1 flex flex-col justify-between bg-neutral-950/95 border-2 {currentRankStyle.border} {currentRankStyle.glow} rounded-2xl p-3 sm:p-4 mb-2 space-y-2 sm:space-y-3">
         
         <!-- Top Hero Rank & Avatar -->
         <div class="text-center flex flex-col items-center justify-start flex-shrink-0 pt-0.5">
             <!-- Rank Pill Badge -->
-            <div class="inline-block px-4 py-1.5 rounded-xl {currentRankStyle.bg} font-sans font-black text-sm uppercase tracking-wider mb-1 shadow-md">
+            <div class="inline-block px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-xl {currentRankStyle.bg} font-sans font-black text-xs sm:text-sm uppercase tracking-wider mb-1 shadow-md">
                 {getRankTitle(myRank, $t)}
             </div>
 
-            <span class="text-xs font-sans font-bold text-slate-400 uppercase tracking-widest block mb-1">
+            <span class="text-[11px] sm:text-xs font-sans font-bold text-slate-400 uppercase tracking-widest block mb-1">
                 {getRankSubtitle(myRank)}
             </span>
 
-            <!-- Avatar Hero (120px) -->
-            <div class="w-[120px] h-[120px] mx-auto my-2 relative flex-shrink-0">
+            <!-- Avatar Hero (Responsive) -->
+            <div class="w-20 h-20 sm:w-28 sm:h-28 mx-auto my-1 sm:my-2 relative flex-shrink-0">
                 <PixelAvatar avatar={player?.avatar || '🦊'} className="w-full h-full" />
                 {#if myRank === 1}
-                    <div class="absolute -top-4 -right-1 text-4xl animate-bounce">
+                    <div class="absolute -top-3 -right-1 text-3xl sm:text-4xl animate-bounce">
                         👑
                     </div>
                 {/if}
             </div>
 
-            <!-- Final Score Section with larger vertical padding -->
-            <div class="mt-2 mb-1.5 flex-shrink-0">
-                <span class="text-[10px] sm:text-[11px] font-display font-bold uppercase tracking-widest text-slate-400 block mb-2 mt-1">
+            <!-- Final Score Section -->
+            <div class="mt-1 mb-1 flex-shrink-0">
+                <span class="text-[10px] sm:text-[11px] font-display font-bold uppercase tracking-widest text-slate-400 block mb-1">
                     {$t.finalScores || 'FINAL SCORE'}
                 </span>
                 
                 <!-- Seamless Inline Score & PTS -->
                 <div class="flex items-baseline justify-center gap-2">
-                    <span class="text-4xl sm:text-5xl font-display font-black {currentRankStyle.scoreColor} leading-none drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
+                    <span class="text-3xl sm:text-5xl font-display font-black {currentRankStyle.scoreColor} leading-none drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
                         {(player?.score || 0).toLocaleString()}
                     </span>
-                    <span class="text-sm font-sans font-bold text-slate-400 uppercase leading-none">{$t.pts || 'PTS'}</span>
+                    <span class="text-xs sm:text-sm font-sans font-bold text-slate-400 uppercase leading-none">{$t.pts || 'PTS'}</span>
                 </div>
             </div>
         </div>
