@@ -92,7 +92,7 @@
         {:else if $gamePhase === 'battle_voting'}
             <PlayerBattleVotingView timer={$phaseTimer} battle={$currentVotingBattle} player={$currentPlayerDetails} gameId={$gameState?.id} players={$gameState?.players}/>
         {:else if $gamePhase === 'battle_result_reveal'}
-            <PlayerBattleRevealView timer={$phaseTimer} battle={$currentVotingBattle} player={$currentPlayerDetails} players={$gameState?.players} />
+            <PlayerBattleRevealView timer={$phaseTimer} battle={$currentVotingBattle} player={$currentPlayerDetails} gameId={$gameState?.id} players={$gameState?.players} />
         {:else if $gamePhase === 'results'}
             <PlayerResultsView game={$gameState} player={$currentPlayerDetails} />
         {/if}
@@ -101,12 +101,27 @@
     <!-- Flying Live Emoji Reactions Overlay -->
     <div class="pointer-events-none fixed inset-0 overflow-hidden z-50">
         {#each $flyingEmojis as emoji (emoji.id)}
+            {@const startX = emoji.startX ?? 50}
+            {@const endX = emoji.endX ?? startX}
+            {@const startRotate = emoji.startRotate ?? 0}
+            {@const endRotate = emoji.endRotate ?? 0}
             <div 
-                class="absolute animate-float-up text-3xl select-none"
-                style="left: {emoji.x}%; bottom: 0;"
+                class="flying-emoji"
+                style="--start-x: {startX}vw; --end-x: {endX}vw; --start-rotate: {startRotate}deg; --end-rotate: {endRotate}deg;"
                 on:animationend={() => removeEmoji(emoji.id)}
             >
-                {emoji.emoji}
+                {#if emoji.emoji}
+                    <div class="flex flex-col items-center select-none pointer-events-none">
+                        <span class="text-4xl sm:text-5xl filter drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] leading-none">{emoji.emoji}</span>
+                        {#if emoji.avatar}
+                            <div class="w-5 h-5 -mt-1 opacity-90 scale-90 rounded-full bg-black/60 p-0.5 border border-white/40 shadow-sm">
+                                <PixelAvatar avatar={emoji.avatar} />
+                            </div>
+                        {/if}
+                    </div>
+                {:else}
+                    <PixelAvatar avatar={emoji.avatar} />
+                {/if}
             </div>
         {/each}
     </div>

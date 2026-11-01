@@ -13,6 +13,7 @@
     
     let battleForms = {}; // Holds state for each battle a player is in
     let showPromptTooltip = false;
+    let nextAnswerWordSeq = 0;
     
     $: currentBattleToAnswer = battlesToAnswer[0]; // Always show the first unanswered battle
 
@@ -116,7 +117,7 @@
                     return rawSource.map((tid, i) => {
                         const found = allSourceTiles.find(t => t.tileId === tid);
                         return found
-                            ? { ...found, id: `ans-${Math.random().toString(36).substring(2, 9)}-${i}` }
+                            ? { ...found, id: `ans-${++nextAnswerWordSeq}-${i}` }
                             : null;
                     }).filter(Boolean);
                 }
@@ -124,7 +125,7 @@
                     return rawSource.split(' ').filter(Boolean).map((wordText, i) => {
                         const found = allSourceTiles.find(t => String(t.text).toLowerCase() === wordText.toLowerCase());
                         return {
-                            id: `ans-${Math.random().toString(36).substring(2, 9)}-${i}`,
+                            id: `ans-${++nextAnswerWordSeq}-${i}`,
                             tileId: found?.tileId || null,
                             text: wordText
                         };
@@ -221,7 +222,7 @@
         const form = battleForms[battleId];
         if (!form) return;
         
-        const newAnswerWord = { ...word, id: `ans-${Math.random().toString(36).substring(2, 9)}` };
+        const newAnswerWord = { ...word, id: `ans-${++nextAnswerWordSeq}` };
         const targetLine = form.isFinal ? form.activeLine : 'main';
 
         if (form.isFinal) {
@@ -380,11 +381,11 @@
     }
 
     function handleSendReaction() {
-        if (!$currentPlayer || !gameId) return;
-        sendMessage('send-emoji', {
-            gameId,
-            playerId,
-            emoji: $currentPlayer.avatar
+        const activeGameId = gameId || $gameState?.id;
+        if (!activeGameId) return;
+        sendMessage('send-lobby-emoji', {
+            gameId: activeGameId,
+            emoji: currentPlayerObj?.avatar
         });
     }
 </script>
@@ -416,7 +417,7 @@
             <!-- Battle Pill Indicator -->
             <div class="px-3.5 py-1 rounded-full bg-pink-950/80 border border-pink-500/50 shadow-[0_0_12px_rgba(236,72,153,0.3)]">
                 <span class="text-xs font-display font-black text-pink-300 uppercase tracking-wider">
-                    {battle.competitors.length > 2 ? ($t.brawlLabel || 'BRAWL') : (battle.isFinal ? ($t.finalBattle || 'FINAL MOVIE BATTLE') : ($t.battlePrompt || 'BATTLE'))} {currentBattleNum}/{totalAssigned}
+                    {battleForm.isFinal ? ($t.finalBattle || 'FINAL MOVIE BATTLE') : (battle.competitors.length === 4 ? ($t.quadLabel || '🔥 4-WAY BRAWL') : (battle.competitors.length === 3 ? ($t.brawlLabel || '💥 3-WAY BRAWL') : ($t.battlePrompt || 'BATTLE')))} {currentBattleNum}/{totalAssigned}
                 </span>
             </div>
         </header>
@@ -446,8 +447,8 @@
 
                 <!-- Prompt Words (Tappable into answer) -->
                 <div class="text-sm sm:text-base font-sans font-medium text-slate-100 text-center leading-snug py-1">
-                    {#if battleForm.isFinal && battle.genre}
-                        <p class="font-display font-black text-sm text-amber-300 uppercase tracking-wider mb-1">{battle.genre}</p>
+                    {#if battleForm.isFinal && (battle.genre || battle.formatConfig?.genre)}
+                        <p class="font-display font-black text-sm text-amber-300 uppercase tracking-wider mb-1">{battle.genre || battle.formatConfig?.genre}</p>
                     {/if}
                     <div class="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1.5">
                         {#each battleForm.promptWords as word (word.id)}
@@ -626,7 +627,7 @@
                     aria-label={$t.sendReaction || 'Send Reaction'}
                 >
                     <div class="w-10 h-10">
-                        <PixelAvatar avatar={$currentPlayer?.avatar || '🦊'} />
+                        <PixelAvatar avatar={currentPlayerObj?.avatar || '🦊'} />
                     </div>
                 </button>
             </div>

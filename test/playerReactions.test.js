@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as manager from '../game/manager.js';
 import { handleSendLobbyEmoji } from '../game/handlers/lobbyHandlers.js';
 import { sendReactionSchema } from '../game/validationSchemas.js';
+import { UI_TEXT } from '../src/ui_text.js';
+import { playSound, soundEngine } from '../src/lib/utils.js';
 
 describe('Player Reaction Emojis System', () => {
     let io;
@@ -134,5 +136,30 @@ describe('Player Reaction Emojis System', () => {
 
         handleSendLobbyEmoji(io, socket, { gameId: 'NON_EXISTENT', emoji: '🔥' });
         expect(mockHostEmit).not.toHaveBeenCalled();
+    });
+
+    it('broadcasts avatar reaction during question and battle_answering waiting phases', () => {
+        game.phase = 'question';
+        handleSendLobbyEmoji(io, socket, { gameId: 'TEST', emoji: '👽' });
+        expect(mockHostEmit).toHaveBeenCalledWith('lobby-emoji-sent', {
+            avatar: '👽',
+            emoji: '👽',
+            playerName: 'Alice'
+        });
+
+        game.phase = 'battle_answering';
+        game.playerActionCooldowns.set('emoji-player-alice', 0);
+        handleSendLobbyEmoji(io, socket, { gameId: 'TEST', emoji: '👽' });
+        expect(mockHostEmit).toHaveBeenCalledTimes(2);
+    });
+
+    it('provides localized votedForThis strings without exclamation marks and tracks sfx_time_boost playback', () => {
+        expect(UI_TEXT.en.votedForThis).toBe('Voted for this');
+        expect(UI_TEXT.uk.votedForThis).toBe('Голосували за це');
+        expect(UI_TEXT.ua.votedForThis).toBe('Голосували за це');
+
+        const beforeCount = soundEngine.getPlayCount('sfx_time_boost');
+        playSound('sfx_time_boost');
+        expect(soundEngine.getPlayCount('sfx_time_boost')).toBe(beforeCount + 1);
     });
 });

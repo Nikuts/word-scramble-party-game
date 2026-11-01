@@ -163,7 +163,7 @@
                 <!-- Voter Chips -->
                 <div class="pt-1 border-t border-neutral-800/80 text-left">
                     <span class="text-[9px] font-display font-bold text-slate-400 uppercase block mb-0.5">
-                        {$t.votedForYou || 'VOTED FOR THIS'}:
+                        {$t.votedForThis || 'VOTED FOR THIS'}:
                     </span>
                     <div class="flex flex-wrap gap-1">
                         {#each Object.entries(battle.votes || {}) as [voterId, votedFor]}

@@ -1,6 +1,6 @@
 <!-- src/lib/views/player_game/PlayerBattleRevealView.svelte -->
 <script>
-    import { t, sendMessage } from '../../../stores.js';
+    import { t, sendMessage, gameState } from '../../../stores.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
     import PixelAvatar from '../../shared/PixelAvatar.svelte';
 
@@ -8,6 +8,7 @@
     export let battle = null;
     export let player = null;
     export let players = [];
+    export let gameId = null;
 
     $: isCompetitor = battle && player && battle.competitors?.includes(player.id);
     $: isWinner = isCompetitor && (battle.winnerId === player.id || (Array.isArray(battle.winnerId) && battle.winnerId.includes(player.id)));
@@ -46,8 +47,10 @@
     const reactionEmojis = ['🔥', '😂', '💀', '💩', '🤮', '🤯'];
 
     function sendReaction(emoji) {
-        if (!battle || !player) return;
+        const activeGameId = gameId || $gameState?.id;
+        if (!battle || !player || !activeGameId) return;
         sendMessage('send-lobby-emoji', {
+            gameId: activeGameId,
             emoji: emoji
         });
     }
@@ -72,13 +75,18 @@
     </header>
 
     <!-- Battle Prompt -->
-    {#if battle?.prompt}
+    {#if battle?.prompt || battle?.premise || battle?.genre}
         <div class="bg-neutral-950/90 border border-neutral-800 rounded-2xl p-3 mb-2.5 text-center shadow-md flex-shrink-0">
             <span class="text-xs font-display font-bold text-cyan-400 uppercase tracking-widest block mb-1">
-                {$t.battlePrompt || 'BATTLE PROMPT'}
+                {battle?.genre ? ($t.moviePitch || 'MOVIE PREMISE') : ($t.battlePrompt || 'BATTLE PROMPT')}
             </span>
+            {#if battle?.genre}
+                <span class="inline-block px-2 py-0.5 rounded bg-amber-950 border border-amber-500/60 text-amber-300 font-display text-[10px] mb-1">
+                    {battle.genre}
+                </span>
+            {/if}
             <p class="text-sm sm:text-base font-bold text-slate-100 leading-snug">
-                {battle.prompt}
+                {battle.premise || battle.prompt}
             </p>
         </div>
     {/if}
@@ -143,7 +151,7 @@
             {#if votersForMe.length > 0}
                 <div class="border-t border-neutral-800 pt-1.5 mt-1.5">
                     <span class="text-[9px] font-display font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                        {$t.votedForYou || 'VOTED FOR YOU'}:
+                        {($t.votedForYou || 'VOTED FOR YOU').replace(/!+$/, '')}:
                     </span>
                     <div class="flex flex-wrap gap-1.5">
                         {#each votersForMe as voter}

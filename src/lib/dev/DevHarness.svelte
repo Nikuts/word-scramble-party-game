@@ -102,13 +102,22 @@
             wordBank: slicedBank
         };
 
+        const movieGenre = isUkrainian ? 'Низькобюджетна фантастика' : 'Low-Budget Sci-Fi';
+        const moviePremise = isUkrainian ? 'Дві ворогуючі бабусі беруть участь у підпільних перегонах на машинах часу.' : 'Two rival grandmas compete in an underground time-traveling street racing tournament.';
         const movieBattle = {
             ...singleBattle,
             id: 'b-3-0',
-            formatConfig: { type: 'multi_line', labels: isUkrainian ? ['Назва фільму', 'Слоган'] : ['Movie Title', 'Tagline'] },
-            moviePrompt: {
-                genre: isUkrainian ? 'Низькобюджетна фантастика' : 'Low-Budget Sci-Fi',
-                premise: isUkrainian ? 'Дві ворогуючі бабусі беруть участь у підпільних перегонах на машинах часу.' : 'Two rival grandmas compete in an underground time-traveling street racing tournament.'
+            genre: movieGenre,
+            premise: moviePremise,
+            promptTokens: (isUkrainian
+                ? ['Дві', 'ворогуючі', 'бабусі', 'беруть', 'участь', 'у', 'підпільних', 'перегонах', 'на', 'машинах', 'часу.']
+                : ['Two', 'rival', 'grandmas', 'compete', 'in', 'an', 'underground', 'time-traveling', 'street', 'racing', 'tournament.']
+            ).map((t, i) => ({ id: `pt-m-${i}`, text: t, isPrompt: true })),
+            formatConfig: {
+                formatType: 'multi_line',
+                genre: movieGenre,
+                premise: moviePremise,
+                labels: isUkrainian ? ['Назва фільму', 'Слоган'] : ['Movie Title', 'Tagline']
             }
         };
 
@@ -183,11 +192,11 @@
             phaseTimer: activeScreen.includes('question') ? 80 : (activeScreen.includes('voting') ? 30 : 65),
             playerAnswers: {
                 p1: { questions: [{ answer: 'a' }, { answer: 'b' }, { answer: 'c' }], rerollsLeft: 1 },
-                p2: { questions: [{ answer: 'a' }, { answer: 'b' }], rerollsLeft: 1 },
-                p3: { questions: [], rerollsLeft: 1 },
+                p2: { questions: [{ answer: 'a' }, { answer: 'b' }, { answer: '' }], rerollsLeft: 1 },
+                p3: { questions: [{ answer: '' }, { answer: '' }, { answer: '' }], rerollsLeft: 1 },
                 p4: { questions: [{ answer: 'a' }, { answer: 'b' }, { answer: 'c' }], rerollsLeft: 1 },
-                p5: { questions: [{ answer: 'a' }], rerollsLeft: 1 },
-                p6: { questions: [], rerollsLeft: 1 }
+                p5: { questions: [{ answer: 'a' }, { answer: '' }, { answer: '' }], rerollsLeft: 1 },
+                p6: { questions: [{ answer: '' }, { answer: '' }, { answer: '' }], rerollsLeft: 1 }
             }
         }));
     }
@@ -234,7 +243,7 @@
                     {:else if activeScreen === 'player_voting'}
                         <PlayerBattleVotingView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p5', name: 'Evan', avatar: '🐶' }} gameId="TEST" players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_reveal'}
-                        <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} players={MOCK_PLAYERS} />
+                        <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} gameId="TEST" players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_results'}
                         <PlayerResultsView game={$gameState} player={activePlayerObj} />
                     {:else if activeScreen === 'avatar_gallery'}
@@ -267,7 +276,7 @@
                     {:else if activeScreen === 'player_voting'}
                         <PlayerBattleVotingView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p5', name: 'Evan', avatar: '🐶' }} gameId="TEST" players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_reveal'}
-                        <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} players={MOCK_PLAYERS} />
+                        <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} gameId="TEST" players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_results'}
                         <PlayerResultsView game={$gameState} player={activePlayerObj} />
                     {:else if activeScreen === 'instructions'}

@@ -9,11 +9,24 @@
     let hostCustomTheme = '';
     let isThemeInputFocused = false;
 
+    $: gameLang = $gameState?.language || ($language === 'ua' || $language === 'uk' ? 'uk' : 'en');
+    $: availableThemes = $gameState?.preGeneratedThemes?.[gameLang] 
+        || $gameState?.preGeneratedThemes?.[$language] 
+        || $gameState?.preGeneratedThemes?.['en'] 
+        || $gameState?.preGeneratedThemes?.['uk'] 
+        || $gameState?.preGeneratedThemes?.['ua'] 
+        || [];
+
     $: {
         if ($gameState?.isGeneratingThemes && !isThemeInputFocused) {
             hostCustomTheme = '';
-        } else if ($gameState?.theme !== hostCustomTheme && !isThemeInputFocused) {
-            hostCustomTheme = $gameState?.theme || '';
+        } else if (!isThemeInputFocused) {
+            const currentTheme = $gameState?.theme || '';
+            const isPreset = availableThemes.includes(currentTheme);
+            const targetCustom = isPreset ? '' : currentTheme;
+            if (hostCustomTheme !== targetCustom) {
+                hostCustomTheme = targetCustom;
+            }
         }
     }
 
@@ -69,7 +82,7 @@
 
     function handleSelectTheme(theme) {
         if (!$gameState) return;
-        hostCustomTheme = theme;
+        hostCustomTheme = '';
         sendMessage('set-theme', { gameId: $gameState.id, theme });
     }
 
@@ -78,14 +91,6 @@
         hostCustomTheme = e.target.value;
         sendMessage('set-theme', { gameId: $gameState.id, theme: hostCustomTheme.trim() });
     }
-
-    $: gameLang = $gameState?.language || ($language === 'ua' || $language === 'uk' ? 'uk' : 'en');
-    $: availableThemes = $gameState?.preGeneratedThemes?.[gameLang] 
-        || $gameState?.preGeneratedThemes?.[$language] 
-        || $gameState?.preGeneratedThemes?.['en'] 
-        || $gameState?.preGeneratedThemes?.['uk'] 
-        || $gameState?.preGeneratedThemes?.['ua'] 
-        || [];
 
     let showOrientationHint = true;
 

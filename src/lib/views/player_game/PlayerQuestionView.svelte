@@ -133,10 +133,9 @@
 
     function handleSendReaction() {
         if (!$currentPlayer || !$gameState?.id) return;
-        sendMessage('send-emoji', {
+        sendMessage('send-lobby-emoji', {
             gameId: $gameState.id,
-            playerId: $currentPlayer.id,
-            emoji: $currentPlayer.avatar
+            emoji: currentPlayerObj?.avatar
         });
     }
 </script>
@@ -160,7 +159,7 @@
                     aria-label={$t.sendReaction || 'Send Reaction'}
                 >
                     <div class="w-10 h-10">
-                        <PixelAvatar avatar={$currentPlayer?.avatar || '🦊'} />
+                        <PixelAvatar avatar={currentPlayerObj?.avatar || '🦊'} />
                     </div>
                 </button>
             </div>

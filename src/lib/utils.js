@@ -75,6 +75,30 @@ class WebAudioSoundEngine {
 
         const ctx = this.initContext();
         const buffer = this.buffers.get(soundId);
+        if (soundId === 'sfx_time_boost' && !buffer) {
+            if (ctx && ctx.state === 'running') {
+                try {
+                    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.value = freq * pitch;
+                        const startTime = ctx.currentTime + idx * 0.055;
+                        const duration = 0.08;
+                        gain.gain.setValueAtTime(0.15 * Math.max(0, Math.min(1, volume)), startTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(startTime);
+                        osc.stop(startTime + duration);
+                    });
+                } catch (e) {
+                    console.warn(`[SoundEngine] Web Audio synth failed for ${soundId}:`, e);
+                }
+            }
+            return;
+        }
 
         if (ctx && buffer && ctx.state === 'running') {
             try {
