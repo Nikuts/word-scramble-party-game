@@ -207,15 +207,53 @@ export function generateWordBanksDirectly({
         });
     });
 
-    // 2. Track words & bundles previously used by each player in battle answers (for Tier 2 filtering)
+    // 2. Track words & bundles previously used by each player (and globally across all players) in battle answers,
+    //    as well as fallback words previously shown in earlier rounds' word banks.
     const usedBundlesByPlayer = new Map();
     const usedWordsByPlayer = new Map();
+    const globallyUsedBundles = new Set();
+    const globallyUsedWords = new Set();
+    const seenFallbackWordsByPlayer = new Map();
+    const globallyShownFallbackWords = new Set();
+    const playerFallbackWordsThisRound = new Map();
+
     allPlayerIds.forEach(pid => {
-        usedBundlesByPlayer.set(pid, new Set(playerUsedBundles?.[pid] || []));
+        const pBundles = playerUsedBundles?.[pid] || [];
+        usedBundlesByPlayer.set(pid, new Set(pBundles));
+        pBundles.forEach(bId => {
+            if (bId) globallyUsedBundles.add(bId);
+        });
         usedWordsByPlayer.set(pid, new Set());
+        seenFallbackWordsByPlayer.set(pid, new Set());
+        playerFallbackWordsThisRound.set(pid, new Set());
     });
 
     (battleHistory || []).forEach(battle => {
+        if (battle?.wordBanks) {
+            Object.entries(battle.wordBanks).forEach(([pid, bank]) => {
+                if (!Array.isArray(bank)) return;
+                if (!seenFallbackWordsByPlayer.has(pid)) seenFallbackWordsByPlayer.set(pid, new Set());
+                if (!initialSeenByPlayer.has(pid)) initialSeenByPlayer.set(pid, new Set());
+                const playerSeenFallbacks = seenFallbackWordsByPlayer.get(pid);
+                const playerSeenSet = initialSeenByPlayer.get(pid);
+
+                bank.forEach(tok => {
+                    if (!tok || typeof tok !== 'object') return;
+                    if (tok.bundleId && !playerSeenSet.has(tok.bundleId)) {
+                        playerSeenSet.add(tok.bundleId);
+                        shownFrequency.set(tok.bundleId, (shownFrequency.get(tok.bundleId) || 0) + 1);
+                    }
+                    if (tok.source === 'fallback' && tok.text) {
+                        const cleaned = cleanWordToken(tok.text).toLowerCase();
+                        if (cleaned && !isStopwordOrConnector(cleaned, language)) {
+                            playerSeenFallbacks.add(cleaned);
+                            globallyShownFallbackWords.add(cleaned);
+                        }
+                    }
+                });
+            });
+        }
+
         if (!battle?.answers) return;
         Object.entries(battle.answers).forEach(([pid, ans]) => {
             if (!ans || ans === '::TIMEOUT::') return;
@@ -225,10 +263,38 @@ export function generateWordBanksDirectly({
                 ? `${ans.title || ''} ${ans.tagline || ''}`
                 : String(ans);
             extractCleanWords(rawText).forEach(w => {
-                wordSet.add(w.toLowerCase());
+                const lower = w.toLowerCase();
+                wordSet.add(lower);
+                if (!isStopwordOrConnector(lower, language)) {
+                    globallyUsedWords.add(lower);
+                }
             });
         });
     });
+
+    const isChunkUsedInAnyBattle = (chunk) => {
+        if (!chunk) return false;
+        if (globallyUsedBundles.has(chunk.bundleId)) return true;
+
+        const nonConnectorWords = chunk.words
+            .map(w => w.toLowerCase())
+            .filter(w => !isStopwordOrConnector(w, language));
+        const checkWords = nonConnectorWords.length > 0
+            ? nonConnectorWords
+            : chunk.words.map(w => w.toLowerCase());
+
+        // Check if any player who was actually shown this specific bundleId/chunk
+        // used any of its non-connector words in a past battle answer.
+        // Do not retire a different bundleId merely because its words appear in globallyUsedWords.
+        for (const [pid, seenSet] of initialSeenByPlayer.entries()) {
+            if (!seenSet.has(chunk.bundleId) && !seenSet.has(chunk.chunkText)) continue;
+            const playerUsedWords = usedWordsByPlayer.get(pid);
+            if (playerUsedWords && checkWords.some(w => playerUsedWords.has(w))) {
+                return true;
+            }
+        }
+        return false;
+    };
 
     // 3. Create one slot per (battleIndex, competitorId)
     const slots = [];
@@ -247,9 +313,20 @@ export function generateWordBanksDirectly({
         });
     });
 
+    const inRoundSeenTextsByPlayer = new Map();
+    allPlayerIds.forEach(pid => {
+        inRoundSeenTextsByPlayer.set(pid, new Set());
+    });
+
     const addClauseToSlot = (slot, chunk, tier) => {
         slot.chunks.push(chunk);
         if (chunk.authorId) slot.authors.add(chunk.authorId);
+        if (chunk.chunkText) {
+            if (!inRoundSeenTextsByPlayer.has(slot.playerId)) {
+                inRoundSeenTextsByPlayer.set(slot.playerId, new Set());
+            }
+            inRoundSeenTextsByPlayer.get(slot.playerId).add(chunk.chunkText.trim().toLowerCase());
+        }
         chunk.words.forEach(w => {
             slot.distinctWords.add(w.toLowerCase());
             slot.tokens.push({
@@ -273,19 +350,24 @@ export function generateWordBanksDirectly({
 
     shuffleArray(currentRoundChunks);
     shuffleArray(pastRoundChunks);
+    // Prioritize past-round clauses that have never been shown to any player yet
+    pastRoundChunks.sort((a, b) => (shownFrequency.get(a.bundleId) || 0) - (shownFrequency.get(b.bundleId) || 0));
 
     const usedBundleIdsThisRound = new Set();
 
-    // 5. Tier 1: New clauses (not authored by player, never shown to player, no fan-out across slots)
+    // 5. Tier 1: New clauses (not authored by player, never shown to player, never used in any past battle, no fan-out across slots)
     const tier1Pool = [...currentRoundChunks, ...pastRoundChunks];
     tier1Pool.forEach(chunk => {
         if (usedBundleIdsThisRound.has(chunk.bundleId)) return;
+        if (isChunkUsedInAnyBattle(chunk)) return;
 
         const eligibleSlots = slots
             .filter(slot => {
                 if (slot.playerId === chunk.authorId) return false;
                 const seen = initialSeenByPlayer.get(slot.playerId);
                 if (seen && (seen.has(chunk.bundleId) || seen.has(chunk.chunkText))) return false;
+                const normText = chunk.chunkText ? chunk.chunkText.trim().toLowerCase() : '';
+                if (normText && inRoundSeenTextsByPlayer.get(slot.playerId)?.has(normText)) return false;
                 return true;
             })
             .sort((a, b) => {
@@ -314,9 +396,9 @@ export function generateWordBanksDirectly({
         : minBankSize;
     const softTarget = Math.min(maxBankSize, Math.max(minBankSize, Math.round(avgDistinctAfterTier1)));
 
-    // 7. Tier 2: Shown in an earlier round, but unused by that player
+    // 7. Tier 2: Shown in an earlier round, but unused in any past battle
     const tier2Candidates = allAnswerChunks
-        .filter(chunk => !usedBundleIdsThisRound.has(chunk.bundleId))
+        .filter(chunk => !usedBundleIdsThisRound.has(chunk.bundleId) && !isChunkUsedInAnyBattle(chunk))
         .sort((a, b) => {
             const freqDiff = (shownFrequency.get(a.bundleId) || 0) - (shownFrequency.get(b.bundleId) || 0);
             if (freqDiff !== 0) return freqDiff;
@@ -339,6 +421,10 @@ export function generateWordBanksDirectly({
                 if (slot.playerId === chunk.authorId) return false;
                 const seen = initialSeenByPlayer.get(slot.playerId);
                 if (!seen || (!seen.has(chunk.bundleId) && !seen.has(chunk.chunkText))) return false;
+
+                // Exclude if player already received identical clause text in another battle this round
+                const normText = chunk.chunkText ? chunk.chunkText.trim().toLowerCase() : '';
+                if (normText && inRoundSeenTextsByPlayer.get(slot.playerId)?.has(normText)) return false;
 
                 // Exclude if player used this bundleId or any of its non-connector words
                 if (usedBundlesByPlayer.get(slot.playerId)?.has(chunk.bundleId)) return false;
@@ -383,8 +469,20 @@ export function generateWordBanksDirectly({
         }
     });
 
-    // 9. Tier 3 (AI helper phrases) & Tier 4 (Static fallback phrases) — distributed without replacement
-    const distributePhrasePoolWithoutReplacement = (phrases, tierNum) => {
+    // 9. Tier 3 (AI helper phrases) & Tier 4 (Static fallback phrases) — distributed without replacement,
+    //    excluding phrases whose content words were already used in past battles or shown in earlier rounds.
+    const isFallbackWordEligibleForSlot = (slot, lowerWord, strictGlobalFresh = true) => {
+        if (slot.distinctWords.has(lowerWord)) return false;
+        if (isStopwordOrConnector(lowerWord, language)) return true;
+        if (globallyUsedWords.has(lowerWord)) return false;
+        if (usedWordsByPlayer.get(slot.playerId)?.has(lowerWord)) return false;
+        if (seenFallbackWordsByPlayer.get(slot.playerId)?.has(lowerWord)) return false;
+        if (playerFallbackWordsThisRound.get(slot.playerId)?.has(lowerWord)) return false;
+        if (strictGlobalFresh && globallyShownFallbackWords.has(lowerWord)) return false;
+        return true;
+    };
+
+    const distributePhrasePoolWithoutReplacement = (phrases, tierNum, strictGlobalFresh = true) => {
         const queue = shuffleArray([...phrases]);
         while (queue.length > 0) {
             const deficitSlots = slots
@@ -396,15 +494,28 @@ export function generateWordBanksDirectly({
             const phraseWords = extractCleanWords(phrase);
             if (phraseWords.length === 0) continue;
 
+            const nonStopPhraseWords = phraseWords
+                .map(w => w.toLowerCase())
+                .filter(w => !isStopwordOrConnector(w, language));
+
+            // If any content word in this phrase was already used in a past battle, skip the whole phrase
+            if (nonStopPhraseWords.some(w => globallyUsedWords.has(w))) continue;
+            if (strictGlobalFresh && nonStopPhraseWords.some(w => globallyShownFallbackWords.has(w))) continue;
+
             const targetSlot = deficitSlots.find(slot =>
-                phraseWords.some(w => !slot.distinctWords.has(w.toLowerCase()))
+                phraseWords.some(w => isFallbackWordEligibleForSlot(slot, w.toLowerCase(), strictGlobalFresh))
             );
             if (!targetSlot) continue;
 
+            const playerRoundFallbacks = playerFallbackWordsThisRound.get(targetSlot.playerId);
             phraseWords.forEach(w => {
                 const lower = w.toLowerCase();
-                if (!targetSlot.distinctWords.has(lower)) {
+                if (isFallbackWordEligibleForSlot(targetSlot, lower, strictGlobalFresh)) {
                     targetSlot.distinctWords.add(lower);
+                    if (!isStopwordOrConnector(lower, language)) {
+                        playerRoundFallbacks?.add(lower);
+                        globallyShownFallbackWords.add(lower);
+                    }
                     targetSlot.tokens.push({
                         text: w,
                         authorId: null,
@@ -418,16 +529,18 @@ export function generateWordBanksDirectly({
     };
 
     if (preGeneratedFallbackWords && preGeneratedFallbackWords.length > 0) {
-        distributePhrasePoolWithoutReplacement(preGeneratedFallbackWords, 3);
+        distributePhrasePoolWithoutReplacement(preGeneratedFallbackWords, 3, true);
+        distributePhrasePoolWithoutReplacement(preGeneratedFallbackWords, 3, false);
     }
 
     const staticPhrases = (FALLBACK_WORDS[langKey] || FALLBACK_WORDS.en).map(arr =>
         Array.isArray(arr) ? arr.join(' ') : String(arr)
     );
-    distributePhrasePoolWithoutReplacement(staticPhrases, 4);
+    distributePhrasePoolWithoutReplacement(staticPhrases, 4, true);
+    distributePhrasePoolWithoutReplacement(staticPhrases, 4, false);
 
     // Safety floor pass: if a huge lobby exhausted the single-pass pool, top up remaining deficit slots
-    // while strictly preventing duplicate filler words within any individual bank.
+    // while preferring unused/unseen words and strictly preventing duplicate filler words within any individual bank.
     slots.forEach(slot => {
         if (slot.distinctWords.size >= softTarget) return;
         const combinedPool = shuffleArray([
@@ -435,12 +548,35 @@ export function generateWordBanksDirectly({
             ...staticPhrases,
             ...connectorList
         ]);
+        const playerRoundFallbacks = playerFallbackWordsThisRound.get(slot.playerId);
+        // Pass 1: respect per-player unseen & globally unused
         for (const phrase of combinedPool) {
             if (slot.distinctWords.size >= softTarget) break;
             const phraseWords = extractCleanWords(phrase);
             phraseWords.forEach(w => {
                 const lower = w.toLowerCase();
-                if (!slot.distinctWords.has(lower)) {
+                if (isFallbackWordEligibleForSlot(slot, lower, false)) {
+                    slot.distinctWords.add(lower);
+                    if (!isStopwordOrConnector(lower, language)) {
+                        playerRoundFallbacks?.add(lower);
+                    }
+                    slot.tokens.push({
+                        text: w,
+                        authorId: null,
+                        source: 'fallback',
+                        tier: 4,
+                        bundleId: null
+                    });
+                }
+            });
+        }
+        // Pass 2: absolute floor guarantee if vocabulary still below softTarget
+        for (const phrase of combinedPool) {
+            if (slot.distinctWords.size >= softTarget) break;
+            const phraseWords = extractCleanWords(phrase);
+            phraseWords.forEach(w => {
+                const lower = w.toLowerCase();
+                if (!slot.distinctWords.has(lower) && !globallyUsedWords.has(lower)) {
                     slot.distinctWords.add(lower);
                     slot.tokens.push({
                         text: w,

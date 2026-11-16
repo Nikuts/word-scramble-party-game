@@ -2,9 +2,15 @@
 import { test } from '@playwright/test';
 import path from 'path';
 
-const ARTIFACT_DIR = 'C:/Users/nikku/.gemini/antigravity/brain/384590c5-3b22-4f96-89e2-7e50f2b5b4c3';
+const ARTIFACT_DIR = 'C:/Users/nikku/.gemini/antigravity/brain/0ba4d08c-fc46-46a2-8c3d-d610f6006523';
 
 const CAPTURES = [
+    { screen: 'host_lobby', vp: { width: 1920, height: 1080 }, filename: 'host_lobby_tv.png', players: 6, lang: 'en' },
+    { screen: 'host_question', vp: { width: 1920, height: 1080 }, filename: 'host_question_tv.png', players: 6, lang: 'en' },
+    { screen: 'host_voting', vp: { width: 1920, height: 1080 }, filename: 'host_voting_tv.png', players: 6, lang: 'en' },
+    { screen: 'host_reveal', vp: { width: 1920, height: 1080 }, filename: 'host_reveal_tv.png', players: 6, lang: 'en' },
+    { screen: 'host_podium', vp: { width: 1920, height: 1080 }, filename: 'host_podium_tv.png', players: 6, lang: 'en' },
+
     { screen: 'host_lobby', vp: { width: 1366, height: 768 }, filename: 'host_lobby_laptop.png', players: 6, lang: 'en' },
     { screen: 'host_question', vp: { width: 1366, height: 768 }, filename: 'host_question_laptop.png', players: 6, lang: 'en' },
     { screen: 'host_voting', vp: { width: 1366, height: 768 }, filename: 'host_voting_laptop.png', players: 6, lang: 'en' },
@@ -18,6 +24,7 @@ const CAPTURES = [
     { screen: 'host_podium', vp: { width: 1228, height: 691 }, filename: 'host_podium_scaled_laptop.png', players: 14, lang: 'en' },
     { screen: 'player_lobby', vp: { width: 375, height: 667 }, filename: 'mobile_player_lobby_ua_375.png', players: 6, lang: 'ua', viewportMode: 'mobile' },
     { screen: 'player_lobby', vp: { width: 375, height: 667 }, filename: 'mobile_player_lobby_nonhost_375.png', players: 6, lang: 'en', viewportMode: 'mobile', pIndex: 1 },
+    { screen: 'player_voting', vp: { width: 390, height: 844 }, filename: 'mobile_player_voting_390.png', players: 14, lang: 'en', viewportMode: 'mobile' },
 ];
 
 test.describe('Capture Host UI Screenshots', () => {

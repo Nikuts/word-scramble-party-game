@@ -15,10 +15,21 @@ export async function generateInitialThemes(io, game) {
     game.isGeneratingThemes = true;
     helpers.broadcastGameState(io, game.id);
 
+    const usedThemesSet = new Set([
+        ...(game.usedFallbackThemes || []),
+        ...(game.usedThemesHistory || [])
+    ]);
+    const pickFallbackThemes = (packs) => {
+        const allThemes = (packs || []).map(p => p.theme);
+        const unseen = allThemes.filter(t => !usedThemesSet.has(t));
+        const pool = unseen.length >= 3 ? unseen : allThemes;
+        return helpers.shuffleArray([...pool]).slice(0, 3);
+    };
+
     const fallbackThemes = {
-        en: helpers.shuffleArray([...(FALLBACK_CONTENT.en || []).map(p => p.theme)]).slice(0, 3),
-        uk: helpers.shuffleArray([...(FALLBACK_CONTENT.uk || FALLBACK_CONTENT.ua || []).map(p => p.theme)]).slice(0, 3),
-        ua: helpers.shuffleArray([...(FALLBACK_CONTENT.ua || FALLBACK_CONTENT.uk || []).map(p => p.theme)]).slice(0, 3)
+        en: pickFallbackThemes(FALLBACK_CONTENT.en),
+        uk: pickFallbackThemes(FALLBACK_CONTENT.uk || FALLBACK_CONTENT.ua),
+        ua: pickFallbackThemes(FALLBACK_CONTENT.ua || FALLBACK_CONTENT.uk)
     };
     
     try {
@@ -89,7 +100,12 @@ export async function handleCreateGame(io, socket, { language }) {
         battleHistory: [],
         playerSeenChunks: {}, // Tracks which chunks have been shown to which players
         geminiApiErrorCount: 0,
+        gameInstanceId: 1,
         usedFallbackThemes: [],
+        usedThemesHistory: [],
+        usedQuestions: [],
+        usedBattlePrompts: [],
+        usedFinalPrompts: [],
         partialAnswers: {}, // To store partial answers from clients
         preGeneratedFallbackWords: [],
         playerAnswers: {},

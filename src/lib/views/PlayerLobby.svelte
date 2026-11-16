@@ -117,6 +117,7 @@
         <div class="flex items-center gap-3 min-w-0">
             <button 
                 type="button" 
+                data-testid="send-reaction-btn"
                 on:click={sendEmoji}
                 class="w-12 h-12 rounded-xl bg-neutral-900 border border-cyan-400 p-1 shadow-sm flex items-center justify-center flex-shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
                 title={$t.sendReaction || 'Send Reaction'}
@@ -145,18 +146,8 @@
             </div>
         </div>
 
-        <!-- Right Side: Reaction Trigger + Room Code Badge (Compact & Aligned) -->
+        <!-- Right Side: Room Code Badge (Compact & Aligned) -->
         <div class="flex items-center gap-2 flex-shrink-0">
-            <button
-                type="button"
-                on:click={sendEmoji}
-                disabled={!canSendEmoji || !player}
-                class="w-9 h-9 rounded-full flex justify-center items-center p-1 bg-secondary/90 border border-white/80 shadow-[0_0_10px_rgba(255,0,168,0.5)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-60 cursor-pointer"
-                title={$t.sendReaction || 'Send Reaction'}
-                aria-label={$t.sendReaction || 'Send Reaction'}
-            >
-                <span class="text-base leading-none">🎉</span>
-            </button>
             <div class="bg-black/80 border border-neutral-700 px-2.5 py-1.5 rounded-lg text-right flex-shrink-0">
                 <span class="text-[8px] font-display text-slate-400 block uppercase">{isUkrainian ? 'КОД' : 'ROOM'}</span>
                 <span class="font-mono font-black text-sm text-amber-300">#{game?.id || '----'}</span>
@@ -406,8 +397,8 @@
     {/if}
 </div>
 
-<!-- Flying Live Emoji Reactions Overlay -->
-<div class="pointer-events-none fixed inset-0 overflow-hidden z-50">
+<!-- Flying Live Avatar Reactions Overlay -->
+<div class="pointer-events-none fixed inset-0 overflow-hidden z-50" style="transform: translateZ(0); isolation: isolate;">
     {#each $flyingEmojis as emoji (emoji.id)}
         {@const startX = emoji.startX ?? 50}
         {@const endX = emoji.endX ?? startX}
@@ -418,18 +409,7 @@
             style="--start-x: {startX}vw; --end-x: {endX}vw; --start-rotate: {startRotate}deg; --end-rotate: {endRotate}deg;"
             on:animationend={() => removeEmoji(emoji.id)}
         >
-            {#if emoji.emoji}
-                <div class="flex flex-col items-center select-none pointer-events-none">
-                    <span class="text-4xl sm:text-5xl filter drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] leading-none">{emoji.emoji}</span>
-                    {#if emoji.avatar}
-                        <div class="w-5 h-5 -mt-1 opacity-90 scale-90 rounded-full bg-black/60 p-0.5 border border-white/40 shadow-sm">
-                            <PixelAvatar avatar={emoji.avatar} />
-                        </div>
-                    {/if}
-                </div>
-            {:else}
-                <PixelAvatar avatar={emoji.avatar} />
-            {/if}
+            <PixelAvatar avatar={emoji.avatar} className="w-full h-full" />
         </div>
     {/each}
 </div>

@@ -454,4 +454,243 @@ describe('Word Bank Engine (4-Tier Slot-Balanced Algorithm, §6)', () => {
         expect(isStopwordOrConnector('але', 'ua')).toBe(true);
         expect(isStopwordOrConnector('корабель', 'ua')).toBe(false);
     });
+
+    it('globally retires clauses used in a past battle answer so other players never receive them in later rounds', () => {
+        const answerHistory = [
+            { round: 1, playerId: 'p1', answer: 'radioactive squirrel invasion, enchanted crystal pancake' },
+            { round: 1, playerId: 'p2', answer: 'supersonic narwhal symphony, mysterious velvet telescope' }
+        ];
+        const r1Chunks = collectAnswerChunks({}, answerHistory);
+        const usedP1Chunk = r1Chunks.find(c => c.chunkText.includes('squirrel'));
+        const unusedP1Chunk = r1Chunks.find(c => c.chunkText.includes('pancake'));
+
+        // In Round 1, p2 saw usedP1Chunk and used it in a battle answer.
+        // In Round 2, p3 (who never saw usedP1Chunk in Round 1!) competes against p4.
+        // p3 must NOT receive usedP1Chunk in Tier 1 or Tier 2 because it was already used in a battle!
+        const r2Schedule = [
+            { id: 'b-2-0', competitors: ['p3', 'p4'], prompt: 'Round 2 showdown:' }
+        ];
+        const result = generateWordBanksDirectly({
+            language: 'en',
+            players: mockPlayers,
+            playerAnswers: {
+                p1: { questions: [{ answer: 'fresh round two alpha clause' }] },
+                p2: { questions: [{ answer: 'fresh round two beta clause' }] },
+                p3: { questions: [{ answer: 'fresh round two gamma clause' }] },
+                p4: { questions: [{ answer: 'fresh round two delta clause' }] }
+            },
+            answerHistory,
+            battleSchedule: r2Schedule,
+            preGeneratedFallbackWords: [],
+            currentRound: 2,
+            playerSeenChunks: {
+                p2: [usedP1Chunk.bundleId]
+            },
+            playerUsedBundles: {
+                p2: [usedP1Chunk.bundleId]
+            },
+            battleHistory: [
+                {
+                    id: 'b-1-0',
+                    competitors: ['p2', 'p3'],
+                    answers: {
+                        p2: 'radioactive squirrel invasion today'
+                    }
+                }
+            ]
+        });
+
+        const bankP3 = result.battleScheduleWithBanks[0].wordBanks.p3;
+        const bankP4 = result.battleScheduleWithBanks[0].wordBanks.p4;
+        const allR2BundleIds = new Set([
+            ...bankP3.map(t => t.bundleId).filter(Boolean),
+            ...bankP4.map(t => t.bundleId).filter(Boolean)
+        ]);
+
+        // The clause used by p2 in Round 1 is globally retired and never given to p3 or p4 in Round 2
+        expect(allR2BundleIds.has(usedP1Chunk.bundleId)).toBe(false);
+        // Meanwhile, the unused clause from Round 1 is still eligible to be distributed
+        expect(allR2BundleIds.has(unusedP1Chunk.bundleId)).toBe(true);
+    });
+
+    it('avoids repeating previously shown or battle-used fallback words to players in subsequent rounds', () => {
+        const r1Schedule = [
+            { id: 'b-1-0', competitors: ['p1', 'p2'], prompt: 'Round 1 duel:' }
+        ];
+        const r1Result = generateWordBanksDirectly({
+            language: 'en',
+            players: [mockPlayers[0], mockPlayers[1]],
+            playerAnswers: {
+                p1: { questions: [{ answer: 'tiny alpha word' }] },
+                p2: { questions: [{ answer: 'tiny beta word' }] }
+            },
+            answerHistory: [],
+            battleSchedule: r1Schedule,
+            preGeneratedFallbackWords: [],
+            currentRound: 1,
+            playerSeenChunks: {},
+            battleHistory: []
+        });
+
+        const r1BankP1 = r1Result.battleScheduleWithBanks[0].wordBanks.p1;
+        const r1FallbacksP1 = r1BankP1
+            .filter(t => t.source === 'fallback' && !isStopwordOrConnector(t.text, 'en'))
+            .map(t => t.text.toLowerCase());
+        expect(r1FallbacksP1.length).toBeGreaterThan(0);
+
+        // Suppose p1 used the first fallback word in their Round 1 battle answer
+        const usedFallbackWord = r1FallbacksP1[0];
+
+        const r2Schedule = [
+            { id: 'b-2-0', competitors: ['p1', 'p2'], prompt: 'Round 2 duel:' }
+        ];
+        const r2Result = generateWordBanksDirectly({
+            language: 'en',
+            players: [mockPlayers[0], mockPlayers[1]],
+            playerAnswers: {
+                p1: { questions: [{ answer: 'second round alpha phrase' }] },
+                p2: { questions: [{ answer: 'second round beta phrase' }] }
+            },
+            answerHistory: [],
+            battleSchedule: r2Schedule,
+            preGeneratedFallbackWords: [],
+            currentRound: 2,
+            playerSeenChunks: r1Result.updatedPlayerSeenChunks,
+            battleHistory: [
+                {
+                    id: 'b-1-0',
+                    competitors: ['p1', 'p2'],
+                    answers: {
+                        p1: `${usedFallbackWord} forever`,
+                        p2: 'nothing special'
+                    },
+                    wordBanks: r1Result.battleScheduleWithBanks[0].wordBanks
+                }
+            ]
+        });
+
+        const r2BankP1 = r2Result.battleScheduleWithBanks[0].wordBanks.p1;
+        const r2BankP2 = r2Result.battleScheduleWithBanks[0].wordBanks.p2;
+        const r2FallbacksP1 = new Set(
+            r2BankP1
+                .filter(t => t.source === 'fallback' && !isStopwordOrConnector(t.text, 'en'))
+                .map(t => t.text.toLowerCase())
+        );
+        const r2FallbacksP2 = new Set(
+            r2BankP2
+                .filter(t => t.source === 'fallback' && !isStopwordOrConnector(t.text, 'en'))
+                .map(t => t.text.toLowerCase())
+        );
+
+        // Neither p1 nor p2 should get the fallback word that was used in a Round 1 battle answer
+        expect(r2FallbacksP1.has(usedFallbackWord)).toBe(false);
+        expect(r2FallbacksP2.has(usedFallbackWord)).toBe(false);
+
+        // And p1 should receive fresh fallback words in Round 2 without repeating their Round 1 fallback pool
+        const overlapCount = r1FallbacksP1.filter(w => r2FallbacksP1.has(w)).length;
+        expect(overlapCount).toBe(0);
+    });
+
+    it('keeps unused duplicate-phrase instances (written by different players or in separate answers by the same player) eligible after one instance is used', () => {
+        // Case A: Same phrase written by different players (p1_0_0 and p2_0_0)
+        // Case B: Same phrase written by the same player in two separate answers (p1_0_0 and p1_1_0)
+        const answerHistory = [
+            { round: 1, playerId: 'p1', answer: 'radioactive pancake wizard' }, // p1_0_0
+            { round: 1, playerId: 'p1', answer: 'radioactive pancake wizard' }, // p1_1_0
+            { round: 1, playerId: 'p2', answer: 'radioactive pancake wizard' }  // p2_0_0
+        ];
+        const chunks = collectAnswerChunks({}, answerHistory);
+        expect(chunks.map(c => c.bundleId)).toEqual(['p1_0_0', 'p1_1_0', 'p2_0_0']);
+
+        // In Round 1, p3 saw ONLY p1_0_0 and used it in a battle answer.
+        // p1_1_0 (Alice's second answer) and p2_0_0 (Bob's answer) have distinct bundleIds and were never used.
+        const r2Schedule = [
+            { id: 'b-2-0', competitors: ['p3', 'p4'], prompt: 'Round 2 showdown:' }
+        ];
+        const result = generateWordBanksDirectly({
+            language: 'en',
+            players: mockPlayers,
+            playerAnswers: {},
+            answerHistory,
+            battleSchedule: r2Schedule,
+            preGeneratedFallbackWords: [],
+            currentRound: 2,
+            playerSeenChunks: {
+                p3: ['p1_0_0']
+            },
+            playerUsedBundles: {
+                p3: ['p1_0_0']
+            },
+            battleHistory: [
+                {
+                    id: 'b-1-0',
+                    competitors: ['p3', 'p4'],
+                    answers: {
+                        p3: 'radioactive pancake wizard'
+                    }
+                }
+            ]
+        });
+
+        const allR2BundleIds = new Set([
+            ...result.battleScheduleWithBanks[0].wordBanks.p3.map(t => t.bundleId).filter(Boolean),
+            ...result.battleScheduleWithBanks[0].wordBanks.p4.map(t => t.bundleId).filter(Boolean)
+        ]);
+
+        // Only the specific bundleId that was used (p1_0_0) is retired
+        expect(allR2BundleIds.has('p1_0_0')).toBe(false);
+        // The identical-text second answer by the same player (p1_1_0) and by another player (p2_0_0) remain eligible
+        expect(allR2BundleIds.has('p1_1_0')).toBe(true);
+        expect(allR2BundleIds.has('p2_0_0')).toBe(true);
+    });
+
+    it('never assigns two identical-text clauses (different bundleIds) to the same player across two slots in the same round', () => {
+        const answerHistory = [
+            { round: 1, playerId: 'p1', answer: 'radioactive pancake wizard' },
+            { round: 1, playerId: 'p2', answer: 'radioactive pancake wizard' },
+            { round: 1, playerId: 'p4', answer: 'turbocharged flamingo submarine' },
+            { round: 1, playerId: 'p4', answer: 'intergalactic pickles on toast' },
+        ];
+
+        const r2Schedule = [
+            { id: 'b-2-0', competitors: ['p3', 'p4'], prompt: 'Battle 1:' },
+            { id: 'b-2-1', competitors: ['p3', 'p1'], prompt: 'Battle 2:' },
+        ];
+
+        const result = generateWordBanksDirectly({
+            language: 'en',
+            players: mockPlayers,
+            playerAnswers: {},
+            answerHistory,
+            battleSchedule: r2Schedule,
+            preGeneratedFallbackWords: ['banana', 'cactus', 'disco', 'elbow', 'ferret', 'goblin', 'hammer', 'igloo', 'jester', 'kazoo', 'llama', 'muffin', 'noodle', 'octopus'],
+            currentRound: 2,
+            playerSeenChunks: {},
+            playerUsedBundles: {},
+            battleHistory: [],
+        });
+
+        const getBundleTextsForPlayer = (playerId) => {
+            const texts = [];
+            for (const b of result.battleScheduleWithBanks) {
+                if (!b.wordBanks[playerId]) continue;
+                const seenBundlesInSlot = new Set();
+                const byBundle = new Map();
+                for (const tok of b.wordBanks[playerId]) {
+                    if (!tok.bundleId) continue;
+                    if (!byBundle.has(tok.bundleId)) byBundle.set(tok.bundleId, []);
+                    byBundle.get(tok.bundleId).push(tok.text);
+                }
+                for (const [bId, words] of byBundle.entries()) {
+                    seenBundlesInSlot.add(bId);
+                    texts.push(words.join(' ').trim().toLowerCase());
+                }
+            }
+            return texts;
+        };
+
+        const p3ClauseTexts = getBundleTextsForPlayer('p3');
+        const duplicateMatches = p3ClauseTexts.filter(t => t === 'radioactive pancake wizard');
+        expect(duplicateMatches.length).toBeLessThanOrEqual(1);
+    });
 });

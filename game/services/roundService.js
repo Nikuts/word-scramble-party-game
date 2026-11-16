@@ -40,20 +40,23 @@ export function prefetchNextRoundData(game) {
     const numPlayers = game.players.length;
     if (numPlayers === 0) return;
 
+    const expectedInstanceId = game.gameInstanceId || 1;
+    const expectedTheme = game.theme;
+
     console.log(`[Game ${game.id}] 🚀 Background prefetching data for Round ${nextRoundIndex}...`);
     
     game.prefetchedRoundPromise = (async () => {
         try {
             const data = await generateRoundData(
-                game.theme,
+                expectedTheme,
                 game.language,
                 numPlayers,
                 numQuestionsPerPlayer,
                 game.sillyMode,
                 game.is18PlusMode
             );
-            if (data) {
-                game.prefetchedRoundData = { roundIndex: nextRoundIndex, data };
+            if (data && (game.gameInstanceId || 1) === expectedInstanceId && game.phase !== 'lobby' && game.theme === expectedTheme) {
+                game.prefetchedRoundData = { roundIndex: nextRoundIndex, gameInstanceId: expectedInstanceId, data };
                 console.log(`[Game ${game.id}] ✅ Pre-fetch completed for Round ${nextRoundIndex}`);
                 return data;
             }
@@ -67,8 +70,8 @@ export function prefetchNextRoundData(game) {
     if (nextRoundIndex === QUESTIONS_PER_ROUND.length && !game.prefetchedFinalRoundPrompts && !game.prefetchedFinalRoundPromise) {
         game.prefetchedFinalRoundPromise = (async () => {
             try {
-                const finalPrompts = await generateFinalRoundData(game.theme, game.language, numPlayers, game.is18PlusMode);
-                if (finalPrompts) {
+                const finalPrompts = await generateFinalRoundData(expectedTheme, game.language, numPlayers, game.is18PlusMode);
+                if (finalPrompts && (game.gameInstanceId || 1) === expectedInstanceId && game.phase !== 'lobby' && game.theme === expectedTheme) {
                     game.prefetchedFinalRoundPrompts = finalPrompts;
                     console.log(`[Game ${game.id}] ✅ Pre-fetch completed for Final Round Movie Prompts`);
                     return finalPrompts;
@@ -97,6 +100,7 @@ export async function startNextRound(io, game) {
         }
         if (game.battleSchedule?.length > 0) {
             game.battleHistory.push(...game.battleSchedule);
+            game.battleSchedule = [];
         }
     }
 
@@ -110,6 +114,7 @@ export async function startNextRound(io, game) {
     game.phase = 'generating_round';
     game.playerAnswers = {};
     game.battleSchedule = [];
+    game.partialAnswers = {};
     helpers.broadcastGameState(io, game.id);
 
     const MAX_RETRIES = 3;
@@ -142,6 +147,7 @@ export async function startNextRound(io, game) {
         game.prefetchedRoundPromise = null;
     }
 
+    if (!Array.isArray(game.usedFallbackThemes)) game.usedFallbackThemes = [];
     const useFallback = game.geminiApiErrorCount >= 3;
 
     if (!roundData) {
@@ -190,24 +196,75 @@ export async function startNextRound(io, game) {
     }
 
     game.theme = finalTheme;
-    game.preGeneratedBattlePrompts = roundData.battlePrompts;
+    if (!game.usedQuestions) game.usedQuestions = [];
+    if (!game.usedBattlePrompts) game.usedBattlePrompts = [];
+    const usedQuestionsSet = new Set(game.usedQuestions);
+    const usedBattlePromptsSet = new Set(game.usedBattlePrompts);
+
+    // Filter battle prompts against previously used prompts across rounds/games
+    const rawBattlePrompts = Array.isArray(roundData.battlePrompts) ? roundData.battlePrompts : [];
+    const freshBattlePrompts = rawBattlePrompts.filter(bp => bp && !usedBattlePromptsSet.has(bp));
+    if (freshBattlePrompts.length >= game.players.length) {
+        game.preGeneratedBattlePrompts = freshBattlePrompts;
+    } else {
+        const fallbackSet = FALLBACK_CONTENT[game.language] || FALLBACK_CONTENT.en || [];
+        const sparePrompts = helpers.shuffleArray(fallbackSet.flatMap(p => p.battlePrompts || []))
+            .filter(bp => bp && !usedBattlePromptsSet.has(bp) && !freshBattlePrompts.includes(bp));
+        game.preGeneratedBattlePrompts = [...freshBattlePrompts, ...sparePrompts, ...rawBattlePrompts];
+    }
+
     game.preGeneratedFallbackWords = roundData.fallbackWords || [];
-    const shuffledQuestionSets = helpers.shuffleArray(roundData.playerQuestions);
+    const shuffledQuestionSets = helpers.shuffleArray([...(roundData.playerQuestions || [])]);
     game.reserveQuestions = {};
-    const extraQuestions = shuffledQuestionSets.slice(game.players.length).flat();
+
+    // Build a deduplicated pool of unseen spare questions across all sets and fallback packs
+    const fallbackQuestionPool = helpers.shuffleArray(
+        ((FALLBACK_CONTENT[game.language] || FALLBACK_CONTENT.en || []).flatMap(p => (p.playerQuestions || []).flat()))
+    ).filter(q => q && !usedQuestionsSet.has(q));
+
+    const extraQuestions = [
+        ...shuffledQuestionSets.slice(game.players.length).flat().filter(q => q && !usedQuestionsSet.has(q)),
+        ...fallbackQuestionPool
+    ];
+
+    const instancePrefix = (game.gameInstanceId && game.gameInstanceId > 1) ? `g${game.gameInstanceId}-` : '';
 
     game.players.forEach((player, playerIndex) => {
-        const playerQuestionSet = shuffledQuestionSets[playerIndex % shuffledQuestionSets.length] || [];
-        const mainQuestions = playerQuestionSet.slice(0, numQuestionsPerPlayer);
+        const rawSet = shuffledQuestionSets[playerIndex % Math.max(1, shuffledQuestionSets.length)] || [];
+        const unseenInSet = rawSet.filter(q => q && !usedQuestionsSet.has(q));
+        const mainQuestions = [];
+
+        for (const q of unseenInSet) {
+            if (mainQuestions.length >= numQuestionsPerPlayer) break;
+            mainQuestions.push(q);
+            usedQuestionsSet.add(q);
+            game.usedQuestions.push(q);
+        }
+        while (mainQuestions.length < numQuestionsPerPlayer && extraQuestions.length > 0) {
+            const nextQ = extraQuestions.shift();
+            if (nextQ && !usedQuestionsSet.has(nextQ)) {
+                mainQuestions.push(nextQ);
+                usedQuestionsSet.add(nextQ);
+                game.usedQuestions.push(nextQ);
+            }
+        }
+        if (mainQuestions.length < numQuestionsPerPlayer) {
+            for (const q of rawSet) {
+                if (mainQuestions.length >= numQuestionsPerPlayer) break;
+                if (q && !mainQuestions.includes(q)) {
+                    mainQuestions.push(q);
+                }
+            }
+        }
         
         // Spare questions for this player
         const playerReserves = [
-            ...playerQuestionSet.slice(numQuestionsPerPlayer),
-            ...(extraQuestions.length > 0 ? [extraQuestions.pop()] : [])
-        ];
+            ...unseenInSet.filter(q => !mainQuestions.includes(q)),
+            ...(extraQuestions.length > 0 ? [extraQuestions.shift()] : [])
+        ].filter(Boolean);
         
         if (playerReserves.length === 0) {
-            const fallbackPack = getFallbackRoundData(game.language, []);
+            const fallbackPack = getFallbackRoundData(game.language, game.usedFallbackThemes);
             playerReserves.push(fallbackPack.playerQuestions[0]?.[0] || 'What is your secret superpower?');
         }
         
@@ -215,7 +272,7 @@ export async function startNextRound(io, game) {
 
         game.playerAnswers[player.id] = {
             questions: mainQuestions.map((qText, i) => ({
-                id: `q-${game.currentRound}-${i}-${player.id}`,
+                id: `q-${instancePrefix}${game.currentRound}-${i}-${player.id}`,
                 text: qText || `Fallback Question ${i+1}`,
                 answer: ''
             })),

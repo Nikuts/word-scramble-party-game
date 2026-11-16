@@ -39,9 +39,11 @@
 </script>
 
 <div class="h-[100dvh] max-h-[100dvh] w-full flex flex-col justify-between overflow-hidden select-none font-sans box-border relative">
-    {#if $activeAllVotesInNotice}
-        <div class="fixed top-14 left-1/2 -translate-x-1/2 z-50 animate-bounce bg-emerald-400 text-black px-4 py-1.5 rounded-full font-display font-black tracking-wider shadow-[0_0_20px_rgba(52,211,153,0.9)] border-2 border-white flex items-center gap-1.5 text-xs sm:text-sm pointer-events-none">
-            <span>{$t.allVotesIn || '🗳️ ALL VOTES IN!'}</span>
+    {#if $activeAllVotesInNotice && $gamePhase === 'battle_voting'}
+        <div class="fixed top-14 inset-x-0 flex justify-center z-50 pointer-events-none px-4">
+            <div class="animate-bounce bg-emerald-400 text-black px-4 py-1.5 rounded-full font-display font-black tracking-wider shadow-[0_0_20px_rgba(52,211,153,0.9)] border-2 border-white flex items-center gap-1.5 text-xs sm:text-sm">
+                <span>{$t.allVotesIn || '🗳️ ALL VOTES IN!'}</span>
+            </div>
         </div>
     {/if}
 
@@ -62,8 +64,8 @@
                     </div>
                 </div>
                 <div class="text-right flex-shrink-0">
-                    <span class="font-bold text-lg sm:text-xl text-primary font-mono">{Math.round($animatedScore)}</span>
-                    <span class="text-xs text-neutral-400 font-display"> {$t.score || 'PTS'}</span>
+                    <span class="font-bold text-lg sm:text-xl text-primary font-mono">{Math.round($animatedScore).toLocaleString()}</span>
+                    <span class="text-xs text-neutral-400 font-display"> {$t.pts || $t.score || 'PTS'}</span>
                 </div>
             </div>
         </header>
@@ -98,8 +100,8 @@
         {/if}
     </main>
 
-    <!-- Flying Live Emoji Reactions Overlay -->
-    <div class="pointer-events-none fixed inset-0 overflow-hidden z-50">
+    <!-- Flying Live Avatar Reactions Overlay -->
+    <div class="pointer-events-none fixed inset-0 overflow-hidden z-50" style="transform: translateZ(0); isolation: isolate;">
         {#each $flyingEmojis as emoji (emoji.id)}
             {@const startX = emoji.startX ?? 50}
             {@const endX = emoji.endX ?? startX}
@@ -110,18 +112,7 @@
                 style="--start-x: {startX}vw; --end-x: {endX}vw; --start-rotate: {startRotate}deg; --end-rotate: {endRotate}deg;"
                 on:animationend={() => removeEmoji(emoji.id)}
             >
-                {#if emoji.emoji}
-                    <div class="flex flex-col items-center select-none pointer-events-none">
-                        <span class="text-4xl sm:text-5xl filter drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] leading-none">{emoji.emoji}</span>
-                        {#if emoji.avatar}
-                            <div class="w-5 h-5 -mt-1 opacity-90 scale-90 rounded-full bg-black/60 p-0.5 border border-white/40 shadow-sm">
-                                <PixelAvatar avatar={emoji.avatar} />
-                            </div>
-                        {/if}
-                    </div>
-                {:else}
-                    <PixelAvatar avatar={emoji.avatar} />
-                {/if}
+                <PixelAvatar avatar={emoji.avatar} className="w-full h-full" />
             </div>
         {/each}
     </div>

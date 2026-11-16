@@ -6,12 +6,8 @@
     export let player;
 
     $: sortedPlayers = game?.players ? [...game.players].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)) : [];
-    $: myRankIndex = sortedPlayers.findIndex(p => p.id === player?.id);
-    $: myRank = myRankIndex >= 0 ? myRankIndex + 1 : 4;
+    $: myRank = player ? sortedPlayers.filter(p => (p.score ?? 0) > (player.score ?? 0)).length + 1 : 4;
     $: isHost = player?.id === game?.hostPlayerId || player?.isHost || false;
-
-    // Option 1 Emojis: Hype, Laugh, Skull, Poop, Vomit, Mindblown
-    const reactionEmojis = ['🔥', '😂', '💀', '💩', '🤮', '🤯'];
 
     const rankTitles = {
         1: { border: 'border-amber-400', glow: 'shadow-[0_0_20px_rgba(251,191,36,0.5)]', bg: 'bg-amber-400 text-black', scoreColor: 'text-amber-400' },
@@ -23,9 +19,10 @@
     $: currentRankStyle = rankTitles[myRank] || rankTitles[4];
 
     function getRankTitle(rank, dict) {
-        if (rank === 1) return `👑 1 ${dict.place || 'PLACE'} - ${dict.champion || 'CHAMPION'}!`;
-        if (rank === 2) return `🥈 2 ${dict.place || 'PLACE'} - ${dict.runnerUp || 'RUNNER UP'}`;
-        if (rank === 3) return `🥉 3 ${dict.place || 'PLACE'} - ${dict.podium || 'PODIUM'}`;
+        const isEn = !dict.place || dict.place === 'PLACE';
+        if (rank === 1) return `👑 ${isEn ? '1ST' : '1'} ${dict.place || 'PLACE'} - ${dict.champion || 'CHAMPION'}!`;
+        if (rank === 2) return `🥈 ${isEn ? '2ND' : '2'} ${dict.place || 'PLACE'} - ${dict.runnerUp || 'RUNNER UP'}`;
+        if (rank === 3) return `🥉 ${isEn ? '3RD' : '3'} ${dict.place || 'PLACE'} - ${dict.podium || 'PODIUM'}`;
         return `🎮 #${rank} - ${dict.participant || 'PARTICIPANT'}`;
     }
 
@@ -54,16 +51,16 @@
             }));
     }
 
-    function sendReaction(emoji) {
+    function sendReaction() {
         if (!game?.id) return;
-        sendMessage('send-lobby-emoji', { gameId: game.id, emoji });
+        sendMessage('send-lobby-emoji', { gameId: game.id });
     }
 </script>
 
 <div class="w-full h-full flex flex-col p-3 pb-3 max-w-md mx-auto select-none font-sans overflow-y-auto overscroll-contain box-border">
     
     <!-- 1. Main Card: Scrollable Content with Clean Inline Spacing -->
-    <div class="flex-1 flex flex-col justify-between bg-neutral-950/95 border-2 {currentRankStyle.border} {currentRankStyle.glow} rounded-2xl p-3 sm:p-4 mb-2 space-y-2 sm:space-y-3">
+    <div class="flex-1 flex flex-col justify-start gap-3 bg-neutral-950/95 border-2 {currentRankStyle.border} {currentRankStyle.glow} rounded-2xl p-3 sm:p-4 mb-2">
         
         <!-- Top Hero Rank & Avatar -->
         <div class="text-center flex flex-col items-center justify-start flex-shrink-0 pt-0.5">
@@ -172,7 +169,10 @@
             {:else}
                 <!-- Regular Participant: Waiting for Host Banner -->
                 <div class="p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 text-center flex items-center justify-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                    <span class="relative flex h-2 w-2 flex-shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+                    </span>
                     <span class="text-xs font-sans text-slate-300 font-medium">
                         {$t.waitingForHostToRestart || 'Waiting for host to start a new game...'}
                     </span>
@@ -181,21 +181,19 @@
         </div>
     </div>
 
-    <!-- 4. Docked Live Emoji Reaction Bar (Option 1: 🔥, 😂, 💀, 💩, 🤮, 🤯) -->
-    <footer class="pt-1 border-t border-neutral-800 flex-shrink-0">
+    <!-- 4. Docked Live Avatar Reaction Button -->
+    <footer class="pt-1 border-t border-neutral-800 flex-shrink-0 flex flex-col items-center">
         <span class="text-[9px] font-display font-bold text-slate-400 uppercase tracking-widest block text-center mb-1">
-            {$t.sendReaction || 'SEND LIVE REACTION'}
+            {$t.sendReaction || 'SEND AVATAR REACTION'}
         </span>
-        <div class="flex justify-center items-center gap-2">
-            {#each reactionEmojis as emoji}
-                <button
-                    type="button"
-                    on:click={() => sendReaction(emoji)}
-                    class="w-9 h-9 rounded-full bg-neutral-900 border border-neutral-700 hover:border-cyan-400 active:scale-125 flex items-center justify-center text-base shadow-sm transition-transform cursor-pointer"
-                >
-                    {emoji}
-                </button>
-            {/each}
-        </div>
+        <button
+            type="button"
+            data-testid="send-reaction-btn"
+            aria-label={$t.sendReaction || 'Send Reaction'}
+            on:click={() => sendReaction()}
+            class="w-11 h-11 rounded-full bg-neutral-900 border-2 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.5)] hover:scale-105 active:scale-95 flex items-center justify-center p-1.5 transition-transform cursor-pointer"
+        >
+            <PixelAvatar avatar={player?.avatar || '🦊'} className="w-full h-full" />
+        </button>
     </footer>
 </div>

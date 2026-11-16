@@ -1,6 +1,6 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { t, sendMessage, getPartialAnswers, gameState, currentPlayer } from '../../../stores.js';
+    import { t, sendMessage, getPartialAnswers, clearConsumedPartialAnswers, gameState, currentPlayer } from '../../../stores.js';
     import { MIN_ANSWER_WORDS } from '../../config.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
     import PixelAvatar from '../../shared/PixelAvatar.svelte';
@@ -26,6 +26,13 @@
     // Reactively hydrate answers whenever questions change or are loaded
     $: if (questions && questions.length > 0) {
         let changed = false;
+        const activeIds = new Set(questions.map(q => q.id));
+        Object.keys(answers).forEach(existingId => {
+            if (!activeIds.has(existingId)) {
+                delete answers[existingId];
+                changed = true;
+            }
+        });
         questions.forEach(q => {
             if (q.answer && (!answers[q.id] || !answers[q.id].submitted)) {
                 answers[q.id] = { text: q.answer, submitted: true };
@@ -46,6 +53,7 @@
         const partials = getPartialAnswers();
         if (questions.length > 0) {
             let restored = false;
+            let consumedPartials = false;
             questions.forEach(q => {
                 if (q.answer) {
                     answers[q.id] = { text: q.answer, submitted: true };
@@ -55,10 +63,12 @@
                     if (partial) {
                         answers[q.id] = { text: partial, submitted: false };
                         restored = true;
+                        consumedPartials = true;
                     }
                 }
             });
             if (restored) answers = { ...answers };
+            if (consumedPartials) clearConsumedPartialAnswers();
         }
     });
 
@@ -134,8 +144,7 @@
     function handleSendReaction() {
         if (!$currentPlayer || !$gameState?.id) return;
         sendMessage('send-lobby-emoji', {
-            gameId: $gameState.id,
-            emoji: currentPlayerObj?.avatar
+            gameId: $gameState.id
         });
     }
 </script>
@@ -147,13 +156,14 @@
             <h1 class="text-2xl sm:text-3xl font-display my-3 text-emerald-400">{$t.allAnswersSubmitted || 'READY!'}</h1>
             <p class="text-sm sm:text-base text-warning animate-pulse font-display mb-6">{$t.waitingForAnswers}</p>
 
-            <!-- Interactive Live Emoji Reaction Button while waiting -->
+            <!-- Interactive Live Avatar Reaction Button while waiting -->
             <div class="flex flex-col items-center gap-2 mt-2">
                 <span class="text-xs font-display text-slate-400 uppercase tracking-widest">
                     {$t.sendReaction || 'Send Reaction'}
                 </span>
                 <button 
                     type="button"
+                    data-testid="send-reaction-btn"
                     class="w-16 h-16 rounded-full border-2 border-pink-500 bg-pink-950/80 shadow-[0_0_25px_rgba(236,72,153,0.7)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all"
                     on:click={handleSendReaction}
                     aria-label={$t.sendReaction || 'Send Reaction'}
@@ -196,7 +206,7 @@
                         disabled={rerollsLeft === 0}
                         class="px-2.5 py-1 rounded-lg border font-mono text-xs font-bold uppercase transition-all {
                             rerollsLeft === 0 
-                            ? 'bg-neutral-900 border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed' 
+                            ? 'bg-neutral-900 border-neutral-700 text-neutral-400 opacity-65 cursor-not-allowed' 
                             : 'bg-purple-950/80 border-purple-500/60 text-purple-200 hover:bg-purple-900 shadow-sm cursor-pointer'
                         }"
                     >
@@ -209,11 +219,11 @@
                         disabled={hasUsedTimeBoost}
                         class="px-2.5 py-1 rounded-lg border font-mono text-xs font-bold uppercase transition-all {
                             hasUsedTimeBoost 
-                            ? 'bg-neutral-900 border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed' 
+                            ? 'bg-neutral-900 border-neutral-700 text-neutral-400 opacity-65 cursor-not-allowed' 
                             : 'bg-amber-950/80 border-amber-500/60 text-amber-200 hover:bg-amber-900 shadow-sm cursor-pointer'
                         }"
                     >
-                        +30s ({hasUsedTimeBoost ? '0' : '1'})
+                        {$t.timeBoost || '+30s'} ({hasUsedTimeBoost ? '0' : '1'})
                     </button>
                 </div>
             </div>
@@ -248,8 +258,9 @@
                         ✓ {$t.readyToSubmit || 'READY'}
                     </span>
                 {:else}
+                    {@const neededCount = MIN_ANSWER_WORDS - currentWordCount}
                     <span class="text-xs sm:text-sm font-sans font-bold text-amber-400">
-                        {MIN_ANSWER_WORDS - currentWordCount} {$t.wordsNeeded || 'more words needed'}
+                        {$t.wordsNeeded?.includes('{n}') ? $t.wordsNeeded.replace('{n}', neededCount) : `${neededCount} ${$t.wordsNeeded || 'more words needed'}`}
                     </span>
                 {/if}
             </div>

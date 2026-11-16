@@ -66,9 +66,52 @@
         const raw = tokens.filter(Boolean).map(w => w.text).join(' ');
         return formatAnswerText(raw);
     }
+
+    const TRAILING_PUNCT_REGEX = /^[.,!?:;…»”)\]]+$/;
+
+    function getPromptWordGroups(promptWords, battle, isFinal) {
+        let words = promptWords || [];
+        const genre = battle?.genre || battle?.formatConfig?.genre;
+        if (isFinal && genre && words.length > 0) {
+            const colonIdx = words.findIndex(w => w?.text === ':');
+            if (colonIdx > 0 && colonIdx <= 6) {
+                const prefix = words.slice(0, colonIdx).map(w => w.text).join(' ').toLowerCase().replace(/[^a-zа-яіїєґ0-9]+/gi, '');
+                const cleanGenre = String(genre).toLowerCase().replace(/[^a-zа-яіїєґ0-9]+/gi, '');
+                if (cleanGenre && (prefix === cleanGenre || cleanGenre.startsWith(prefix))) {
+                    words = words.slice(colonIdx + 1);
+                }
+            }
+        }
+        const groups = [];
+        for (const w of words) {
+            if (!w) continue;
+            if (groups.length > 0 && TRAILING_PUNCT_REGEX.test(w.text)) {
+                groups[groups.length - 1].push(w);
+            } else {
+                groups.push([w]);
+            }
+        }
+        return groups;
+    }
+
+    function getWordCountLabel(count, dict) {
+        if (!dict?.wordsGenitive) return dict?.words || 'WORDS';
+        const mod100 = count % 100;
+        const mod10 = count % 10;
+        if ((mod100 >= 11 && mod100 <= 14) || mod10 === 0 || mod10 >= 5) {
+            return dict.wordsGenitive;
+        }
+        return dict.words || 'WORDS';
+    }
     
     function ensureBattleFormsInitialized(battles, pId) {
         if (!battles || !battles.length || !pId) return;
+        const activeScheduleIds = new Set(($gameState?.battleSchedule || battles).map(b => b.id));
+        Object.keys(battleForms).forEach(existingId => {
+            if (!activeScheduleIds.has(existingId)) {
+                delete battleForms[existingId];
+            }
+        });
         const uninitialized = battles.filter(b => !battleForms[b.id]);
         if (uninitialized.length === 0) return;
 
@@ -384,8 +427,7 @@
         const activeGameId = gameId || $gameState?.id;
         if (!activeGameId) return;
         sendMessage('send-lobby-emoji', {
-            gameId: activeGameId,
-            emoji: currentPlayerObj?.avatar
+            gameId: activeGameId
         });
     }
 </script>
@@ -437,11 +479,11 @@
                         disabled={hasUsedTimeBoost}
                         class="px-2.5 py-1 rounded-lg border font-mono text-xs font-bold uppercase transition-all {
                             hasUsedTimeBoost 
-                            ? 'bg-neutral-900 border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed' 
+                            ? 'bg-neutral-900 border-neutral-700 text-neutral-400 opacity-65 cursor-not-allowed' 
                             : 'bg-amber-950/80 border-amber-500/60 text-amber-200 hover:bg-amber-900 shadow-sm cursor-pointer'
                         }"
                     >
-                        +30s ({hasUsedTimeBoost ? '0' : '1'})
+                        {$t.timeBoost || '+30s'} ({hasUsedTimeBoost ? '0' : '1'})
                     </button>
                 </div>
 
@@ -451,15 +493,19 @@
                         <p class="font-display font-black text-sm text-amber-300 uppercase tracking-wider mb-1">{battle.genre || battle.formatConfig?.genre}</p>
                     {/if}
                     <div class="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1.5">
-                        {#each battleForm.promptWords as word (word.id)}
-                            <button
-                                type="button"
-                                on:click={() => addWordToAnswer(word, battle.id)}
-                                class="hover:text-cyan-300 hover:underline transition-colors cursor-pointer text-left inline bg-transparent p-0 border-0 font-bold text-sm sm:text-base"
-                                title={$t.promptWordsLabel || 'Tap to use prompt word'}
-                            >
-                                {word.text}
-                            </button>
+                        {#each getPromptWordGroups(battleForm.promptWords, battle, battleForm.isFinal) as group (group[0].id)}
+                            <span class="inline-flex items-baseline">
+                                {#each group as word (word.id)}
+                                    <button
+                                        type="button"
+                                        on:click={() => addWordToAnswer(word, battle.id)}
+                                        class="hover:text-cyan-300 hover:underline transition-colors cursor-pointer text-left inline bg-transparent p-0 border-0 font-bold text-sm sm:text-base"
+                                        title={$t.promptWordsLabel || 'Tap to use prompt word'}
+                                    >
+                                        {word.text}
+                                    </button>
+                                {/each}
+                            </span>
                         {/each}
                     </div>
                 </div>
@@ -531,7 +577,7 @@
                     <div class="flex items-center justify-between text-xs font-display font-bold uppercase tracking-widest text-slate-400 mb-1">
                         <span class="text-pink-400 font-bold">⚔️ {$t.yourAnswer || 'YOUR ANSWER'}</span>
                         <div class="flex items-center gap-2">
-                            <span class="text-xs text-slate-400 font-mono">{countVocabularyWords(battleForm.answerWords)} {$t.words || 'WORDS'}</span>
+                            <span class="text-xs text-slate-400 font-mono">{countVocabularyWords(battleForm.answerWords)} {getWordCountLabel(countVocabularyWords(battleForm.answerWords), $t)}</span>
                             {#if battleForm.answerWords.length > 0}
                                 <button type="button" class="text-red-400 hover:text-red-300 font-sans text-xs cursor-pointer font-bold" on:click={() => clearLine(battle.id)}>✕ {$t.clear || 'Clear'}</button>
                             {/if}
@@ -622,6 +668,7 @@
                 </span>
                 <button 
                     type="button"
+                    data-testid="send-reaction-btn"
                     class="w-16 h-16 rounded-full border-2 border-pink-500 bg-pink-950/80 shadow-[0_0_25px_rgba(236,72,153,0.7)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all"
                     on:click={handleSendReaction}
                     aria-label={$t.sendReaction || 'Send Reaction'}

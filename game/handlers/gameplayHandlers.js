@@ -163,6 +163,10 @@ export function handleRerollQuestion(io, socket, { gameId, playerId, questionId 
     }
 
     question.text = newQuestionText;
+    if (!Array.isArray(game.usedQuestions)) game.usedQuestions = [];
+    if (!game.usedQuestions.includes(newQuestionText)) {
+        game.usedQuestions.push(newQuestionText);
+    }
     pa.rerollsLeft = Math.max(0, (pa.rerollsLeft || 1) - 1);
 
     // Clear partial answer draft for this question

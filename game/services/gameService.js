@@ -1,9 +1,17 @@
 import * as helpers from '../helpers.js';
 import * as timerService from './timerService.js';
 import { TIMEOUT_ANSWER_PLACEHOLDER } from '../../shared/config.js';
+import { extractCleanWords } from './wordBankEngine.js';
 
 export function calculateGameSuperlatives(game) {
-    const allBattles = [...(game.battleHistory || []), ...(game.battleSchedule || [])];
+    const seenBattleIds = new Set();
+    const allBattles = [...(game.battleHistory || []), ...(game.battleSchedule || [])].filter(b => {
+        if (!b) return false;
+        if (!b.id) return true;
+        if (seenBattleIds.has(b.id)) return false;
+        seenBattleIds.add(b.id);
+        return true;
+    });
     if (allBattles.length === 0 || !game.players || game.players.length === 0) return {};
 
     const royaltiesByPlayer = {};
@@ -50,7 +58,7 @@ export function calculateGameSuperlatives(game) {
                 ansText = `${rawAns.title || ''} ${rawAns.tagline || ''}`.trim();
             }
 
-            const wordTokens = helpers.tokenizeText(ansText);
+            const wordTokens = extractCleanWords(ansText);
             if (wordTokens.length > 0) {
                 const count = wordTokens.length;
                 if (!shortestWin || count < shortestWin.count) {
@@ -125,8 +133,22 @@ export function resetGameForRestart(game) {
     if (game.playerReconnectionTimers) Object.values(game.playerReconnectionTimers).forEach(timerId => clearTimeout(timerId));
     if (game.inactivityTimeoutId) clearTimeout(game.inactivityTimeoutId);
 
+    const preservedUsedFallbackThemes = [...new Set([
+        ...(game.usedFallbackThemes || []),
+        ...(game.theme ? [game.theme] : [])
+    ])];
+    const preservedUsedThemesHistory = [...new Set([
+        ...(game.usedThemesHistory || []),
+        ...(game.theme ? [game.theme] : [])
+    ])];
+    const preservedUsedQuestions = [...new Set(game.usedQuestions || [])];
+    const preservedUsedBattlePrompts = [...new Set(game.usedBattlePrompts || [])];
+    const preservedUsedFinalPrompts = [...new Set(game.usedFinalPrompts || [])];
+    const nextGameInstanceId = (game.gameInstanceId || 1) + 1;
+
     Object.assign(game, {
         phase: 'lobby',
+        gameInstanceId: nextGameInstanceId,
         currentRound: 0,
         theme: '',
         sillyMode: false,
@@ -149,7 +171,11 @@ export function resetGameForRestart(game) {
         phaseOnExpire: null,
         pausedRemainingMs: null,
         isPaused: false,
-        usedFallbackThemes: [],
+        usedFallbackThemes: preservedUsedFallbackThemes,
+        usedThemesHistory: preservedUsedThemesHistory,
+        usedQuestions: preservedUsedQuestions,
+        usedBattlePrompts: preservedUsedBattlePrompts,
+        usedFinalPrompts: preservedUsedFinalPrompts,
         partialAnswers: {},
         playerSeenChunks: {},
         preGeneratedFallbackWords: [],

@@ -32,12 +32,17 @@
         }
     });
 
+    let lastScoresSignature = '';
     $: if ($gamePlayers) {
-        const scoresObject = $gamePlayers.reduce((acc, p) => {
-            acc[p.id] = p.score;
-            return acc;
-        }, {});
-        animatedScores.set(scoresObject);
+        const sig = $gamePlayers.map(p => `${p.id}:${p.score}`).join('|');
+        if (sig !== lastScoresSignature) {
+            lastScoresSignature = sig;
+            const scoresObject = $gamePlayers.reduce((acc, p) => {
+                acc[p.id] = p.score;
+                return acc;
+            }, {});
+            animatedScores.set(scoresObject);
+        }
     }
     
     $: if ($gamePhase === 'battle_result_reveal') {
@@ -143,15 +148,19 @@
     {/if}
 
     {#if $activeTimeBoostNotice}
-        <div class="fixed top-6 right-6 z-50 animate-bounce bg-yellow-400 text-black px-4 py-2 rounded-lg font-display font-extrabold shadow-[0_0_20px_rgba(250,204,21,0.8)] border-2 border-white flex items-center gap-2">
-            <span class="text-xl">⏱️</span>
-            <span>{$t.timeBoostUsed.replace('{name}', $activeTimeBoostNotice.playerName)}</span>
+        <div class="fixed top-16 inset-x-0 flex justify-center z-50 pointer-events-none px-4">
+            <div class="animate-bounce bg-yellow-400 text-black px-4 py-1.5 rounded-xl font-display font-extrabold shadow-[0_0_20px_rgba(250,204,21,0.8)] border-2 border-white flex items-center gap-2 text-sm sm:text-base">
+                <span class="text-xl">⏱️</span>
+                <span>{$t.timeBoostUsed.replace('{name}', $activeTimeBoostNotice.playerName)}</span>
+            </div>
         </div>
     {/if}
 
-    {#if $activeAllVotesInNotice}
-        <div class="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-bounce bg-emerald-400 text-black px-5 py-2 rounded-full font-display font-black tracking-wider shadow-[0_0_25px_rgba(52,211,153,0.9)] border-2 border-white flex items-center gap-2 text-sm sm:text-base pointer-events-none">
-            <span>{$t.allVotesIn || '🗳️ ALL VOTES IN!'}</span>
+    {#if $activeAllVotesInNotice && $gamePhase === 'battle_voting'}
+        <div class="fixed top-20 inset-x-0 flex justify-center z-50 pointer-events-none px-4">
+            <div class="animate-bounce bg-emerald-400 text-black px-5 py-2 rounded-full font-display font-black tracking-wider shadow-[0_0_25px_rgba(52,211,153,0.9)] border-2 border-white flex items-center gap-2 text-sm sm:text-base">
+                <span>{$t.allVotesIn || '🗳️ ALL VOTES IN!'}</span>
+            </div>
         </div>
     {/if}
 
@@ -162,7 +171,7 @@
             <button 
                 type="button"
                 on:click={toggleTvMode}
-                class="px-2 sm:px-2.5 py-1 bg-black/90 text-[10px] sm:text-xs rounded-lg border transition-all font-display flex items-center gap-1.5 cursor-pointer {$tvMode ? 'border-primary text-primary shadow-sm shadow-primary/50' : 'border-neutral-700 text-neutral-400 hover:text-white'}"
+                class="px-2.5 sm:px-3 py-1.5 bg-neutral-950 text-xs sm:text-sm font-bold rounded-lg border transition-all font-display flex items-center gap-1.5 cursor-pointer {$tvMode ? 'border-primary text-primary' : 'border-neutral-700 text-neutral-300 hover:text-white'}"
                 title={$t.tvModeDesc}
             >
                 <span>📺</span>
@@ -172,11 +181,11 @@
         </div>
 
         <!-- Center: Theme Marquee -->
-        <div class="px-3 sm:px-5 py-1 sm:py-1.5 rounded-xl bg-black/90 border-2 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)] text-center flex-1 min-w-0 max-w-2xl lg:max-w-4xl mx-1 sm:mx-2">
-            <span class="text-[9px] sm:text-[10px] font-display uppercase tracking-widest text-cyan-400 font-bold block leading-tight">
+        <div class="px-3 sm:px-5 py-1 sm:py-1.5 rounded-xl bg-neutral-950/95 border-2 border-cyan-400 shadow-lg text-center flex-1 min-w-0 max-w-2xl lg:max-w-4xl mx-1 sm:mx-2">
+            <span class="text-[11px] sm:text-xs font-display uppercase tracking-widest text-cyan-300 font-bold block leading-tight">
                 {$t.chosenTheme || 'CHOSEN THEME'}
             </span>
-            <span class="font-black text-amber-300 font-display text-xs sm:text-sm lg:text-base tracking-wide drop-shadow-[0_0_10px_rgba(252,211,77,0.5)] leading-snug break-words line-clamp-2 block">
+            <span class="font-black text-amber-300 font-display text-sm sm:text-base lg:text-lg tracking-wide leading-snug break-words line-clamp-2 block">
                 {$gameState.theme || '...'}
             </span>
         </div>
@@ -186,7 +195,7 @@
             <button 
                 type="button"
                 on:click={handleForceEndGame}
-                class="px-2 sm:px-2.5 py-1 bg-neutral-900 border border-neutral-700 hover:border-danger/80 hover:bg-danger/20 text-neutral-400 hover:text-danger text-[10px] sm:text-xs rounded-lg transition-colors font-display cursor-pointer flex items-center gap-1"
+                class="px-2.5 sm:px-3 py-1.5 bg-neutral-900 border border-neutral-700 hover:border-danger/80 hover:bg-danger/20 text-neutral-300 hover:text-danger text-xs sm:text-sm font-bold rounded-lg transition-colors font-display cursor-pointer flex items-center gap-1"
                 title={$t.endGame}
             >
                 <span>🛑</span>
@@ -222,19 +231,19 @@
     {#if $gamePhase !== 'question' && $gamePhase !== 'battle_answering' && $gamePhase !== 'generating_round' && $gamePhase !== 'preparing_battles' && $gamePhase !== 'results'}
         {@const isReveal = $gamePhase === 'battle_result_reveal'}
         {@const currentBattle = $gameState.battleSchedule?.[$gameState.currentVotingBattleIndex]}
-        {@const isLargeRoster = $gamePlayers.length > 8}
-        <footer class="w-full flex items-center justify-center {isLargeRoster ? 'gap-1' : 'gap-1.5 sm:gap-2.5'} flex-wrap pt-1 flex-shrink-0 max-w-7xl mx-auto">
+        {@const isLargeRoster = $gamePlayers.length >= 6}
+        <footer class="w-full flex items-center justify-center {isLargeRoster ? 'gap-1 sm:gap-1.5' : 'gap-2 sm:gap-3'} flex-wrap pt-1 flex-shrink-0 max-w-7xl mx-auto">
             {#each $gamePlayers as p (p.id)}
                 {@const isWinner = isReveal && currentBattle?.winnerId === p.id}
-                <div class="flex items-center {isLargeRoster ? 'gap-1 px-1.5 py-0.5 rounded-lg' : 'gap-2 px-2.5 sm:px-3 py-1 rounded-xl'} bg-neutral-950/90 border-2 {isWinner ? 'border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.8)] ring-1 ring-yellow-400/40' : 'border-neutral-700/90'} shadow-md" data-player-id={p.id}>
-                    <div class="{isLargeRoster ? 'w-4 h-4 sm:w-5 sm:h-5' : 'w-6 h-6 sm:w-7 sm:h-7'} flex-shrink-0">
+                <div class="flex items-center {isLargeRoster ? 'gap-1.5 px-2 py-0.5 rounded-lg' : 'gap-2 px-3 sm:px-3.5 py-1 rounded-xl'} bg-neutral-950/95 border-2 {isWinner ? 'border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.8)] ring-1 ring-yellow-400/40' : 'border-neutral-700/90'} shadow-md" data-player-id={p.id}>
+                    <div class="{isLargeRoster ? 'w-5 h-5' : 'w-6 h-6 sm:w-7 sm:h-7'} flex-shrink-0">
                         <PixelAvatar avatar={p.avatar} />
                     </div>
-                    <span class="font-display {isLargeRoster ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'} text-slate-100 font-bold whitespace-nowrap">{p.name}</span>
+                    <span class="font-display {isLargeRoster ? 'text-xs' : 'text-sm sm:text-base'} text-slate-100 font-bold whitespace-nowrap">{p.name}</span>
                     {#if isWinner}
                         <span class="text-xs sm:text-sm">👑</span>
                     {/if}
-                    <span class="font-mono {isLargeRoster ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'} text-cyan-300 font-black ml-0.5">
+                    <span class="font-mono {isLargeRoster ? 'text-xs' : 'text-sm sm:text-base'} text-cyan-300 font-black ml-0.5">
                         {Math.round($animatedScores[p.id] || p.score)}
                     </span>
                 </div>
@@ -242,8 +251,8 @@
         </footer>
     {/if}
 
-    <!-- Flying Avatar & Emoji Container -->
-    <div class="fixed inset-0 w-full h-full pointer-events-none overflow-hidden z-50">
+    <!-- Flying Avatar Reactions Container -->
+    <div class="fixed inset-0 w-full h-full pointer-events-none overflow-hidden z-50" style="transform: translateZ(0); isolation: isolate;">
         {#each $flyingEmojis as emoji (emoji.id)}
             {@const startX = emoji.startX ?? (Math.random() * 75 + 10)}
             {@const endX = emoji.endX ?? startX}
@@ -254,18 +263,9 @@
                 style="--start-x: {startX}vw; --end-x: {endX}vw; --start-rotate: {startRotate}deg; --end-rotate: {endRotate}deg;"
                 on:animationend={() => removeEmoji(emoji.id)}
             >
-                {#if emoji.emoji}
-                    <div class="flex flex-col items-center select-none pointer-events-none">
-                        <span class="text-5xl sm:text-6xl filter drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] leading-none">{emoji.emoji}</span>
-                        {#if emoji.avatar}
-                            <div class="w-6 h-6 -mt-1.5 opacity-90 scale-90 rounded-full bg-black/60 p-0.5 border border-white/40 shadow-sm">
-                                <PixelAvatar avatar={emoji.avatar} />
-                            </div>
-                        {/if}
-                    </div>
-                {:else}
-                    <PixelAvatar avatar={emoji.avatar} />
-                {/if}
+                <div class="w-16 h-16 sm:w-20 sm:h-20 select-none pointer-events-none">
+                    <PixelAvatar avatar={emoji.avatar} className="w-full h-full" />
+                </div>
             </div>
         {/each}
     </div>

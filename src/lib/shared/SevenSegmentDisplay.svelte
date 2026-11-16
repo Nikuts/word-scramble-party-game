@@ -6,11 +6,12 @@
     export let time = 0;
     export let showLabel = true;
     export let size = 'md'; // 'sm' (32px), 'md' (44px), 'lg' (60px), 'xl' (80px)
+    export let disableLowWarning = false;
 
     $: height = size === 'sm' ? 32 : (size === 'lg' ? 60 : (size === 'xl' ? 80 : 44));
 
     let digits = [0, 0, 0];
-    $: isLow = time <= 10 && time > 0;
+    $: isLow = !disableLowWarning && time <= 10 && time > 0;
 
     $: {
         const safeTime = Math.max(0, Math.min(999, parseInt(time, 10) || 0));

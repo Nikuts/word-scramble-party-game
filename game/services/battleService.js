@@ -344,10 +344,38 @@ export function generateBattleSchedule(game, prompts, isFinalRound = false) {
 
     helpers.shuffleArray(battleGroups);
 
-    const shuffledPrompts = helpers.shuffleArray([...prompts]);
+    if (!game.usedBattlePrompts) game.usedBattlePrompts = [];
+    if (!game.usedFinalPrompts) game.usedFinalPrompts = [];
+    const usedBattleSet = new Set(game.usedBattlePrompts);
+    const usedFinalSet = new Set(game.usedFinalPrompts);
+
+    const rawPrompts = helpers.shuffleArray([...(prompts || [])]);
+    const unseenPrompts = rawPrompts.filter(p => {
+        if (!p) return false;
+        const key = isFinalRound ? `${p.genre || ''}:${p.premise || ''}` : String(p);
+        return isFinalRound ? !usedFinalSet.has(key) : !usedBattleSet.has(key);
+    });
+    const seenPrompts = rawPrompts.filter(p => p && !unseenPrompts.includes(p));
+    // Pop from end, so put unseenPrompts at the end of shuffledPrompts
+    const shuffledPrompts = [...seenPrompts, ...unseenPrompts];
+
+    const instancePrefix = (game.gameInstanceId && game.gameInstanceId > 1) ? `g${game.gameInstanceId}-` : '';
 
     game.battleSchedule = battleGroups.map((group, index) => {
         const promptData = shuffledPrompts.pop() || (isFinalRound ? { genre: 'Action', premise: `A secret agent teams up with their talking cat.` } : `Creative battle! #${index + 1}`);
+        if (isFinalRound && promptData) {
+            const key = `${promptData.genre || ''}:${promptData.premise || ''}`;
+            if (!usedFinalSet.has(key)) {
+                usedFinalSet.add(key);
+                game.usedFinalPrompts.push(key);
+            }
+        } else if (promptData) {
+            const key = String(promptData);
+            if (!usedBattleSet.has(key)) {
+                usedBattleSet.add(key);
+                game.usedBattlePrompts.push(key);
+            }
+        }
         
         const formatConfig = isFinalRound
             ? {
@@ -368,7 +396,7 @@ export function generateBattleSchedule(game, prompts, isFinalRound = false) {
             };
 
         return {
-            id: `b-${game.currentRound}-${index}`,
+            id: `b-${instancePrefix}${game.currentRound}-${index}`,
             competitors: group,
             optionOrder: helpers.shuffleArray([...group]),
             formatConfig,
@@ -429,6 +457,10 @@ export function resolveBattleSubmission(game, battle, playerId, submissionPayloa
 
     const tileMap = buildBattleTileLookup(battle, playerId);
     const hasWordBank = (battle.wordBanks?.[playerId]?.length || 0) > 0;
+    const lang = game?.language || 'en';
+    const extractUsedBundles = (tiles) => tiles
+        .filter(t => t.bundleId && !isStopwordOrConnector(t.text, lang))
+        .map(t => t.bundleId);
 
     // Extract raw tileIds if present
     let rawTileIds = null;
@@ -456,7 +488,7 @@ export function resolveBattleSubmission(game, battle, playerId, submissionPayloa
             }
             const tiles = rawTileIds.map(tid => tileMap.get(tid));
             const answer = helpers.formatAnswerText(tiles.map(t => t.text).join(' '));
-            const usedBundles = tiles.map(t => t.bundleId).filter(Boolean);
+            const usedBundles = extractUsedBundles(tiles);
             return { answer, tileIds: [...rawTileIds], usedBundles };
         }
         if (typeof rawTileIds === 'object') {
@@ -472,7 +504,7 @@ export function resolveBattleSubmission(game, battle, playerId, submissionPayloa
                 title: helpers.formatAnswerText(titleTiles.map(t => t.text).join(' ')),
                 tagline: helpers.formatAnswerText(taglineTiles.map(t => t.text).join(' '))
             };
-            const usedBundles = [...titleTiles, ...taglineTiles].map(t => t.bundleId).filter(Boolean);
+            const usedBundles = extractUsedBundles([...titleTiles, ...taglineTiles]);
             return {
                 answer,
                 tileIds: { title: [...titleIds], tagline: [...taglineIds] },
@@ -511,7 +543,7 @@ export function resolveBattleSubmission(game, battle, playerId, submissionPayloa
             return {
                 answer: helpers.formatAnswerText(matchedTiles.map(t => t.text).join(' ')),
                 tileIds: matchedTiles.map(t => t.id),
-                usedBundles: matchedTiles.map(t => t.bundleId).filter(Boolean)
+                usedBundles: extractUsedBundles(matchedTiles)
             };
         } else if (rawAns && typeof rawAns === 'object' && (typeof rawAns.title === 'string' || typeof rawAns.tagline === 'string')) {
             const titleTokens = helpers.tokenizeText(rawAns.title || '');
@@ -538,7 +570,7 @@ export function resolveBattleSubmission(game, battle, playerId, submissionPayloa
                     title: matchedTitle.map(t => t.id),
                     tagline: matchedTagline.map(t => t.id)
                 },
-                usedBundles: [...matchedTitle, ...matchedTagline].map(t => t.bundleId).filter(Boolean)
+                usedBundles: extractUsedBundles([...matchedTitle, ...matchedTagline])
             };
         }
         return null;
@@ -579,18 +611,35 @@ export async function prepareBattlePhase(io, game) {
             }
             game.prefetchedFinalRoundPromise = null;
         }
+        const usedFinalSet = new Set(game.usedFinalPrompts || []);
         if (game.prefetchedFinalRoundPrompts && game.prefetchedFinalRoundPrompts.length >= numBattles) {
             console.log(`[Game ${game.id}] ⚡ Using pre-fetched Final Round Movie Prompts!`);
-            promptsForThisRound = game.prefetchedFinalRoundPrompts;
+            promptsForThisRound = game.prefetchedFinalRoundPrompts.filter(
+                p => p && !usedFinalSet.has(`${p.genre || ''}:${p.premise || ''}`)
+            );
             game.prefetchedFinalRoundPrompts = null;
             game.prefetchedFinalRoundPromise = null;
         } else {
             const finalPrompts = await generateFinalRoundData(game.theme, game.language, numBattles, game.is18PlusMode);
             if (finalPrompts) {
-                promptsForThisRound = finalPrompts;
+                promptsForThisRound = finalPrompts.filter(
+                    p => p && !usedFinalSet.has(`${p.genre || ''}:${p.premise || ''}`)
+                );
             } else {
-                promptsForThisRound = getFallbackFinalRoundPrompts(game.language, numBattles);
+                promptsForThisRound = getFallbackFinalRoundPrompts(game.language, numBattles, usedFinalSet);
             }
+        }
+        if (promptsForThisRound.length < numBattles) {
+            const seenInBatch = new Set([
+                ...usedFinalSet,
+                ...promptsForThisRound.map(p => `${p.genre || ''}:${p.premise || ''}`)
+            ]);
+            const extra = getFallbackFinalRoundPrompts(
+                game.language,
+                numBattles - promptsForThisRound.length,
+                seenInBatch
+            );
+            promptsForThisRound = [...promptsForThisRound, ...extra];
         }
     } else {
         promptsForThisRound = game.preGeneratedBattlePrompts;

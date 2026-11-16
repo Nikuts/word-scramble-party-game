@@ -130,42 +130,99 @@
 
         let currentBattle = activeScreen === 'player_battle_movie' ? movieBattle : singleBattle;
         if (activeScreen === 'host_reveal' || activeScreen === 'player_reveal') {
-            currentBattle = {
-                ...singleBattle,
-                ...MOCK_ACTIVE_BATTLE_REVEAL,
-                competitors: isQuadBattle ? ['p1', 'p2', 'p3', 'p4'] : ['p1', 'p2', 'p3'],
-                answers: {
-                    ...MOCK_ACTIVE_BATTLE_REVEAL.answers,
-                    ...(isQuadBattle ? { p4: isUkrainian ? 'турбо качки захопили всесвіт' : 'unleash turbo ducks across the universe' } : {})
-                },
-                annotatedAnswers: {
-                    ...MOCK_ACTIVE_BATTLE_REVEAL.annotatedAnswers,
-                    ...(isQuadBattle ? {
-                        p4: {
+            currentBattle = isUkrainian
+                ? {
+                    ...singleBattle,
+                    annotatedAnswers: {
+                        p1: {
                             words: [
-                                { text: 'unleash', authorIndex: 1 },
-                                { text: 'turbo', authorIndex: 2 },
-                                { text: 'ducks', authorIndex: 0 },
-                                { text: 'across', authorIndex: 3 },
-                                { text: 'the', authorIndex: 1 },
-                                { text: 'universe', authorIndex: 4 }
+                                { text: 'лазерна', authorIndex: 1 },
+                                { text: 'картопля', authorIndex: 2 },
+                                { text: 'кричить', authorIndex: 3 },
+                                { text: 'у', authorIndex: 4 },
+                                { text: 'подушку', authorIndex: 1 }
                             ]
-                        }
-                    } : {})
-                },
-                pointsAwarded: {
-                    ...MOCK_ACTIVE_BATTLE_REVEAL.pointsAwarded,
-                    ...(isQuadBattle ? { p4: 250 } : {})
-                },
-                scoreBreakdown: {
-                    ...MOCK_ACTIVE_BATTLE_REVEAL.scoreBreakdown,
-                    ...(isQuadBattle ? { p4: { votes: 1, votePoints: 250, winBonus: 0, sweepBonus: 0, rainbowBonus: 0 } } : {})
-                },
-                royalties: [
-                    { authorName: 'Alice', points: 150 },
-                    { authorName: 'Bob', points: 200 }
-                ]
-            };
+                        },
+                        p2: {
+                            words: [
+                                { text: 'пухнастий', authorIndex: 0 },
+                                { text: 'борсук', authorIndex: 2 },
+                                { text: 'викрав', authorIndex: 3 },
+                                { text: 'усю', authorIndex: 0 },
+                                { text: 'піцу', authorIndex: 2 }
+                            ]
+                        },
+                        p3: {
+                            words: [
+                                { text: 'ніколи', authorIndex: 0 },
+                                { text: 'не', authorIndex: 1 },
+                                { text: 'вибачатися', authorIndex: 3 },
+                                { text: 'за', authorIndex: 1 },
+                                { text: 'сир', authorIndex: 4 }
+                            ]
+                        },
+                        ...(isQuadBattle ? {
+                            p4: {
+                                words: [
+                                    { text: 'турбо', authorIndex: 1 },
+                                    { text: 'качки', authorIndex: 2 },
+                                    { text: 'захопили', authorIndex: 0 },
+                                    { text: 'всесвіт', authorIndex: 3 }
+                                ]
+                            }
+                        } : {})
+                    },
+                    votes: { p4: 'p2', p5: 'p2', p6: 'p1' },
+                    winnerId: 'p2',
+                    pointsAwarded: {
+                        ...MOCK_ACTIVE_BATTLE_REVEAL.pointsAwarded,
+                        ...(isQuadBattle ? { p4: 250 } : {})
+                    },
+                    scoreBreakdown: {
+                        ...MOCK_ACTIVE_BATTLE_REVEAL.scoreBreakdown,
+                        ...(isQuadBattle ? { p4: { votes: 1, votePoints: 250, winBonus: 0, sweepBonus: 0, rainbowBonus: 0 } } : {})
+                    },
+                    royalties: [
+                        { authorId: 'p1', authorName: 'Alice', points: 150 },
+                        { authorId: 'p2', authorName: 'Bob', points: 200 }
+                    ]
+                }
+                : {
+                    ...singleBattle,
+                    ...MOCK_ACTIVE_BATTLE_REVEAL,
+                    competitors: isQuadBattle ? ['p1', 'p2', 'p3', 'p4'] : ['p1', 'p2', 'p3'],
+                    answers: {
+                        ...MOCK_ACTIVE_BATTLE_REVEAL.answers,
+                        ...(isQuadBattle ? { p4: 'unleash turbo ducks across the universe' } : {})
+                    },
+                    annotatedAnswers: {
+                        ...MOCK_ACTIVE_BATTLE_REVEAL.annotatedAnswers,
+                        ...(isQuadBattle ? {
+                            p4: {
+                                words: [
+                                    { text: 'unleash', authorIndex: 1 },
+                                    { text: 'turbo', authorIndex: 2 },
+                                    { text: 'ducks', authorIndex: 0 },
+                                    { text: 'across', authorIndex: 3 },
+                                    { text: 'the', authorIndex: 1 },
+                                    { text: 'universe', authorIndex: 4 }
+                                ]
+                            }
+                        } : {})
+                    },
+                    pointsAwarded: {
+                        ...MOCK_ACTIVE_BATTLE_REVEAL.pointsAwarded,
+                        ...(isQuadBattle ? { p4: 250 } : {})
+                    },
+                    scoreBreakdown: {
+                        ...MOCK_ACTIVE_BATTLE_REVEAL.scoreBreakdown,
+                        ...(isQuadBattle ? { p4: { votes: 1, votePoints: 250, winBonus: 0, sweepBonus: 0, rainbowBonus: 0 } } : {})
+                    },
+                    royalties: [
+                        { authorId: 'p1', authorName: 'Alice', points: 150 },
+                        { authorId: 'p2', authorName: 'Bob', points: 200 }
+                    ]
+                };
         }
         mockActiveBattle = currentBattle;
         mockBattlesToAnswer = [currentBattle];
@@ -310,6 +367,12 @@
                             <PlayerQuestionView timer={mockTimer} questions={mockQuestions} />
                         {:else if activeScreen === 'player_voting'}
                             <PlayerBattleVotingView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p5', name: 'Evan', avatar: '🐶' }} gameId="TEST" players={MOCK_PLAYERS} />
+                        {:else if activeScreen === 'player_reveal'}
+                            <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} gameId="TEST" players={MOCK_PLAYERS} />
+                        {:else if activeScreen === 'player_results'}
+                            <PlayerResultsView game={$gameState} player={activePlayerObj} />
+                        {:else if activeScreen === 'player_avatar'}
+                            <PlayerAvatarSelect />
                         {:else}
                             <PlayerLobby />
                         {/if}

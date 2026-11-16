@@ -17,6 +17,7 @@ import {
     handleStartGame
 } from '../game/handlers/lobbyHandlers.js';
 import { handleLeaveGame } from '../game/handlers/connectionHandlers.js';
+import { getFallbackFinalRoundPrompts } from '../game/fallback/index.js';
 
 describe('Step 1: Integrity Fixes (B1-B4, B7-B11, R1, R2)', () => {
     let mockIo;
@@ -268,25 +269,86 @@ describe('Step 1: Integrity Fixes (B1-B4, B7-B11, R1, R2)', () => {
         });
     });
 
-    describe('B8: resetGameForRestart clears battleHistory and superlatives', () => {
-        it('wipes battleHistory, superlatives, pairHistory, and playerUsedBundles on restart', () => {
+    describe('B8: resetGameForRestart clears battleHistory and superlatives while preserving used content history and incrementing gameInstanceId', () => {
+        it('wipes battleHistory, superlatives, pairHistory, and playerUsedBundles on restart and increments gameInstanceId', () => {
             const game = {
                 id: 'RSET',
+                gameInstanceId: 1,
+                theme: 'Cyberpunk',
                 players: [{ id: 'p1', name: 'Alice', socketId: 's1', score: 900, hasUsedTimeBoost: true }],
                 battleHistory: [{ id: 'b-old' }],
                 superlatives: { ammoFactory: { playerId: 'p1', value: 100 } },
                 pairHistory: { 'p1:p2': 2 },
-                playerUsedBundles: { p1: ['b1'] }
+                playerUsedBundles: { p1: ['b1'] },
+                usedFallbackThemes: ['Theme A'],
+                usedQuestions: ['Old Question 1'],
+                usedBattlePrompts: ['Old Battle Prompt 1'],
+                usedFinalPrompts: ['Old Genre — Old Premise'],
+                partialAnswers: { 'q-1-0-p1': 'Leftover draft' }
             };
 
             gameService.resetGameForRestart(game);
 
+            expect(game.gameInstanceId).toBe(2);
             expect(game.battleHistory).toEqual([]);
             expect(game.superlatives).toBeNull();
             expect(game.pairHistory).toEqual({});
             expect(game.playerUsedBundles).toEqual({});
+            expect(game.partialAnswers).toEqual({});
             expect(game.players[0].score).toBe(0);
             expect(game.players[0].hasUsedTimeBoost).toBe(false);
+            expect(game.usedFallbackThemes).toEqual(['Theme A', 'Cyberpunk']);
+            expect(game.usedThemesHistory).toContain('Cyberpunk');
+            expect(game.usedQuestions).toEqual(['Old Question 1']);
+            expect(game.usedBattlePrompts).toEqual(['Old Battle Prompt 1']);
+            expect(game.usedFinalPrompts).toEqual(['Old Genre — Old Premise']);
+        });
+
+        it('prefixes question and battle IDs with g2- after restart and excludes previously used questions/prompts', async () => {
+            const game = {
+                id: 'RST2',
+                gameInstanceId: 1,
+                language: 'en',
+                theme: 'Adulting & Modern Life',
+                currentRound: 0,
+                geminiApiErrorCount: 3, // force fallback pack
+                players: [
+                    { id: 'p1', name: 'Alice', socketId: 's1', score: 0 },
+                    { id: 'p2', name: 'Bob', socketId: 's2', score: 0 },
+                    { id: 'p3', name: 'Charlie', socketId: 's3', score: 0 }
+                ],
+                usedQuestions: [],
+                usedBattlePrompts: [],
+                partialAnswers: {}
+            };
+            manager.addGame('RST2', game);
+
+            await roundService.startNextRound(mockIo, game);
+            timerService.clearPhaseTimer(game);
+
+            const game1QuestionIds = game.playerAnswers.p1.questions.map(q => q.id);
+            const game1Questions = Object.values(game.playerAnswers).flatMap(pa => pa.questions.map(q => q.text));
+            expect(game1QuestionIds[0]).toBe('q-1-0-p1');
+            expect(game.usedQuestions.length).toBeGreaterThanOrEqual(game1Questions.length);
+
+            // Restart for Game 2 with same players
+            gameService.resetGameForRestart(game);
+            game.theme = 'Adulting & Modern Life';
+            game.geminiApiErrorCount = 3;
+
+            await roundService.startNextRound(mockIo, game);
+            timerService.clearPhaseTimer(game);
+
+            const game2QuestionIds = game.playerAnswers.p1.questions.map(q => q.id);
+            const game2Questions = Object.values(game.playerAnswers).flatMap(pa => pa.questions.map(q => q.text));
+
+            // Game 2 question IDs include the gameInstanceId prefix (g2-) so cached partial drafts never collide
+            expect(game2QuestionIds[0]).toBe('q-g2-1-0-p1');
+            expect(game2QuestionIds[0]).not.toBe(game1QuestionIds[0]);
+
+            // None of the Game 1 questions should be dealt again in Game 2 Round 1
+            const repeatedQuestions = game2Questions.filter(q => game1Questions.includes(q));
+            expect(repeatedQuestions).toEqual([]);
         });
     });
 
@@ -360,6 +422,71 @@ describe('Step 1: Integrity Fixes (B1-B4, B7-B11, R1, R2)', () => {
             expect(gameId).toMatch(/^[A-Z0-9]{4}$/);
             expect(playerId).toMatch(/^[a-f0-9]{12}$/);
             expect(token).toMatch(/^[a-f0-9]{48}$/);
+        });
+    });
+
+    describe('B12: getFallbackFinalRoundPrompts avoids repeating seen final prompts across Play Again', () => {
+        it('prioritizes unseen genre:premise keys over already used ones', () => {
+            const sampleAll = getFallbackFinalRoundPrompts('en', 100);
+            const uniqueKeys = Array.from(new Set(sampleAll.map(p => `${p.genre}:${p.premise}`)));
+            expect(uniqueKeys.length).toBeGreaterThan(3);
+
+            const used = uniqueKeys.slice(0, uniqueKeys.length - 2);
+            const expectedRemaining = new Set(uniqueKeys.slice(uniqueKeys.length - 2));
+
+            const picked = getFallbackFinalRoundPrompts('en', 2, used);
+            expect(picked).toHaveLength(2);
+            picked.forEach(p => {
+                expect(expectedRemaining.has(`${p.genre}:${p.premise}`)).toBe(true);
+            });
+
+            // When all prompts are used, still returns the requested count instead of empty
+            const wrapped = getFallbackFinalRoundPrompts('en', 2, uniqueKeys);
+            expect(wrapped).toHaveLength(2);
+        });
+    });
+
+    describe('B13: calculateGameSuperlatives deduplicates battles and excludes punctuation from word counts', () => {
+        it('counts Round 3 battle once when present in both battleHistory and battleSchedule, and strips punctuation', () => {
+            const dupBattle = {
+                id: 'b-r3-0',
+                winnerId: 'p1',
+                competitors: ['p1', 'p2'],
+                answers: {
+                    p1: 'Wait , what ?! No ... way !', // 4 real words, 8 tokens if punctuation counted
+                    p2: 'Two words only . Yes , six words total !' // 7 real words
+                },
+                votes: { p3: 'p1' },
+                royalties: [{ authorId: 'p2', points: 25 }],
+                scoreBreakdown: {
+                    p1: { votes: 1, votePoints: 100, winBonus: 500, sweepBonus: 0, total: 600 },
+                    p2: { votes: 0, votePoints: 0, winBonus: 0, sweepBonus: 0, total: 0 }
+                }
+            };
+
+            const game = {
+                id: 'SUP1',
+                players: [
+                    { id: 'p1', name: 'Alice', score: 600 },
+                    { id: 'p2', name: 'Bob', score: 25 },
+                    { id: 'p3', name: 'Charlie', score: 0 }
+                ],
+                battleHistory: [dupBattle],
+                battleSchedule: [dupBattle]
+            };
+
+            const sups = gameService.calculateGameSuperlatives(game);
+            expect(sups.ammoFactory).toBeDefined();
+            expect(sups.ammoFactory.playerId).toBe('p2');
+            expect(sups.ammoFactory.value).toBe(25); // Must not double to 50
+
+            expect(sups.minimalist).toBeDefined();
+            expect(sups.minimalist.playerId).toBe('p1');
+            expect(sups.minimalist.count).toBe(4);
+
+            expect(sups.shakespeare).toBeDefined();
+            expect(sups.shakespeare.playerId).toBe('p1');
+            expect(sups.shakespeare.count).toBe(4);
         });
     });
 });

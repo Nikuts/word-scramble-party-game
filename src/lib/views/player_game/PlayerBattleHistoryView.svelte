@@ -21,7 +21,7 @@
             let tagline = (answer.tagline || '...').trim();
             if (title === '::TIMEOUT::') title = `(${$t.noAnswerSubmitted})`;
             if (tagline === '::TIMEOUT::' || tagline === '') tagline = '...';
-            return `Title: ${title}\nTagline: ${tagline}`;
+            return `${$t.title || 'Title'}: ${title}\n${$t.tagline || 'Tagline'}: ${tagline}`;
         }
         return `(${$t.noAnswerSubmitted})`;
     }
@@ -132,31 +132,35 @@
             {@const isFinalRound = !!battle.genre}
             {@const cardId = `battle-card-${battle.id}`}
             
-            <div id={cardId} class="battle-card-history panel-arcade text-left relative" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
+            <div id={cardId} class="battle-card-history panel-arcade text-left relative !p-3.5 sm:!p-5" style="--neon-color: var(--color-primary); --neon-color-rgb: var(--color-primary-rgb);">
                  {#if isFinalRound}
                     <div class="text-neutral-300 text-lg leading-relaxed text-center mb-4 p-3 bg-neutral-900/50 border border-neutral-700 rounded-md">
                         <p class="mb-1 text-primary font-bold">{battle.genre}</p>
                         <p class="text-base">{battle.premise}</p>
                     </div>
                 {:else}
-                    <h3 class="font-bold text-xl text-primary text-center mb-4 break-words">{battle.prompt}</h3>
+                    <h3 class="font-bold text-base sm:text-xl text-primary text-center mb-4 break-words">{battle.prompt}</h3>
                 {/if}
 
                 <div class="grid grid-cols-1 {battle.competitors.length >= 3 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-2'} gap-4">
                     {#each battle.competitors as cId (cId)}
                         {@const competitor = getPlayerById(cId)}
+                        {@const isSoloWinner = winnerId === competitor?.id}
+                        {@const isTieWinner = !winnerId && (battle.scoreBreakdown?.[competitor?.id]?.winBonus ?? 0) > 0}
                         {#if competitor}
-                            <div class="bg-neutral-900/50 p-3 border-2 rounded-md {winnerId === competitor.id ? 'border-accent shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.5)]' : 'border-neutral-700'}">
+                            <div class="bg-neutral-900/50 p-3 border-2 rounded-md {isSoloWinner || isTieWinner ? 'border-accent shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.5)]' : 'border-neutral-700'}">
                                  <div class="flex items-center gap-3 text-base sm:text-lg font-bold mb-2">
                                     <div class="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0">
                                         <PixelAvatar avatar={competitor.avatar} />
                                     </div>
                                     <span class="truncate">{competitor.name}</span>
-                                    {#if winnerId === competitor.id}
-                                        <span class="ml-auto text-xs px-2 py-0.5 bg-accent text-black font-bold rounded-sm">👑 {$t.winner}</span>
+                                    {#if isSoloWinner}
+                                        <span class="ml-auto text-xs px-2 py-0.5 bg-accent text-black font-bold rounded-sm flex-shrink-0">👑 {$t.winner}</span>
+                                    {:else if isTieWinner}
+                                        <span class="ml-auto text-xs px-2 py-0.5 bg-amber-400 text-black font-bold rounded-sm flex-shrink-0">🤝 {$t.tie || 'TIE'}</span>
                                     {/if}
                                 </div>
-                                <p class="text-base sm:text-lg min-h-[5rem] bg-neutral-900 border border-neutral-600 p-2.5 whitespace-pre-wrap rounded-md leading-relaxed">{renderAnswer(battle.answers[competitor.id])}</p>
+                                <p class="text-base sm:text-lg min-h-[5rem] bg-neutral-900 border border-neutral-600 p-2.5 whitespace-pre-wrap break-words rounded-md leading-relaxed">{renderAnswer(battle.answers[competitor.id])}</p>
                             </div>
                         {/if}
                     {/each}

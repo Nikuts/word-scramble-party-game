@@ -193,10 +193,15 @@ export function triggerConfetti(options = {}) {
             shapes: ['square'],
             gravity: 1.2,
             scalar: 1.2,
+            zIndex: 30,
             colors: ['#00CFFD', '#FF00A8', '#39FF14', '#facc15', '#ffffff'],
         };
         
-        confetti({ ...defaults, ...options });
+        const merged = { ...defaults, ...options };
+        if (isTvMode) {
+            merged.particleCount = Math.min(merged.particleCount ?? 40, 40);
+        }
+        confetti(merged);
     }
 }
 

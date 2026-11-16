@@ -44,14 +44,11 @@
         return `(${$t.noAnswerSubmitted || 'No answer'})`;
     }
 
-    const reactionEmojis = ['🔥', '😂', '💀', '💩', '🤮', '🤯'];
-
-    function sendReaction(emoji) {
+    function sendReaction() {
         const activeGameId = gameId || $gameState?.id;
         if (!battle || !player || !activeGameId) return;
         sendMessage('send-lobby-emoji', {
-            gameId: activeGameId,
-            emoji: emoji
+            gameId: activeGameId
         });
     }
 </script>
@@ -70,7 +67,7 @@
             {/if}
         </span>
         <div class="flex-shrink-0">
-            <SevenSegmentDisplay time={timer} showLabel={false} size="sm" />
+            <SevenSegmentDisplay time={timer} showLabel={false} size="sm" disableLowWarning={true} />
         </div>
     </header>
 
@@ -93,9 +90,9 @@
 
     {#if isCompetitor}
         <!-- 🏆 Competitor Results Card (Winner or Runner-up) -->
-        <main class="flex-1 min-h-0 flex flex-col justify-between p-3 sm:p-4 bg-neutral-950/90 border-2 {isWinner ? 'border-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.5)]' : 'border-slate-600'} rounded-2xl overflow-y-auto">
+        <main class="flex-1 min-h-0 flex flex-col justify-start p-3 sm:p-4 bg-neutral-950/90 border-2 {isWinner ? 'border-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.5)]' : 'border-slate-600'} rounded-2xl overflow-y-auto">
             
-            <div>
+            <div class="my-auto w-full flex flex-col gap-2.5">
                 <!-- Status Banner -->
                 <div class="w-full py-1.5 px-3 rounded-xl text-center font-display font-black text-xs sm:text-base uppercase tracking-wider mb-2 {
                     isWinner 
@@ -110,7 +107,7 @@
                     <span class="text-[10px] font-display font-bold text-slate-400 uppercase tracking-widest block mb-1">
                         {$t.yourAnswer || 'Your Punchline'}
                     </span>
-                    <div class="bg-black/80 border border-neutral-700 rounded-xl p-2.5 sm:p-3 text-sm sm:text-base font-bold text-white leading-relaxed">
+                    <div class="bg-black/80 border border-neutral-700 rounded-xl p-2.5 sm:p-3 text-sm sm:text-base font-bold text-white leading-relaxed whitespace-pre-wrap break-words">
                         {renderAnswer(battle?.answers?.[player?.id])}
                     </div>
                 </div>
@@ -118,7 +115,7 @@
                 <!-- Points Breakdown -->
                 <div class="flex flex-col items-center justify-center my-1.5 sm:my-2.5 text-center">
                     <span class="font-display font-black text-2xl sm:text-4xl text-amber-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">
-                        +{pointsAwarded.toLocaleString()} PTS
+                        +{pointsAwarded.toLocaleString()} {$t.pts || 'PTS'}
                     </span>
                     
                     {#if myScoreBreakdown.rainbowBonus > 0}
@@ -131,16 +128,22 @@
 
                     <div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 mt-1 text-[11px] sm:text-xs font-mono">
                         <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-200 font-bold">
-                            🗳️ {myScoreBreakdown.votes} {myScoreBreakdown.votes === 1 ? ($t.vote || 'Vote') : ($t.votes || 'Votes')} (+{myScoreBreakdown.votePoints})
+                            🗳️ {myScoreBreakdown.votes} {myScoreBreakdown.votes === 1 ? ($t.vote || 'Vote') : ($t.votes || $t.votesBreakdown || 'Votes')} (+{myScoreBreakdown.votePoints})
                         </span>
                         {#if myScoreBreakdown.winBonus > 0}
                             <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-amber-950 border border-amber-500 text-amber-300 font-bold">
-                                🏆 {$t.winBonus || 'Win Bonus'} (+{myScoreBreakdown.winBonus})
+                                🏆 {$t.winBonusBreakdown || $t.winBonus || 'Win Bonus'} (+{myScoreBreakdown.winBonus})
                             </span>
                         {/if}
                         {#if myScoreBreakdown.sweepBonus > 0}
                             <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-purple-950 border border-purple-500 text-purple-300 font-bold">
-                                🧹 {$t.sweepBonus || 'Clean Sweep'} (+{myScoreBreakdown.sweepBonus})
+                                🧹 {$t.sweepBonusBreakdown || $t.sweepBonus || 'Clean Sweep'} (+{myScoreBreakdown.sweepBonus})
+                            </span>
+                        {/if}
+                        {#if (battle?.royalties || []).reduce((s, r) => (r.authorId === player?.id || (player?.name && r.authorName === player.name)) ? s + (r.points || 0) : s, 0) > 0}
+                            {@const myRoyaltyPts = (battle?.royalties || []).reduce((s, r) => (r.authorId === player?.id || (player?.name && r.authorName === player.name)) ? s + (r.points || 0) : s, 0)}
+                            <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-cyan-950 border border-cyan-500 text-cyan-300 font-bold">
+                                ✨ {$t.royaltyBreakdown || 'Royalties'} (+{myRoyaltyPts})
                             </span>
                         {/if}
                     </div>
@@ -178,21 +181,19 @@
         </main>
     {/if}
 
-    <!-- Docked Live Emoji Reaction Bar -->
-    <footer class="mt-2.5 pt-2 border-t border-neutral-800 flex-shrink-0">
+    <!-- Docked Live Avatar Reaction Button -->
+    <footer class="mt-2.5 pt-2 border-t border-neutral-800 flex-shrink-0 flex flex-col items-center">
         <span class="text-[9px] font-display font-bold text-slate-400 uppercase tracking-widest block text-center mb-1.5">
-            {$t.sendReaction || 'REACT LIVE'}
+            {$t.sendReaction || 'SEND AVATAR REACTION'}
         </span>
-        <div class="flex justify-center items-center gap-2">
-            {#each reactionEmojis as emoji}
-                <button
-                    type="button"
-                    on:click={() => sendReaction(emoji)}
-                    class="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-700 hover:border-cyan-400 active:scale-125 flex items-center justify-center text-lg shadow-sm transition-transform cursor-pointer"
-                >
-                    {emoji}
-                </button>
-            {/each}
-        </div>
+        <button
+            type="button"
+            data-testid="send-reaction-btn"
+            aria-label={$t.sendReaction || 'Send Reaction'}
+            on:click={() => sendReaction()}
+            class="w-12 h-12 rounded-full bg-neutral-900 border-2 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.5)] hover:scale-105 active:scale-95 flex items-center justify-center p-1.5 transition-transform cursor-pointer"
+        >
+            <PixelAvatar avatar={player?.avatar || '🦊'} className="w-full h-full" />
+        </button>
     </footer>
 </div>

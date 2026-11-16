@@ -197,6 +197,17 @@ export function initializeSocket() {
             hasConfirmedAvatar.set(true);
         }
 
+        if (
+            newGameState.phase === 'lobby' ||
+            newGameState.phase === 'generating_round' ||
+            newGameState.phase === 'get_ready' ||
+            newGameState.phase === 'preparing_battles' ||
+            newGameState.phase === 'battle_get_ready' ||
+            newGameState.phase === 'results'
+        ) {
+            clearConsumedPartialAnswers();
+        }
+
         isLoading.set(false);
         error.set({ ...initialErrorState });
         gameState.set(newGameState);

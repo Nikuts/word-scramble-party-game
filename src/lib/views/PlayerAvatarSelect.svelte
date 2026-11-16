@@ -11,14 +11,14 @@
     $: player = $currentPlayerDetails;
     $: isUkrainian = $language === 'ua' || $language === 'uk';
 
+    let initializedForId = null;
     let editNameValue = player?.name || '';
     let selectedAvatar = player?.avatar || '🦊';
 
-    $: if (player?.name && !editNameValue) {
-        editNameValue = player.name;
-    }
-    $: if (player?.avatar && selectedAvatar === '🦊') {
-        selectedAvatar = player.avatar;
+    $: if (player?.id && player.id !== initializedForId) {
+        initializedForId = player.id;
+        editNameValue = player.name || '';
+        selectedAvatar = player.avatar || '🦊';
     }
 
     // Determine which avatars are taken by OTHER players currently in the room
@@ -82,7 +82,7 @@
             type="text"
             bind:value={editNameValue}
             class="w-full bg-neutral-900 border-2 border-cyan-400 text-white font-display font-bold text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-300 select-text"
-            maxlength="15"
+            maxlength="25"
         />
     </div>
 

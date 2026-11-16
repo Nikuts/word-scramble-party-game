@@ -2,6 +2,7 @@
 <script>
     import { t, sendMessage } from '../../../stores.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
+    import PixelAvatar from '../../shared/PixelAvatar.svelte';
 
     export let timer;
     export let battle;
@@ -48,13 +49,10 @@
         return `(${$t.noAnswerSubmitted})`;
     }
     
-    const reactionEmojis = ['🔥', '😂', '💀', '💩', '🤮', '🤯'];
-
-    function sendReaction(emoji) {
+    function sendReaction() {
         if (!gameId || !player) return;
         sendMessage('send-lobby-emoji', {
-            gameId: gameId,
-            emoji: emoji
+            gameId: gameId
         });
     }
 
@@ -87,14 +85,14 @@
     {#if battle && (battle.prompt || battle.premise)}
         {@const isFinalRound = !!battle.genre}
         <!-- Prompt Box (U6: visible on voting phone) -->
-        <div class="bg-neutral-950/90 border border-neutral-800 rounded-2xl p-3 mb-2.5 text-center shadow-md flex-shrink-0">
-            <span class="text-xs font-display font-bold text-cyan-400 uppercase tracking-widest block mb-1">
+        <div class="bg-neutral-950/95 border border-neutral-800 rounded-2xl p-2.5 sm:p-3 mb-2 text-center shadow-md flex-shrink-0 max-h-28 overflow-y-auto">
+            <span class="text-xs font-display font-bold text-cyan-400 uppercase tracking-widest block mb-0.5">
                 {isFinalRound ? ($t.moviePitch || 'MOVIE PREMISE') : ($t.battlePrompt || 'BATTLE PROMPT')}
             </span>
             {#if isFinalRound && battle.genre}
                 <p class="text-xs font-display font-bold text-amber-300 uppercase tracking-wider mb-0.5">{battle.genre}</p>
             {/if}
-            <p class="text-sm sm:text-base font-bold text-slate-100 leading-snug">
+            <p class="text-sm sm:text-base font-bold text-slate-100 leading-snug break-words">
                 {isFinalRound ? (battle.premise || battle.prompt) : battle.prompt}
             </p>
         </div>
@@ -102,19 +100,19 @@
 
     {#if battle && isMyTurnToVote}
         <!-- Vertical Single-Column Stack of Full-Width Anonymous Voting Cards -->
-        <div class="flex-1 min-h-0 overflow-y-auto space-y-3 pr-0.5">
+        <div class="flex-1 min-h-0 overflow-y-auto space-y-3 pr-0.5 pb-2">
             {#each votingOptions as opt, i (opt.optionId)}
                 {@const style = cardStyles[i % cardStyles.length]}
                 {@const answer = renderAnswer(opt.answer)}
                 
-                <div class="bg-neutral-950/90 border-2 {style.cardBorder} rounded-2xl p-3.5 shadow-md flex flex-col justify-between transition-all">
+                <div class="bg-neutral-950/95 border-2 {style.cardBorder} rounded-2xl p-3.5 shadow-md flex flex-col justify-between transition-all">
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-display font-bold uppercase tracking-wider {style.badgeBg} border {style.badgeBorder} {style.badgeText}">
-                                {style.label}
+                                {$t[`answer${['A','B','C','D'][i]}`] || style.label}
                             </span>
                         </div>
-                        <p class="text-sm sm:text-base font-medium text-slate-100 whitespace-pre-wrap leading-relaxed min-h-[3rem] bg-neutral-900/90 p-3 rounded-xl border border-neutral-800">
+                        <p class="text-sm sm:text-base font-medium text-slate-100 whitespace-pre-wrap break-words leading-relaxed min-h-[3rem] bg-neutral-900/90 p-3 rounded-xl border border-neutral-800">
                             {answer}
                         </p>
                     </div>
@@ -123,7 +121,7 @@
                     <button
                         type="button"
                         on:click={() => castVote(battle.id, opt.optionId)}
-                        class="btn-arcade mt-3 w-full py-3.5 bg-gradient-to-r {style.btnBg} text-white font-display font-black text-sm tracking-wider uppercase rounded-xl active:scale-98 transition-all cursor-pointer"
+                        class="btn-arcade mt-3 w-full py-3.5 bg-gradient-to-r {style.btnBg} text-white hover:!text-white font-display font-black text-sm tracking-wider uppercase rounded-xl !border-white/30 active:scale-98 transition-all cursor-pointer"
                         style="box-shadow: 0 0 15px {style.btnShadow};"
                     >
                         🗳️ {$t.voteForThisAnswer || 'VOTE FOR THIS ANSWER'}
@@ -162,22 +160,20 @@
             </div>
         </div>
 
-        <!-- Docked Live Floating Emoji Reaction Bar -->
-        <footer class="mt-2.5 pt-2 border-t border-neutral-800 flex-shrink-0">
+        <!-- Docked Live Floating Avatar Reaction Button -->
+        <footer class="mt-2.5 pt-2 border-t border-neutral-800 flex-shrink-0 flex flex-col items-center">
             <span class="text-[9px] font-display font-bold text-slate-400 uppercase tracking-widest block text-center mb-1.5">
-                {$t.sendReaction || 'REACT LIVE'}
+                {$t.sendReaction || 'SEND AVATAR REACTION'}
             </span>
-            <div class="flex justify-center items-center gap-2">
-                {#each reactionEmojis as emoji}
-                    <button
-                        type="button"
-                        on:click={() => sendReaction(emoji)}
-                        class="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-700 hover:border-cyan-400 active:scale-125 flex items-center justify-center text-lg shadow-sm transition-transform cursor-pointer"
-                    >
-                        {emoji}
-                    </button>
-                {/each}
-            </div>
+            <button
+                type="button"
+                data-testid="send-reaction-btn"
+                aria-label={$t.sendReaction || 'Send Reaction'}
+                on:click={() => sendReaction()}
+                class="w-12 h-12 rounded-full bg-neutral-900 border-2 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.5)] hover:scale-105 active:scale-95 flex items-center justify-center p-1.5 transition-transform cursor-pointer"
+            >
+                <PixelAvatar avatar={player?.avatar || '🦊'} className="w-full h-full" />
+            </button>
         </footer>
 
     {:else}

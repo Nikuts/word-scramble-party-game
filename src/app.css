@@ -40,8 +40,7 @@
   }
 
   body {
-    @apply bg-[var(--color-bg-base)] text-[var(--color-text-base)] font-body text-base; /* Corrected usage of CSS variables */
-    text-shadow: 0 0 2px rgba(226, 232, 240, 0.2);
+    @apply bg-[var(--color-bg-base)] text-[var(--color-text-base)] font-body text-base;
   }
 
   /* Guarantee mobile keyboard focus and text entry across all devices */
@@ -235,29 +234,36 @@
     animation: final-winner-glow-arcade 2s ease-in-out infinite;
 }
 
-/* Flying Emoji - GPU Hardware Accelerated */
+/* Flying Avatar Reactions - GPU Hardware Accelerated & Flicker-Free */
 @keyframes fly-across {
   0% {
-    opacity: 1;
-    transform: translate3d(var(--start-x, 50vw), 105vh, 0) scale(0.85) rotate(var(--start-rotate, 0deg));
+    opacity: 0;
+    transform: translate3d(var(--start-x, 50vw), 102vh, 0) scale(0.85) rotate(var(--start-rotate, 0deg));
   }
-  75% {
-    opacity: 0.95;
+  8% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate3d(var(--end-x, 50vw), -15vh, 0) scale(1.35) rotate(var(--end-rotate, 0deg));
+    transform: translate3d(var(--end-x, 50vw), -15vh, 0) scale(1.25) rotate(var(--end-rotate, 0deg));
   }
 }
 .flying-emoji {
   position: absolute;
   top: 0;
   left: 0;
-  width: 5rem;
-  height: 5rem;
+  width: 4.5rem;
+  height: 4.5rem;
   pointer-events: none;
-  animation: fly-across 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation: fly-across 3.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
   will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  contain: layout style;
   z-index: 50;
 }
 
@@ -266,6 +272,8 @@
   @apply fixed top-0 left-0 right-0 bottom-0 -z-10 overflow-hidden;
   background-color: var(--color-bg-base);
   perspective: 400px;
+  isolation: isolate;
+  transform: translateZ(0);
 }
 .synthwave-grid-background::before {
   content: '';
@@ -273,11 +281,10 @@
   transform-style: preserve-3d;
   transform: translate(-50%, -50%) rotateX(60deg);
   background-image:
-    linear-gradient(to right, rgba(var(--color-primary-rgb), 0.15) 2px, transparent 2px),
-    linear-gradient(to bottom, rgba(var(--color-primary-rgb), 0.15) 2px, transparent 2px);
+    linear-gradient(to right, rgba(var(--color-primary-rgb), 0.12) 2px, transparent 2px),
+    linear-gradient(to bottom, rgba(var(--color-primary-rgb), 0.12) 2px, transparent 2px);
   background-size: 50px 50px;
-  animation: scroll-grid 5s linear infinite;
-  will-change: transform;
+  animation: scroll-grid 6s linear infinite;
   backface-visibility: hidden;
 }
 .synthwave-grid-background::after {
@@ -355,9 +362,15 @@ body[data-tv-mode="true"] {
     will-change: auto !important;
   }
 
-  /* 2. Remove GPU-heavy multi-layer box shadows and text glow */
+  /* 2. Remove GPU-heavy multi-layer box shadows, filter drop-shadows, and backdrop blurs */
   * {
     text-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  h1, h2, h3, p, span {
+    filter: none !important;
   }
 
   .btn-arcade,
@@ -487,4 +500,29 @@ body[data-app-hidden="true"] * {
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.4);
+}
+
+/* Fluid Viewport Typography for Couch & TV Distance Scaling */
+.text-fluid-prompt {
+  font-size: clamp(1rem, min(1.8vw, 2.5vh), 1.85rem);
+}
+
+.text-fluid-punchline {
+  font-size: clamp(1.05rem, min(1.9vw, 2.6vh), 2rem);
+}
+
+.text-fluid-punchline-md {
+  font-size: clamp(0.95rem, min(1.5vw, 2.2vh), 1.5rem);
+}
+
+.text-fluid-punchline-sm {
+  font-size: clamp(0.85rem, min(1.3vw, 1.9vh), 1.25rem);
+}
+
+.text-fluid-punchline-xs {
+  font-size: clamp(0.78rem, min(1.1vw, 1.65vh), 1.05rem);
+}
+
+.text-fluid-player {
+  font-size: clamp(0.9rem, min(1.3vw, 2vh), 1.3rem);
 }
