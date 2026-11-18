@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { view, language, isLoading, error, t, joinForm, initializeSocket, reconnectSocket, resetToMenu, gameState } from './stores.js';
+  import { view, language, isLoading, isReconnecting, error, t, joinForm, initializeSocket, reconnectSocket, resetToMenu, gameState, tvMode } from './stores.js';
 
   // Import all possible view components
   import Language from './lib/views/Language.svelte';
@@ -13,6 +13,7 @@
   // Import shared components
   import LoadingSpinner from './lib/shared/LoadingSpinner.svelte';
   import ErrorDisplay from './lib/shared/ErrorDisplay.svelte';
+  import ArcadeIcon from './lib/shared/ArcadeIcon.svelte';
   import DevHarness from './lib/dev/DevHarness.svelte';
   import { get } from 'svelte/store';
 
@@ -25,7 +26,7 @@
   let transitionFallbackTimer = null;
 
   function transitionToView(targetView) {
-      if (!mainContentElement) {
+      if (!mainContentElement || get(tvMode)) {
           currentView = targetView;
           return;
       }
@@ -53,7 +54,7 @@
       };
 
       // Failsafe timer: if animationend never fires (TV mode, reduced motion, inactive tab), recover immediately
-      transitionFallbackTimer = setTimeout(cleanupTransition, 300);
+      transitionFallbackTimer = setTimeout(cleanupTransition, 260);
 
       const onFadeOutEnd = () => {
           if (transitionDone) return;
@@ -81,7 +82,6 @@
   $: if ($gameState?.colorTheme) {
     document.body.dataset.theme = $gameState.colorTheme;
   } else {
-    // Fallback to default if no theme is set
     if (document.body.dataset.theme) {
       delete document.body.dataset.theme;
     }
@@ -89,7 +89,7 @@
 
   // Initialize the socket connection and background throttling when the app mounts
   onMount(() => {
-    currentView = $view; // Set initial view without transition
+    currentView = $view;
     initializeSocket();
 
     const handleVisibilityChange = () => {
@@ -98,15 +98,15 @@
           document.body.setAttribute('data-app-hidden', 'true');
         } else {
           document.body.removeAttribute('data-app-hidden');
-          // When user returns to the tab, ensure socket session is connected
-          reconnectSocket();
         }
       }
     };
 
     const handleOnline = () => {
-      console.log('Browser online event detected. Reconnecting...');
-      reconnectSocket();
+      console.log('Browser online event detected.');
+      if (get(error)?.fatal) {
+        reconnectSocket();
+      }
     };
 
     if (typeof document !== 'undefined') {
@@ -134,7 +134,6 @@
     // Check for a gameId in the URL, which happens when scanning the QR code or clicking a shared link.
     const gameId = urlParams.get('gameId');
     if (gameId) {
-        // If a gameId is found, pre-populate the join form and jump directly to join prompt.
         joinForm.update(form => ({...form, gameId: gameId.toUpperCase()}));
         view.set('joinPrompt');
     }
@@ -163,10 +162,19 @@
 {#if isDevHarness}
     <DevHarness />
 {:else}
-    <main class="h-[100dvh] max-h-[100dvh] w-full overflow-hidden flex flex-col" style="transform: translateZ(0);">
+    <main class="h-screen-safe max-h-screen-safe w-full overflow-hidden flex flex-col relative z-10" style="transform: translateZ(0);">
+        {#if $isReconnecting}
+            <div class="fixed top-2 inset-x-0 flex justify-center z-50 pointer-events-none px-4">
+                <div class="cut-sm bg-amber-950/95 border-2 border-amber-400 text-amber-200 px-3.5 py-1 flex items-center gap-2 font-display text-xs tracking-wider uppercase shadow-lg">
+                    <ArcadeIcon name="rotate" className="w-3.5 h-3.5 animate-spin" />
+                    <span>{$t.reconnectingBanner || $t.reconnecting || 'Reconnecting...'}</span>
+                </div>
+            </div>
+        {/if}
+
         <div bind:this={mainContentElement} class="w-full h-full flex-1 flex flex-col min-h-0 overflow-hidden">
             {#if $isLoading}
-                <LoadingSpinner message={$error.message || $t.pleaseWait} allowRetry={!!$error.message} />
+                <LoadingSpinner message={$error.message || $t.pleaseWait} />
             {:else if $error.fatal}
                 <ErrorDisplay message={$error.message} on:reset={resetToMenu} />
             {:else}

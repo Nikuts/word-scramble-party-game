@@ -1,15 +1,13 @@
 <!-- src/lib/views/PlayerLobby.svelte -->
 <script>
-    import { createEventDispatcher } from 'svelte';
-    import { t, language, sendMessage, gameState, error, currentPlayerDetails, flyingEmojis } from '../../stores.js';
+    import { createEventDispatcher, onDestroy } from 'svelte';
+    import { t, language, sendMessage, gameState, error, currentPlayerDetails, tvMode, toggleTvMode, sendReaction } from '../../stores.js';
     import { MIN_PLAYERS, MAX_PLAYERS } from '../config.js';
     import PixelAvatar from '../shared/PixelAvatar.svelte';
+    import ArcadeIcon from '../shared/ArcadeIcon.svelte';
+    import FlyingReactionsOverlay from '../shared/FlyingReactionsOverlay.svelte';
 
     const dispatch = createEventDispatcher();
-
-    function removeEmoji(id) {
-        flyingEmojis.update(all => all.filter(e => e.id !== id));
-    }
 
     $: game = $gameState;
     $: player = $currentPlayerDetails;
@@ -20,14 +18,13 @@
     let isInputFocused = false;
 
     $: gameLang = game?.language || ($language === 'ua' || $language === 'uk' ? 'uk' : 'en');
-    $: availableThemes = game?.preGeneratedThemes?.[gameLang] 
-        || game?.preGeneratedThemes?.[$language] 
-        || game?.preGeneratedThemes?.['en'] 
-        || game?.preGeneratedThemes?.['uk'] 
-        || game?.preGeneratedThemes?.['ua'] 
+    $: availableThemes = game?.preGeneratedThemes?.[gameLang]
+        || game?.preGeneratedThemes?.[$language]
+        || game?.preGeneratedThemes?.['en']
+        || game?.preGeneratedThemes?.['uk']
+        || game?.preGeneratedThemes?.['ua']
         || [];
 
-    // Sync local customTheme with game state (safeguarded against wiping active typing)
     $: {
         if (game?.isGeneratingThemes && !isInputFocused) {
             customTheme = '';
@@ -45,7 +42,7 @@
     $: connectedPlayerCount = connectedPlayers.length;
     $: isApiDisabled = game ? game.geminiApiErrorCount >= 3 : false;
     $: canStart = connectedPlayerCount >= MIN_PLAYERS && connectedPlayerCount <= MAX_PLAYERS && (game?.theme || isApiDisabled);
-    
+
     let playerCountMessage = '';
     $: {
         if (connectedPlayerCount < MIN_PLAYERS) {
@@ -58,21 +55,32 @@
     }
 
     let canSendEmoji = true;
-    function sendEmoji() {
+    function sendAvatarReaction() {
         if (!canSendEmoji || !game) return;
-        sendMessage('send-lobby-emoji', { gameId: game.id });
+        sendReaction('avatar');
         canSendEmoji = false;
-        setTimeout(() => { canSendEmoji = true; }, 500);
+        setTimeout(() => { canSendEmoji = true; }, 450);
     }
+
+    let themeDebounceTimer = null;
+    onDestroy(() => {
+        if (themeDebounceTimer) clearTimeout(themeDebounceTimer);
+    });
 
     function handleThemeInput(e) {
         if (!game) return;
+        const gameId = game.id;
         customTheme = e.target.value;
-        sendMessage('set-theme', { gameId: game.id, theme: customTheme.trim() });
+        if (themeDebounceTimer) clearTimeout(themeDebounceTimer);
+        const trimmed = customTheme.trim();
+        themeDebounceTimer = setTimeout(() => {
+            sendMessage('set-theme', { gameId, theme: trimmed });
+        }, 250);
     }
 
     function handleThemeClick(theme) {
         if (!game) return;
+        if (themeDebounceTimer) clearTimeout(themeDebounceTimer);
         customTheme = '';
         sendMessage('set-theme', { gameId: game.id, theme: theme });
     }
@@ -110,306 +118,350 @@
     }
 </script>
 
-<div class="w-full h-[100dvh] max-h-[100dvh] min-h-0 flex flex-col justify-between p-3.5 sm:p-4 max-w-md mx-auto safe-top safe-bottom select-none font-sans overflow-hidden box-border">
+<div class="w-full h-screen-safe max-h-screen-safe min-h-0 flex flex-col justify-between p-3 sm:p-4 max-w-md md:max-w-4xl mx-auto safe-top safe-bottom select-none font-sans overflow-hidden box-border">
     
-    <!-- Top Player HUD Card (Fixed Height, Aligned Badges) -->
-    <header class="bg-neutral-950/90 border border-neutral-800 rounded-xl px-3.5 py-2.5 shadow-md mb-2.5 flex items-center justify-between flex-shrink-0">
+    <!-- Top Player HUD Card -->
+    <header class="bg-[#131126] border-2 border-[#332e59] cut-md px-3.5 py-2 mb-2.5 flex items-center justify-between gap-3 flex-shrink-0">
         <div class="flex items-center gap-3 min-w-0">
-            <button 
-                type="button" 
-                data-testid="send-reaction-btn"
-                on:click={sendEmoji}
-                class="w-12 h-12 rounded-xl bg-neutral-900 border border-cyan-400 p-1 shadow-sm flex items-center justify-center flex-shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
-                title={$t.sendReaction || 'Send Reaction'}
-                aria-label={$t.sendReaction || 'Send Reaction'}
-            >
+            <div class="w-11 h-11 sm:w-12 sm:h-12 cut-sm bg-[#0a0914] border-2 border-cyan-400 p-1 flex items-center justify-center flex-shrink-0">
                 {#if player?.avatar}
                     <PixelAvatar avatar={player.avatar} className="w-full h-full" />
                 {/if}
-            </button>
+            </div>
 
             <div class="text-left min-w-0">
                 <div class="flex items-center gap-1.5">
-                    <span class="font-display font-bold text-sm text-white truncate">{player?.name || ($t.player || 'Player')}</span>
+                    <span class="font-display text-sm sm:text-base text-white truncate">{player?.name || ($t.player || 'Player')}</span>
                     {#if isHost}
-                        <span class="px-1.5 py-0.2 bg-amber-400 text-black text-[9px] font-display font-black rounded flex-shrink-0">{$t.host || 'HOST'}</span>
+                        <span class="cut-sm px-1.5 py-0.5 bg-amber-400 text-black text-[9px] font-display flex-shrink-0">{$t.host || 'HOST'}</span>
                     {/if}
                 </div>
                 <button
                     type="button"
                     on:click={() => dispatch('reselectAvatar')}
-                    class="text-[10px] font-display font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 cursor-pointer mt-0.5"
+                    class="text-[11px] font-display text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1 cursor-pointer mt-0.5"
                 >
-                    <span>✏️</span>
-                    <span>{$t.editProfile || (isUkrainian ? 'Редагувати профіль' : 'Edit Profile')}</span>
+                    <ArcadeIcon name="edit" className="w-3 h-3" />
+                    <span>{$t.editProfile || 'Edit Profile'}</span>
                 </button>
             </div>
         </div>
 
-        <!-- Right Side: Room Code Badge (Compact & Aligned) -->
-        <div class="flex items-center gap-2 flex-shrink-0">
-            <div class="bg-black/80 border border-neutral-700 px-2.5 py-1.5 rounded-lg text-right flex-shrink-0">
-                <span class="text-[8px] font-display text-slate-400 block uppercase">{isUkrainian ? 'КОД' : 'ROOM'}</span>
-                <span class="font-mono font-black text-sm text-amber-300">#{game?.id || '----'}</span>
-            </div>
+        <div class="bg-[#0a0914] border border-[#332e59] cut-sm px-3 py-1 text-right flex-shrink-0">
+            <span class="text-[9px] font-display text-slate-400 block uppercase">{$t.roomTag || 'ROOM'}</span>
+            <span class="font-mono font-extrabold text-sm sm:text-base text-amber-300">#{game?.id || '----'}</span>
         </div>
     </header>
 
     {#if $error.message && !$error.fatal}
-        <div class="mb-2 p-2.5 bg-red-950/80 border border-red-500/60 text-red-300 text-xs font-bold text-center rounded-xl flex-shrink-0">
+        <div class="mb-2 p-2.5 cut-sm bg-rose-950/90 border border-danger text-rose-200 text-xs font-bold text-center flex-shrink-0">
             {$error.message}
         </div>
     {/if}
 
-    <!-- Scrollable Main Container: Host Controls FIRST, then Players List -->
-    <main class="flex-1 min-h-0 overflow-y-auto space-y-3 pr-0.5">
-        
-        {#if isHost}
-            <!-- 👑 HOST CONTROLS FIRST -->
-            <div class="bg-neutral-950/90 border-2 border-amber-400/50 rounded-2xl p-3.5 shadow-md space-y-3">
-                <div class="flex items-center justify-between border-b border-neutral-800 pb-1.5">
-                    <span class="text-[11px] font-display font-black text-amber-300 uppercase tracking-wider flex items-center gap-1">
-                        👑 {$t.youAreTheHost || 'HOST CONTROLS'}
-                    </span>
-                    <span class="text-[10px] font-mono text-slate-400 font-bold">{connectedPlayerCount} / {MAX_PLAYERS} {$t.players || 'Players'}</span>
-                </div>
-
-                <!-- 1. Color Theme Selection -->
-                <div>
-                    <span class="text-[10px] font-display font-bold text-slate-300 uppercase block mb-1">
-                        🎨 {$t.colorTheme || 'COLOR THEME'}:
-                    </span>
-                    <div class="grid grid-cols-3 gap-1.5">
-                        {#each ['arcade', 'vaporwave', 'outrun'] as themeName}
-                            <button
-                                type="button"
-                                on:click={() => handleColorThemeClick(themeName)}
-                                class="py-1 px-1 text-center uppercase font-display text-[7.5px] sm:text-[8px] font-black tracking-tight border-2 rounded-lg transition-all flex items-center justify-center cursor-pointer {
-                                    game?.colorTheme === themeName
-                                    ? 'bg-white text-black font-black border-white shadow-[0_0_10px_rgba(255,255,255,0.7)]'
-                                    : 'bg-neutral-900 border-neutral-700 text-slate-300 hover:border-slate-500'
-                                }"
-                            >
-                                <span>{themeName}</span>
-                            </button>
-                        {/each}
-                    </div>
-                </div>
-
-                <!-- 2. Game Theme Selection & Single-Line Outline Reload Button -->
-                <div>
-                    <div class="flex items-center justify-between gap-2 mb-1.5">
-                        <span class="text-[10px] font-display font-bold text-slate-300 uppercase">
-                            {$t.theme || 'THEME'}:
-                        </span>
-                        <button
-                            type="button"
-                            on:click={handleReloadThemes}
-                            disabled={isApiDisabled || game?.isGeneratingThemes}
-                            class="border border-amber-400/70 hover:bg-amber-400 hover:text-black text-amber-300 px-2 py-0.5 rounded text-[9px] font-display font-bold uppercase tracking-wider transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {$t.reloadThemes || 'Reload Themes'}
-                        </button>
-                    </div>
-
-                    {#if game?.isGeneratingThemes}
-                        <div class="p-2.5 bg-neutral-900 border border-amber-400/50 rounded-lg text-center">
-                            <p class="text-amber-300 text-xs font-display animate-pulse">{$t.generatingThemes || 'Generating themes...'}</p>
+    <!-- Adaptive Content Area: Stacked on Phone, 2 Columns on Tablet/PC -->
+    <main class="flex-1 min-h-0 overflow-y-auto pr-0.5">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+            <!-- Left / Top: Host Controls OR Guest Room Info -->
+            <div class="md:col-span-7 space-y-3">
+                {#if isHost}
+                    <div class="bg-[#131126] border-2 border-amber-400/70 cut-md p-3.5 space-y-3">
+                        <div class="flex items-center justify-between border-b border-[#332e59] pb-1.5">
+                            <span class="text-xs font-display text-amber-300 uppercase tracking-wider inline-flex items-center gap-1.5">
+                                <ArcadeIcon name="crown" className="w-3.5 h-3.5" />
+                                <span>{$t.youAreTheHost || 'You are the Host!'}</span>
+                            </span>
+                            <span class="text-[11px] font-mono text-slate-400 font-bold">{connectedPlayerCount} / {MAX_PLAYERS} {$t.players || 'Players'}</span>
                         </div>
-                    {:else}
-                        <div class="space-y-1.5">
-                            {#each availableThemes as th}
+
+                        <!-- 1. Color Theme -->
+                        <div>
+                            <span class="text-[11px] font-display text-slate-300 uppercase inline-flex items-center gap-1 mb-1">
+                                <ArcadeIcon name="palette" className="w-3.5 h-3.5 text-primary" />
+                                <span>{$t.colorTheme || 'COLOR THEME'}:</span>
+                            </span>
+                            <div class="grid grid-cols-3 gap-1.5">
+                                {#each ['arcade', 'vaporwave', 'outrun'] as themeName}
+                                    <button
+                                        type="button"
+                                        on:click={() => handleColorThemeClick(themeName)}
+                                        class="cut-sm py-1.5 px-1 text-center uppercase font-display text-[11px] tracking-tight border-2 transition-colors flex items-center justify-center cursor-pointer {
+                                            game?.colorTheme === themeName
+                                            ? 'bg-white text-black border-white'
+                                            : 'bg-[#0a0914] border-[#332e59] text-slate-300 hover:border-slate-500'
+                                        }"
+                                    >
+                                        <span>{themeName}</span>
+                                    </button>
+                                {/each}
+                            </div>
+                        </div>
+
+                        <!-- 2. Game Theme Selection + Reload -->
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1.5">
+                                <span class="text-[11px] font-display text-slate-300 uppercase">
+                                    {$t.theme || 'THEME'}:
+                                </span>
                                 <button
                                     type="button"
-                                    on:click={() => handleThemeClick(th)}
-                                    disabled={isApiDisabled}
-                                    class="theme-card w-full text-left px-3 py-2 rounded-lg text-xs font-medium border-2 transition-all cursor-pointer {
-                                        game?.theme === th && !customTheme
-                                        ? 'bg-amber-400/20 border-amber-400 text-amber-200 font-bold shadow-sm' 
-                                        : 'bg-neutral-900 border-neutral-700 text-slate-300 hover:border-slate-500'
-                                    } disabled:opacity-50 disabled:cursor-not-allowed"
+                                    on:click={handleReloadThemes}
+                                    disabled={isApiDisabled || game?.isGeneratingThemes}
+                                    class="cut-sm border border-amber-400/70 hover:bg-amber-400 hover:text-black text-amber-300 px-2.5 py-0.5 text-[10px] font-display uppercase tracking-wider transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
                                 >
-                                    {th}
+                                    <ArcadeIcon name="refresh" className="w-3 h-3" />
+                                    <span>{$t.reloadThemes || 'Reload Themes'}</span>
                                 </button>
-                            {/each}
-                        </div>
-                    {/if}
-                </div>
+                            </div>
 
-                <!-- 3. Custom Theme Text Field -->
-                <div>
-                    <span class="text-[10px] font-display font-bold text-slate-300 uppercase block mb-1">
-                        ✍️ {$t.customTheme || 'OR ENTER CUSTOM THEME'}:
-                    </span>
-                    <div class="relative select-text">
-                        <input 
-                            type="text"
-                            bind:value={customTheme}
-                            on:input={handleThemeInput}
-                            on:focus={() => isInputFocused = true}
-                            on:blur={() => isInputFocused = false}
-                            placeholder={$t.customTheme || (isUkrainian ? 'Власна тема...' : 'Custom Theme...')}
-                            class="w-full bg-neutral-900 border-2 border-neutral-700 focus:border-amber-400 text-white font-sans text-xs px-3 py-2 rounded-lg focus:outline-none select-text"
-                            maxlength="50"
-                        />
-                        {#if customTheme}
-                            <button 
-                                type="button" 
-                                on:click={() => {
-                                    customTheme = '';
-                                    sendMessage('set-theme', { gameId: game.id, theme: '' });
-                                }}
-                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
+                            {#if game?.isGeneratingThemes}
+                                <div class="p-2.5 cut-sm bg-[#0a0914] border border-amber-400/50 text-center">
+                                    <p class="text-amber-300 text-xs font-display animate-pulse">{$t.generatingThemes || 'Generating themes...'}</p>
+                                </div>
+                            {:else}
+                                <div class="space-y-1.5">
+                                    {#each availableThemes as th}
+                                        <button
+                                            type="button"
+                                            on:click={() => handleThemeClick(th)}
+                                            disabled={isApiDisabled}
+                                            class="theme-card cut-sm w-full text-left px-3 py-2 text-xs sm:text-sm font-sans font-bold border-2 transition-colors cursor-pointer {
+                                                game?.theme === th && !customTheme
+                                                ? 'bg-amber-400/20 border-amber-400 text-amber-200'
+                                                : 'bg-[#0a0914] border-[#332e59] text-slate-200 hover:border-slate-500'
+                                            } disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {th}
+                                        </button>
+                                    {/each}
+                                </div>
+                            {/if}
+                        </div>
+
+                        <!-- 3. Custom Theme Input -->
+                        <div>
+                            <span class="text-[11px] font-display text-slate-300 uppercase block mb-1">
+                                {$t.customTheme || 'OR ENTER CUSTOM THEME'}:
+                            </span>
+                            <div class="relative select-text">
+                                <input
+                                    type="text"
+                                    bind:value={customTheme}
+                                    on:input={handleThemeInput}
+                                    on:focus={() => isInputFocused = true}
+                                    on:blur={() => isInputFocused = false}
+                                    placeholder={$t.customTheme || 'Custom Theme...'}
+                                    class="w-full cut-sm bg-[#070610] border-2 border-[#332e59] focus:border-amber-400 text-white font-sans text-xs sm:text-sm px-3 py-2 focus:outline-none select-text"
+                                    maxlength="50"
+                                />
+                                {#if customTheme}
+                                    <button
+                                        type="button"
+                                        on:click={() => {
+                                            customTheme = '';
+                                            sendMessage('set-theme', { gameId: game.id, theme: '' });
+                                        }}
+                                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs cursor-pointer"
+                                        aria-label={$t.clear || 'Clear'}
+                                    >
+                                        <ArcadeIcon name="close" className="w-3.5 h-3.5" />
+                                    </button>
+                                {/if}
+                            </div>
+                        </div>
+
+                        <!-- 4. Game Modes (3 Pills) + Synced TV Low-Power Toggle -->
+                        <div>
+                            <span class="text-[11px] font-display text-slate-300 uppercase block mb-1">
+                                {$t.gameModes || 'GAME MODES'}:
+                            </span>
+
+                            <div class="grid grid-cols-3 gap-1.5 mb-2">
+                                <button
+                                    type="button"
+                                    on:click={handleToggleSilly}
+                                    class="cut-sm p-2 border-2 transition-colors flex flex-col items-center justify-center text-center cursor-pointer min-w-0 {
+                                        game?.sillyMode
+                                        ? 'bg-purple-950/90 border-purple-400 text-purple-200'
+                                        : 'bg-[#0a0914] border-[#332e59] text-slate-400 hover:border-slate-500'
+                                    }"
+                                >
+                                    <ArcadeIcon name="smile" className="w-4 h-4 mb-0.5" />
+                                    <span class="font-display text-[10px] sm:text-xs uppercase leading-tight break-words w-full">{$t.sillyMode || 'Silly'}</span>
+                                    <span class="text-[9px] font-mono font-bold mt-0.5 {game?.sillyMode ? 'text-purple-300' : 'text-slate-500'}">{game?.sillyMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    on:click={handleToggle18Plus}
+                                    class="cut-sm p-2 border-2 transition-colors flex flex-col items-center justify-center text-center cursor-pointer min-w-0 {
+                                        game?.is18PlusMode
+                                        ? 'bg-rose-950/90 border-danger text-rose-200'
+                                        : 'bg-[#0a0914] border-[#332e59] text-slate-400 hover:border-slate-500'
+                                    }"
+                                >
+                                    <ArcadeIcon name="flame" className="w-4 h-4 mb-0.5" />
+                                    <span class="font-display text-[10px] sm:text-xs uppercase leading-tight break-words w-full">{$t.is18PlusMode || '18+'}</span>
+                                    <span class="text-[9px] font-mono font-bold mt-0.5 {game?.is18PlusMode ? 'text-rose-300' : 'text-slate-500'}">{game?.is18PlusMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    on:click={handleToggleSlowpoke}
+                                    class="cut-sm p-2 border-2 transition-colors flex flex-col items-center justify-center text-center cursor-pointer min-w-0 {
+                                        game?.slowpokeMode
+                                        ? 'bg-cyan-950/90 border-cyan-400 text-cyan-200'
+                                        : 'bg-[#0a0914] border-[#332e59] text-slate-400 hover:border-slate-500'
+                                    }"
+                                >
+                                    <ArcadeIcon name="snail" className="w-4 h-4 mb-0.5" />
+                                    <span class="font-display text-[10px] sm:text-xs uppercase leading-tight break-words w-full">{$t.slowpokeMode || 'Slowpoke'}</span>
+                                    <span class="text-[9px] font-mono font-bold mt-0.5 {game?.slowpokeMode ? 'text-cyan-300' : 'text-slate-500'}">{game?.slowpokeMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
+                                </button>
+                            </div>
+
+                            <!-- Synced TV Low-Power Control -->
+                            <button
+                                type="button"
+                                on:click={toggleTvMode}
+                                class="cut-sm w-full px-3 py-2 border-2 transition-colors flex items-center justify-between cursor-pointer {
+                                    $tvMode
+                                    ? 'bg-cyan-950/70 border-primary text-primary'
+                                    : 'bg-[#0a0914] border-[#332e59] text-slate-300 hover:border-slate-500'
+                                }"
+                                title={$t.tvModeDesc}
                             >
-                                ✕
+                                <span class="font-display text-xs uppercase inline-flex items-center gap-1.5">
+                                    <ArcadeIcon name="tv" className="w-4 h-4" />
+                                    <span>{$t.tvLowPowerMode || $t.tvMode || 'TV Low-Power Mode'}</span>
+                                </span>
+                                <span class="font-mono text-xs font-extrabold px-2 py-0.5 cut-sm {$tvMode ? 'bg-primary text-black' : 'bg-neutral-800 text-slate-400'}">
+                                    {$tvMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}
+                                </span>
                             </button>
+                        </div>
+
+                        <!-- Start Game Button -->
+                        <button
+                            type="button"
+                            on:click={handleStartGame}
+                            disabled={!canStart}
+                            class="btn-arcade w-full py-3.5 text-sm sm:text-base"
+                            style="--btn-color: var(--color-warning);"
+                        >
+                            <ArcadeIcon name="bolt" className="w-5 h-5" />
+                            <span>{$t.startGame || 'START GAME'}</span>
+                        </button>
+                        {#if !canStart}
+                            <p class="text-center text-amber-300 font-display text-xs">
+                                {!game?.theme && !isApiDisabled ? $t.themeNotSet : playerCountMessage}
+                            </p>
                         {/if}
                     </div>
-                </div>
-
-                <!-- 4. Game Modes (Sleek Horizontal 3-Pill Toggles) -->
-                <div>
-                    <span class="text-[10px] font-display font-bold text-slate-300 uppercase block mb-1">
-                        ⚙️ {$t.gameModes || (isUkrainian ? 'РЕЖИМИ ГРИ' : 'GAME MODES')}:
-                    </span>
-                    
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <!-- Silly Mode Pill -->
-                        <button
-                            type="button"
-                            on:click={handleToggleSilly}
-                            class="p-1.5 sm:p-2 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center cursor-pointer min-w-0 {
-                                game?.sillyMode 
-                                ? 'bg-purple-950/80 border-purple-400 text-purple-200 shadow-[0_0_10px_rgba(168,85,247,0.4)]' 
-                                : 'bg-neutral-900 border-neutral-800 text-slate-400 hover:border-slate-600'
-                            }"
-                        >
-                            <span class="text-base mb-0.5">🤡</span>
-                            <span class="font-sans font-extrabold text-[10px] sm:text-xs uppercase leading-tight break-words w-full">{$t.sillyMode || 'Silly'}</span>
-                            <span class="text-[8px] font-mono font-bold mt-0.5 {game?.sillyMode ? 'text-purple-300' : 'text-slate-500'}">{game?.sillyMode ? 'ON' : 'OFF'}</span>
-                        </button>
-
-                        <!-- 18+ Mode Pill -->
-                        <button
-                            type="button"
-                            on:click={handleToggle18Plus}
-                            class="p-1.5 sm:p-2 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center cursor-pointer min-w-0 {
-                                game?.is18PlusMode 
-                                ? 'bg-red-950/80 border-red-400 text-red-200 shadow-[0_0_10px_rgba(239,68,68,0.4)]' 
-                                : 'bg-neutral-900 border-neutral-800 text-slate-400 hover:border-slate-600'
-                            }"
-                        >
-                            <span class="text-base mb-0.5">🌶️</span>
-                            <span class="font-sans font-extrabold text-[10px] sm:text-xs uppercase leading-tight break-words w-full">{$t.is18PlusMode || '18+'}</span>
-                            <span class="text-[8px] font-mono font-bold mt-0.5 {game?.is18PlusMode ? 'text-red-300' : 'text-slate-500'}">{game?.is18PlusMode ? 'ON' : 'OFF'}</span>
-                        </button>
-
-                        <!-- Slowpoke Mode Pill -->
-                        <button
-                            type="button"
-                            on:click={handleToggleSlowpoke}
-                            class="p-1.5 sm:p-2 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center cursor-pointer min-w-0 {
-                                game?.slowpokeMode 
-                                ? 'bg-cyan-950/80 border-cyan-400 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.4)]' 
-                                : 'bg-neutral-900 border-neutral-800 text-slate-400 hover:border-slate-600'
-                            }"
-                        >
-                            <span class="text-base mb-0.5">🐌</span>
-                            <span class="font-sans font-extrabold text-[10px] sm:text-xs uppercase leading-tight break-words w-full">{$t.slowpokeMode || 'Slowpoke'}</span>
-                            <span class="text-[8px] font-mono font-bold mt-0.5 {game?.slowpokeMode ? 'text-cyan-300' : 'text-slate-500'}">{game?.slowpokeMode ? 'ON' : 'OFF'}</span>
-                        </button>
+                {:else}
+                    <!-- Guest Room Card with All Active Modes & Theme -->
+                    <div class="bg-[#131126] border-2 border-[#332e59] cut-md p-2.5 text-center space-y-1.5">
+                        <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                            <span class="text-[10px] font-display text-slate-400 uppercase tracking-widest">
+                                {$t.chosenTheme || 'CHOSEN THEME'}:
+                            </span>
+                            <span class="font-display text-xs sm:text-sm text-cyan-300 leading-tight">
+                                {game?.theme || ($t.waitingForTheme || '...')}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1 pt-1.5 border-t border-[#332e59]">
+                            <div class="cut-sm px-1.5 py-1 border flex items-center justify-center gap-1 text-center min-w-0 {game?.sillyMode ? 'bg-purple-900/80 border-purple-400 text-purple-200' : 'bg-[#0a0914] border-[#332e59] text-slate-400'}">
+                                <span class="font-display text-[9px] sm:text-[10px] uppercase leading-tight truncate">{$t.sillyMode}</span>
+                                <span class="font-mono text-[9px] font-extrabold leading-none flex-shrink-0 {game?.sillyMode ? 'text-purple-300' : 'text-slate-500'}">{game?.sillyMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
+                            </div>
+                            <div class="cut-sm px-1.5 py-1 border flex items-center justify-center gap-1 text-center min-w-0 {game?.is18PlusMode ? 'bg-rose-900/80 border-danger text-rose-200' : 'bg-[#0a0914] border-[#332e59] text-slate-400'}">
+                                <span class="font-display text-[9px] sm:text-[10px] uppercase leading-tight truncate">{$t.is18PlusMode}</span>
+                                <span class="font-mono text-[9px] font-extrabold leading-none flex-shrink-0 {game?.is18PlusMode ? 'text-rose-300' : 'text-slate-500'}">{game?.is18PlusMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
+                            </div>
+                            <div class="cut-sm px-1.5 py-1 border flex items-center justify-center gap-1 text-center min-w-0 {game?.slowpokeMode ? 'bg-teal-900/80 border-teal-400 text-teal-200' : 'bg-[#0a0914] border-[#332e59] text-slate-400'}">
+                                <span class="font-display text-[9px] sm:text-[10px] uppercase leading-tight truncate">{$t.slowpokeMode}</span>
+                                <span class="font-mono text-[9px] font-extrabold leading-none flex-shrink-0 {game?.slowpokeMode ? 'text-teal-300' : 'text-slate-500'}">{game?.slowpokeMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Start Game Button (Directly Below Host Settings) -->
-                <button
-                    type="button"
-                    on:click={handleStartGame}
-                    disabled={!canStart}
-                    class="btn-arcade w-full py-3.5 bg-gradient-to-r from-amber-400 to-orange-500 text-black font-display font-black text-sm tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(251,191,36,0.7)] active:scale-98 transition-all cursor-pointer mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    🚀 {$t.startGame || 'START GAME'}
-                </button>
-                {#if !canStart}
-                    <p class="text-center mt-1 text-amber-400 font-display text-[10px] font-bold">
-                        {!game?.theme && !isApiDisabled ? $t.themeNotSet : playerCountMessage}
-                    </p>
                 {/if}
             </div>
-        {:else}
-            <!-- Non-Host Theme Summary Card -->
-            <div class="bg-neutral-950/90 border border-neutral-800 rounded-2xl p-4 text-center shadow-md">
-                <span class="text-[10px] font-display font-bold text-slate-400 uppercase tracking-widest block mb-1">
-                    {$t.chosenTheme || 'CHOSEN THEME'}:
-                </span>
-                <p class="font-display font-bold text-sm sm:text-base text-cyan-300">
-                    {game?.theme || '...'}
-                </p>
-            </div>
-        {/if}
 
-        <!-- 👥 CONNECTED PLAYERS LIST (BELOW HOST CONTROLS) -->
-        <div class="bg-neutral-950/80 border border-neutral-800 rounded-2xl p-3.5 shadow-inner">
-            <div class="flex items-center justify-between mb-2.5">
-                <span class="text-[10px] font-display font-bold uppercase tracking-wider text-slate-400">
-                    {$t.connectedPlayers || 'PLAYERS IN LOBBY'} ({game?.players?.length || 0})
-                </span>
-                <span class="text-[10px] font-mono text-emerald-400 font-bold">
-                    {connectedPlayerCount} / {MAX_PLAYERS} {$t.players || 'Players'}
-                </span>
-            </div>
+            <!-- Right / Bottom: Connected Players List -->
+            <div class="md:col-span-5 bg-[#131126] border-2 border-[#332e59] cut-md p-3">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <span class="text-[11px] font-display uppercase tracking-wider text-slate-400 truncate">
+                        {$t.connectedPlayers || 'PLAYERS IN LOBBY'} ({game?.players?.length || 0})
+                    </span>
+                    <span class="text-[11px] font-mono text-emerald-400 font-bold flex-shrink-0">
+                        {connectedPlayerCount} / {MAX_PLAYERS}
+                    </span>
+                </div>
 
-            <div class="grid {(game?.players?.length || 0) > 6 ? 'grid-cols-2 gap-2' : 'grid-cols-1 gap-2'}">
-                {#each game?.players || [] as p (p.id)}
-                    {@const isCurrent = p.id === player?.id}
-                    <div class="flex items-center justify-between bg-neutral-900/90 border {isCurrent ? 'border-cyan-400/80 bg-cyan-950/20' : 'border-neutral-800'} {(game?.players?.length || 0) > 6 ? 'px-2 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'} rounded-xl {p.socketId ? 'opacity-100' : 'opacity-60'}">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <div class="w-6 h-6 sm:w-7 sm:h-7 flex-shrink-0">
-                                <PixelAvatar avatar={p.avatar} className="w-full h-full" />
+                <div class="grid {(game?.players?.length || 0) > 6 ? 'grid-cols-2 gap-1.5' : 'grid-cols-1 gap-1.5'}">
+                    {#each game?.players || [] as p (p.id)}
+                        {@const isCurrent = p.id === player?.id}
+                        {@const isAway = !p.socketId && p.isAway}
+                        <div class="cut-sm flex items-center justify-between bg-[#0a0914] border {isCurrent ? 'border-cyan-400' : 'border-[#332e59]'} {(game?.players?.length || 0) > 6 ? 'px-2 py-1 text-[11px]' : 'px-2.5 py-1.5 text-xs'} {!p.socketId && !isAway ? 'opacity-55' : 'opacity-100'}">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <div class="w-6 h-6 sm:w-7 sm:h-7 flex-shrink-0">
+                                    <PixelAvatar avatar={p.avatar} className="w-full h-full" />
+                                </div>
+                                <span class="font-display text-slate-200 truncate {isCurrent ? 'text-cyan-300' : ''}">
+                                    {p.name}
+                                </span>
+                                {#if p.isHost}
+                                    <span class="cut-sm px-1.5 py-0.5 bg-amber-400 text-black font-display text-[9px] leading-none flex-shrink-0 uppercase">
+                                        {$t.host || 'HOST'}
+                                    </span>
+                                {/if}
                             </div>
-                            <span class="font-display font-semibold text-slate-200 truncate {isCurrent ? 'text-cyan-300 font-bold' : ''}">
-                                {p.name}
-                            </span>
+                            {#if p.socketId}
+                                <span class="w-5 h-5 cut-sm bg-emerald-950 border border-emerald-400 text-emerald-300 flex items-center justify-center flex-shrink-0">
+                                    <ArcadeIcon name="check" className="w-3 h-3" />
+                                </span>
+                            {:else if isAway}
+                                <span class="px-1.5 py-0.5 cut-sm bg-amber-950 border border-amber-400 text-amber-200 text-[9px] font-display flex-shrink-0">
+                                    {$t.awayStatus || 'AWAY'}
+                                </span>
+                            {:else}
+                                <span class="px-1.5 py-0.5 cut-sm bg-rose-950 border border-danger text-rose-200 text-[9px] font-display flex-shrink-0">
+                                    {$t.disconnected || 'OFF'}
+                                </span>
+                            {/if}
                         </div>
-                        {#if p.socketId}
-                            <span class="w-4 h-4 rounded-full text-[9px] font-display font-black bg-emerald-950 border border-emerald-400 text-emerald-300 flex items-center justify-center flex-shrink-0">
-                                ✓
-                            </span>
-                        {:else}
-                            <span class="px-1.5 py-0.2 bg-red-950 border border-red-500 text-red-300 text-[8px] font-display rounded-sm flex-shrink-0">
-                                {$t.disconnected || 'OFF'}
-                            </span>
-                        {/if}
-                    </div>
-                {/each}
+                    {/each}
+                </div>
             </div>
         </div>
     </main>
 
-    <!-- Bottom Status Banner for Non-Host Players -->
-    {#if !isHost}
-        <footer class="mt-2.5 pt-1.5 border-t border-neutral-800 flex-shrink-0">
-            <div class="w-full py-2.5 bg-neutral-900/80 border border-neutral-800 text-slate-300 font-display font-bold text-xs tracking-wider uppercase rounded-xl text-center flex items-center justify-center gap-2">
-                <span>⏳</span>
-                <span>{$t.waitingForHostToStart || $t.waitingForHost || 'WAITING FOR THE HOST TO START THE GAME...'}</span>
+    <!-- Docked Bottom Bar: Prominent Avatar Reaction Button (+ Guest Status Note) -->
+    <footer class="mt-2 pt-2 border-t border-[#332e59] flex-shrink-0 flex flex-col gap-1.5">
+        {#if !isHost}
+            <div class="w-full py-1.5 px-3 cut-sm bg-[#0a0914] border border-[#332e59] text-slate-300 font-display text-[11px] tracking-wider uppercase text-center">
+                {$t.waitingForHostToStart || $t.waitingForHost || 'WAITING FOR THE HOST TO START THE GAME...'}
             </div>
-        </footer>
-    {/if}
+        {/if}
+
+        <button
+            type="button"
+            data-testid="send-reaction-btn"
+            on:click={sendAvatarReaction}
+            class="cut-sm w-full py-2 px-4 bg-[#1c1936] hover:bg-cyan-950/80 border-2 border-cyan-400 text-cyan-200 flex items-center justify-center gap-2.5 cursor-pointer transition-colors active:scale-98"
+            title={$t.sendAvatarReaction || $t.sendReaction || 'Send Avatar Reaction'}
+            aria-label={$t.sendReaction || 'Send Reaction'}
+        >
+            {#if player?.avatar}
+                <div class="w-7 h-7 flex-shrink-0">
+                    <PixelAvatar avatar={player.avatar} className="w-full h-full" />
+                </div>
+            {/if}
+            <span class="font-display text-xs sm:text-sm uppercase tracking-wider">
+                {$t.sendAvatarReaction || $t.sendReaction || 'Send Avatar Reaction'}
+            </span>
+        </button>
+    </footer>
 </div>
 
-<!-- Flying Live Avatar Reactions Overlay -->
-<div class="pointer-events-none fixed inset-0 overflow-hidden z-50" style="transform: translateZ(0); isolation: isolate;">
-    {#each $flyingEmojis as emoji (emoji.id)}
-        {@const startX = emoji.startX ?? 50}
-        {@const endX = emoji.endX ?? startX}
-        {@const startRotate = emoji.startRotate ?? 0}
-        {@const endRotate = emoji.endRotate ?? 0}
-        <div 
-            class="flying-emoji"
-            style="--start-x: {startX}vw; --end-x: {endX}vw; --start-rotate: {startRotate}deg; --end-rotate: {endRotate}deg;"
-            on:animationend={() => removeEmoji(emoji.id)}
-        >
-            <PixelAvatar avatar={emoji.avatar} className="w-full h-full" />
-        </div>
-    {/each}
-</div>
+<FlyingReactionsOverlay />

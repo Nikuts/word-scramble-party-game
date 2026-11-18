@@ -3,6 +3,11 @@ import {
     TIMEOUT_ANSWER_PLACEHOLDER,
     GAME_PHASES,
     SOUNDS_ON_HOST_ONLY,
+    FINAL_BATTLE_SECONDS_PER_ANSWER,
+    FINAL_BATTLE_SECONDS_PER_VOTE,
+    SLOWPOKE_FINAL_BATTLE_SECONDS_PER_ANSWER,
+    SLOWPOKE_FINAL_BATTLE_SECONDS_PER_VOTE,
+    SLOWPOKE_REVEAL_EXTRA_SECONDS,
     getBattleRevealDurationSeconds,
 } from '../shared/config.js';
 import * as frontendConfig from '../src/lib/config.js';
@@ -30,22 +35,29 @@ describe('Step 4: UX Quick Wins, Gemini Structured Output & Shared Config', () =
             expect(frontendConfig.getBattleRevealDurationSeconds).toBe(getBattleRevealDurationSeconds);
         });
 
-        it('scales battle reveal duration with competitor count (5s + 3s * competitors, +5s slowpoke)', () => {
-            // 2 competitors (Duo): 5 + 3*2 = 11s normal, 16s slowpoke
+        it('scales battle reveal duration with competitor count (5s + 3s * competitors, +2s slowpoke)', () => {
+            expect(SLOWPOKE_REVEAL_EXTRA_SECONDS).toBe(2);
+            // 2 competitors (Duo): 5 + 3*2 = 11s normal, 13s slowpoke
             expect(getBattleRevealDurationSeconds(2, false, false)).toBe(11);
-            expect(getBattleRevealDurationSeconds(2, true, false)).toBe(16);
+            expect(getBattleRevealDurationSeconds(2, true, false)).toBe(13);
 
-            // 3 competitors (Trio): 5 + 3*3 = 14s normal, 19s slowpoke
+            // 3 competitors (Trio): 5 + 3*3 = 14s normal, 16s slowpoke
             expect(getBattleRevealDurationSeconds(3, false, false)).toBe(14);
-            expect(getBattleRevealDurationSeconds(3, true, false)).toBe(19);
+            expect(getBattleRevealDurationSeconds(3, true, false)).toBe(16);
 
-            // 4 competitors (Quad): 5 + 3*4 = 17s normal, 22s slowpoke
+            // 4 competitors (Quad): 5 + 3*4 = 17s normal, 19s slowpoke
             expect(getBattleRevealDurationSeconds(4, false, false)).toBe(17);
-            expect(getBattleRevealDurationSeconds(4, true, false)).toBe(22);
+            expect(getBattleRevealDurationSeconds(4, true, false)).toBe(19);
 
-            // Auto-win: 12s normal, 17s in slowpoke
+            // Auto-win: 12s normal, 14s in slowpoke
             expect(getBattleRevealDurationSeconds(2, false, true)).toBe(12);
-            expect(getBattleRevealDurationSeconds(2, true, true)).toBe(17);
+            expect(getBattleRevealDurationSeconds(2, true, true)).toBe(14);
+
+            // Round 3 Final Round timers (Normal & Slowpoke)
+            expect(FINAL_BATTLE_SECONDS_PER_ANSWER).toBe(125);
+            expect(FINAL_BATTLE_SECONDS_PER_VOTE).toBe(35);
+            expect(SLOWPOKE_FINAL_BATTLE_SECONDS_PER_ANSWER).toBe(165);
+            expect(SLOWPOKE_FINAL_BATTLE_SECONDS_PER_VOTE).toBe(55);
         });
     });
 

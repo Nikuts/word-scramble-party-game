@@ -1,15 +1,20 @@
 // e2e/captureTabletHostScreenshots.spec.js
 import { test } from '@playwright/test';
 import path from 'path';
+import os from 'os';
+import fs from 'fs';
 
-const ARTIFACT_DIR = 'C:/Users/nikku/.gemini/antigravity-ide/brain/8524da66-c512-4769-b6d9-4b0a4fb99c88';
+const ARTIFACT_DIR = process.env.PLAYWRIGHT_SCREENSHOT_DIR || path.join(os.tmpdir(), 'word-scramble-screenshots');
+if (!fs.existsSync(ARTIFACT_DIR)) {
+    fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+}
 
 const CAPTURES = [
-    { name: 'Laptop Standard (1366x768)', screen: 'host_lobby', vp: { width: 1366, height: 768 }, filename: 'host_lobby_laptop.png' },
-    { name: 'Laptop Standard (1366x768)', screen: 'host_question', vp: { width: 1366, height: 768 }, filename: 'host_question_laptop.png' },
-    { name: 'Laptop Standard (1366x768)', screen: 'host_voting', vp: { width: 1366, height: 768 }, filename: 'host_voting_laptop.png' },
-    { name: 'Laptop Standard (1366x768)', screen: 'host_reveal', vp: { width: 1366, height: 768 }, filename: 'host_reveal_laptop.png' },
-    { name: 'Laptop Standard (1366x768)', screen: 'host_podium', vp: { width: 1366, height: 768 }, filename: 'host_podium_laptop.png' },
+    { name: 'Laptop Standard (1366x768)', screen: 'host_lobby', vp: { width: 1366, height: 768 }, filename: 'tablet_host_lobby_laptop.png' },
+    { name: 'Laptop Standard (1366x768)', screen: 'host_question', vp: { width: 1366, height: 768 }, filename: 'tablet_host_question_laptop.png' },
+    { name: 'Laptop Standard (1366x768)', screen: 'host_voting', vp: { width: 1366, height: 768 }, filename: 'tablet_host_voting_laptop.png' },
+    { name: 'Laptop Standard (1366x768)', screen: 'host_reveal', vp: { width: 1366, height: 768 }, filename: 'tablet_host_reveal_laptop.png' },
+    { name: 'Laptop Standard (1366x768)', screen: 'host_podium', vp: { width: 1366, height: 768 }, filename: 'tablet_host_podium_laptop.png' },
 
     { name: 'iPad Landscape (1024x768)', screen: 'host_lobby', vp: { width: 1024, height: 768 }, filename: 'host_lobby_ipad_landscape.png' },
     { name: 'iPad Portrait (768x1024)', screen: 'host_lobby', vp: { width: 768, height: 1024 }, filename: 'host_lobby_ipad_portrait.png' },

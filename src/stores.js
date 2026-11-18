@@ -1,7 +1,8 @@
 import { writable, get, derived } from 'svelte/store';
 import { io } from 'socket.io-client';
-import { playSound, playMusic, stopMusic } from './lib/utils.js';
+import { playSound, playMusic, stopMusic, soundEngine } from './lib/utils.js';
 import { UI_TEXT } from './ui_text.js';
+import { TV_MAX_CONCURRENT_REACTIONS } from './lib/config.js';
 
 // --- Individual, Granular Stores for Better Performance ---
 export const view = writable('language'); // 'language', 'mainMenu', 'joinPrompt', 'hostDisplay', 'playerGame', 'instructions'
@@ -10,6 +11,7 @@ export const gameState = writable(null);
 export const currentPlayer = writable(null);
 export const error = writable({ message: null, fatal: false, context: null });
 export const isLoading = writable(false);
+export const isReconnecting = writable(false);
 export const isHostDisplay = writable(false);
 export const joinForm = writable({ gameId: '', playerName: '', avatar: '' });
 export const showBattleHistory = writable(false);
@@ -17,6 +19,12 @@ export const flyingEmojis = writable([]);
 export const activeTimeBoostNotice = writable(null);
 export const activeAllVotesInNotice = writable(false);
 export const hasConfirmedAvatar = writable(false);
+
+isHostDisplay.subscribe((isHost) => {
+    if (isHost) {
+        soundEngine.enableHostPreload();
+    }
+});
 
 // --- Smart TV & Low Power Display Store ---
 function detectInitialTvMode() {
@@ -48,7 +56,23 @@ if (typeof window !== 'undefined') {
 }
 
 export function toggleTvMode() {
-    tvMode.update(val => !val);
+    let nextVal = false;
+    tvMode.update(val => {
+        nextVal = !val;
+        return nextVal;
+    });
+    const currentGame = get(gameState);
+    const cp = get(currentPlayer);
+    const canSyncTv = Boolean(socket?.connected && currentGame?.id && (get(isHostDisplay) || cp?.isHost));
+    if (canSyncTv) {
+        socket.emit('set-tv-mode', { gameId: currentGame.id, tvMode: nextVal });
+    }
+}
+
+export function sendReaction(reaction = 'avatar') {
+    const currentGame = get(gameState);
+    if (!socket || !currentGame?.id) return;
+    socket.emit('send-lobby-emoji', { gameId: currentGame.id, reaction });
 }
 
 // --- Base Derived Stores ---
@@ -106,6 +130,9 @@ export const currentVotingBattle = derived(
 let socket;
 let lastTickSecond = -1; // Persists across game state updates to track ticking for sounds
 let partialAnswers = {}; // Client-side cache for partial answers
+let lifecycleListenersBound = false;
+let lastHiddenAt = 0;
+let lastResumeAttemptAt = 0;
 const initialErrorState = { message: null, fatal: false, context: null };
 const TIMER_PHASES_FOR_TICK = ['question', 'battle_answering', 'battle_voting'];
 
@@ -119,11 +146,27 @@ export function handleCountdownTick(phase, remaining, soundsOnHostOnly = true) {
                 playSound('sfx_timer_tick', { pitch });
             }
             if (!_isHostDisplay && remaining <= 5) {
-                try {
-                    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-                        navigator.vibrate(40);
+                const g = get(gameState);
+                const cp = get(currentPlayer);
+                let hasCompletedPhaseAction = false;
+                if (g && cp) {
+                    if (phase === 'question') {
+                        hasCompletedPhaseAction = Boolean(g.playerAnswers?.[cp.id]?.submittedAll);
+                    } else if (phase === 'battle_answering') {
+                        const myBattles = (g.battleSchedule || []).filter(b => b.competitors?.includes(cp.id));
+                        hasCompletedPhaseAction = myBattles.length > 0 && myBattles.every(b => Boolean(b.answers?.[cp.id]));
+                    } else if (phase === 'battle_voting') {
+                        const curBattle = g.battleSchedule?.[g.currentVotingBattleIndex];
+                        hasCompletedPhaseAction = !curBattle || curBattle.competitors?.includes(cp.id) || Boolean(curBattle.votes?.[cp.id]);
                     }
-                } catch (e) {}
+                }
+                if (!hasCompletedPhaseAction) {
+                    try {
+                        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+                            navigator.vibrate(40);
+                        }
+                    } catch (e) {}
+                }
             }
             lastTickSecond = remaining;
         }
@@ -134,6 +177,64 @@ export function handleCountdownTick(phase, remaining, soundsOnHostOnly = true) {
 
 // --- Actions and Socket Logic ---
 
+function readStoredSession(key) {
+    try {
+        return JSON.parse(localStorage.getItem(key) || 'null');
+    } catch {
+        return null;
+    }
+}
+
+function attemptSilentResume(force = false) {
+    if (!socket || typeof window === 'undefined') return;
+    const playerSession = readStoredSession('wordScrambleSession');
+    const hostSession = readStoredSession('wordScrambleHostSession');
+    const hasActiveSession = Boolean((playerSession?.playerId && playerSession?.playerToken && playerSession?.gameId) || hostSession?.gameId);
+    if (!hasActiveSession) return;
+
+    const now = Date.now();
+    if (!force && now - lastResumeAttemptAt < 1200) return;
+
+    if (!socket.connected) {
+        lastResumeAttemptAt = now;
+        isReconnecting.set(true);
+        socket.connect();
+    } else if (force) {
+        lastResumeAttemptAt = now;
+        if (playerSession?.playerId && playerSession?.playerToken && playerSession?.gameId) {
+            socket.emit('reconnect-player', playerSession);
+        } else if (hostSession?.gameId) {
+            socket.emit('join-as-host-display', { gameId: hostSession.gameId });
+        }
+    }
+}
+
+function bindLifecycleListeners() {
+    if (lifecycleListenersBound || typeof window === 'undefined' || typeof document === 'undefined') return;
+    lifecycleListenersBound = true;
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            lastHiddenAt = Date.now();
+        } else if (document.visibilityState === 'visible') {
+            const awayMs = lastHiddenAt ? Date.now() - lastHiddenAt : 0;
+            attemptSilentResume(awayMs >= 3000);
+        }
+    });
+
+    window.addEventListener('pageshow', (evt) => {
+        if (evt.persisted || !socket?.connected) {
+            attemptSilentResume(true);
+        }
+    });
+
+    window.addEventListener('focus', () => {
+        if (!socket?.connected) {
+            attemptSilentResume(false);
+        }
+    });
+}
+
 export function initializeSocket() {
     if (socket) return;
     socket = io({
@@ -143,33 +244,53 @@ export function initializeSocket() {
         reconnectionDelayMax: 5000,
         timeout: 20000,
     });
+    bindLifecycleListeners();
 
     socket.on('connect', () => {
         console.log('Connected to server!');
-        const playerSession = JSON.parse(localStorage.getItem('wordScrambleSession'));
-        const hostSession = JSON.parse(localStorage.getItem('wordScrambleHostSession'));
+        isReconnecting.set(false);
+        const playerSession = readStoredSession('wordScrambleSession');
+        const hostSession = readStoredSession('wordScrambleHostSession');
 
         if (playerSession?.playerId && playerSession?.playerToken && playerSession?.gameId) {
             console.log("Found player session, attempting to reconnect...");
-            isLoading.set(true);
+            if (!get(gameState)) {
+                isLoading.set(true);
+            } else {
+                isReconnecting.set(true);
+            }
             error.set({ ...initialErrorState });
             clearConsumedPartialAnswers(); // Clear any stale answers before reconnecting
             socket.emit('reconnect-player', playerSession);
         } else if (hostSession?.gameId) {
             console.log("Found host session, attempting to reconnect host display...");
-            isLoading.set(true);
+            if (!get(gameState)) {
+                isLoading.set(true);
+            } else {
+                isReconnecting.set(true);
+            }
             error.set({ ...initialErrorState });
             socket.emit('join-as-host-display', { gameId: hostSession.gameId });
         } else {
              isLoading.set(false);
+             isReconnecting.set(false);
              error.set({ ...initialErrorState });
         }
     });
 
-    socket.on('disconnect', () => {
-        console.log('Disconnected from server.');
-        isLoading.set(true);
-        error.set({ message: get(t).reconnecting, fatal: false, context: null });
+    socket.on('disconnect', (reason) => {
+        console.log('Disconnected from server:', reason);
+        const playerSession = readStoredSession('wordScrambleSession');
+        const hostSession = readStoredSession('wordScrambleHostSession');
+        const inSession = Boolean(get(gameState) || playerSession?.gameId || hostSession?.gameId);
+        if (inSession) {
+            isReconnecting.set(true);
+        } else {
+            isLoading.set(false);
+            if (reason === 'io server disconnect' && !get(error)?.fatal) {
+                socket.connect();
+            }
+        }
     });
 
     socket.on('game-state-update', (newGameState) => {
@@ -208,8 +329,16 @@ export function initializeSocket() {
             clearConsumedPartialAnswers();
         }
 
+        if (previousPhase && newGameState.phase !== previousPhase && !['battle_voting', 'battle_reveal', 'results'].includes(newGameState.phase)) {
+            flyingEmojis.set([]);
+        }
+
         isLoading.set(false);
+        isReconnecting.set(false);
         error.set({ ...initialErrorState });
+        if (get(isHostDisplay) && typeof newGameState.tvMode === 'boolean' && get(tvMode) !== newGameState.tvMode) {
+            tvMode.set(newGameState.tvMode);
+        }
         gameState.set(newGameState);
         currentPlayer.set(updatedPlayer);
 
@@ -302,6 +431,9 @@ export function initializeSocket() {
         
         hasConfirmedAvatar.set(true);
         isHostDisplay.set(_isHostDisplay);
+        if (typeof newGameState.tvMode === 'boolean' && get(tvMode) !== newGameState.tvMode) {
+            tvMode.set(newGameState.tvMode);
+        }
         view.set(newView);
         gameState.set(newGameState);
         currentPlayer.set(newCurrentPlayer);
@@ -310,6 +442,7 @@ export function initializeSocket() {
         // Important: Clear loading/error state *after* all other state has been updated
         // to ensure the UI transitions smoothly away from the loading screen.
         isLoading.set(false);
+        isReconnecting.set(false);
         error.set({ ...initialErrorState });
     });
 
@@ -321,6 +454,7 @@ export function initializeSocket() {
         localStorage.removeItem('wordScrambleHostSession');
         
         isLoading.set(false);
+        isReconnecting.set(false);
         if (wasPlayerAttempt) {
             view.set('joinPrompt');
             error.set({ message: get(t).reconnectFailed, fatal: false, context: null });
@@ -365,31 +499,34 @@ export function initializeSocket() {
         });
     });
 
-    socket.on('lobby-emoji-sent', ({ avatar, emoji, playerName }) => {
+    socket.on('lobby-emoji-sent', ({ avatar, emoji, reaction, playerName }) => {
         const id = Date.now() + Math.random();
+        const isTv = Boolean(get(tvMode));
+        const maxConcurrent = isTv ? TV_MAX_CONCURRENT_REACTIONS : 25;
         const startX = Math.floor(Math.random() * 75 + 10);
         const endX = Math.max(5, Math.min(90, startX + (Math.random() * 30 - 15)));
-        const startRotate = Math.floor(Math.random() * 40 - 20);
-        const endRotate = Math.floor(Math.random() * 180 - 90);
+        const startRotate = isTv ? 0 : Math.floor(Math.random() * 40 - 20);
+        const endRotate = isTv ? 0 : Math.floor(Math.random() * 180 - 90);
 
         flyingEmojis.update(emojis => {
             const next = [...emojis, {
                 id,
                 avatar: avatar,
                 emoji: emoji || null,
+                reaction: reaction || 'avatar',
                 playerName: playerName || '',
                 startX,
                 endX,
                 startRotate,
                 endRotate
             }];
-            return next.length > 25 ? next.slice(next.length - 25) : next;
+            return next.length > maxConcurrent ? next.slice(next.length - maxConcurrent) : next;
         });
 
-        // Guaranteed auto-cleanup failsafe after 4.5s
+        // Guaranteed auto-cleanup failsafe
         setTimeout(() => {
             flyingEmojis.update(all => all.filter(e => e.id !== id));
-        }, 4500);
+        }, isTv ? 2900 : 4500);
     });
 
     socket.on('time-boost-used', (data) => {
@@ -466,6 +603,9 @@ export function sendMessage(event, payload) {
     if (currentError.message && !currentError.fatal) {
          error.set({ ...initialErrorState });
     }
+    if (socket && !socket.connected) {
+        socket.connect();
+    }
     socket.emit(event, payload);
 }
 
@@ -479,6 +619,7 @@ export function resetToMenu() {
      hasConfirmedAvatar.set(false);
      lastTickSecond = -1;
      isLoading.set(false);
+     isReconnecting.set(false);
      error.set({ ...initialErrorState });
      isHostDisplay.set(false);
      showBattleHistory.set(false);

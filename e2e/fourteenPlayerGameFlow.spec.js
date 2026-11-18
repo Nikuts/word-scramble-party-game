@@ -9,8 +9,8 @@ import {
 } from './helpers/gameTestHelper.js';
 
 test.describe('14-Player Maximum Lobby Scale Game Flow', () => {
-    test('plays max capacity 14-player game with 10 battles per round (8 trios + 2 duos) and multi-voter tallying', async ({ browser }) => {
-        test.setTimeout(360000); // 6 minutes for 14-player session
+    test('plays max capacity 14-player game with 7 battles per round (7 quads / 4-way brawls) and multi-voter tallying', async ({ browser }) => {
+        test.setTimeout(540000); // 9 minutes headroom for 14-player session under parallel workers
 
         // 1. Setup Host Display
         const hostContext = await browser.newContext();
@@ -47,7 +47,7 @@ test.describe('14-Player Maximum Lobby Scale Game Flow', () => {
         }
 
         // Verify all 14 connected on Host
-        await expect(hostPage.locator('text=Players (14)')).toBeVisible({ timeout: 25000 });
+        await expect(hostPage.locator('text=/(?:FIGHTERS|Players|БІЙЦІ) \\(14/i')).toBeVisible({ timeout: 25000 });
 
         // 3. Set Theme and Start Game from Host Player (Alice)
         const p1Page = players[0].page;

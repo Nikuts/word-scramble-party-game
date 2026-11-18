@@ -137,8 +137,14 @@ export const deleteGame = (gameId) => {
         if (game.hostReassignmentTimerId) {
             clearTimeout(game.hostReassignmentTimerId);
         }
+        if (game.inactivityTimeoutId) {
+            clearTimeout(game.inactivityTimeoutId);
+        }
         if (game.playerReconnectionTimers) {
             Object.values(game.playerReconnectionTimers).forEach(t => clearTimeout(t));
+        }
+        if (game.playerAwayTimers) {
+            Object.values(game.playerAwayTimers).forEach(t => clearTimeout(t));
         }
         delete games[gameId];
     }

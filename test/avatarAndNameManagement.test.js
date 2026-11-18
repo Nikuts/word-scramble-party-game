@@ -291,5 +291,21 @@ describe('Avatar & Name Management in Lobby', () => {
             expect(p15Error).toBeTruthy();
             expect(p15Error.key).toBe('lobbyFull');
         });
+
+        it('normalizes collapsed whitespace and Unicode NFC when detecting duplicate names on join or rename', () => {
+            let err1 = null;
+            let err2 = null;
+            const s1 = { id: 's1', join: () => {}, emit: () => {} };
+            const sDupJoin = { id: 's2', join: () => {}, emit: (e, p) => { if (e === 'error-message') err1 = p; } };
+            const s3 = { id: 's3', join: () => {}, emit: (e, p) => { if (e === 'error-message') err2 = p; } };
+
+            handleJoinGame(mockIo, s1, { gameId, playerName: 'Mari\u00e9   K', language: 'en' });
+            handleJoinGame(mockIo, sDupJoin, { gameId, playerName: 'marie\u0301 k', language: 'en' });
+            expect(err1?.key).toBe('nameTaken');
+
+            handleJoinGame(mockIo, s3, { gameId, playerName: 'Bob', language: 'en' });
+            handleChangeName(mockIo, s3, { gameId, newName: '  mari\u00e9  k ' });
+            expect(err2?.key).toBe('nameTaken');
+        });
     });
 });

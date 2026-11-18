@@ -50,7 +50,7 @@ export const historicalFiguresPack = {
         "The #1 rule in Noah's exotic pet adoption center:",
         "Catchphrase shouted by a Viking warrior working in customer service:",
         "Title of Dante's travel guide to morning commuter traffic:",
-        "Slogan on Wright Brothers' commercial drone racing team:",
+        "Slogan on the Wright Brothers' commercial drone racing team:",
         "Review written by King Arthur for a round conference room table:",
         "The final inspirational quote from Charles Darwin's pet store:"
     ]

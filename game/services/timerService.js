@@ -97,6 +97,7 @@ export const PHASES = {
  * @param {object} game The game object.
  */
 export function clearPhaseTimer(game) {
+    if (!game) return;
     if (game.phaseTimerId) {
         clearTimeout(game.phaseTimerId.serverTimeout);
         clearInterval(game.phaseTimerId.broadcastInterval);
@@ -145,17 +146,23 @@ export function startPhaseTimer(io, game, phase, duration, nextStateFn, { preser
         const currentGame = manager.getGame(game.id);
         // If the game ends, the phase changes, or time runs out, stop the interval.
         if (!currentGame || currentGame.phase !== phase || Date.now() >= currentGame.phaseEndTime) {
-            clearPhaseTimer(currentGame);
+            clearInterval(broadcastInterval);
+            if (currentGame) clearPhaseTimer(currentGame);
             return;
         }
         helpers.broadcastTimerTick(io, game.id);
     }, 1000);
 
-    // Broadcast the initial state immediately so the timer appears instantly.
-    helpers.broadcastGameState(io, game.id);
-    
     // Store both timer IDs on the game object for cleanup.
     game.phaseTimerId = { serverTimeout, broadcastInterval };
+
+    // If all players disconnected during an async transition before the timer started, pause immediately.
+    if (game.players && game.players.length > 0 && game.players.every(p => p.socketId === null)) {
+        pauseTimer(game);
+    }
+
+    // Broadcast the initial state immediately so the timer appears instantly.
+    helpers.broadcastGameState(io, game.id);
 }
 
 

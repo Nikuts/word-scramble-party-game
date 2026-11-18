@@ -7,8 +7,9 @@
     export let showLabel = true;
     export let size = 'md'; // 'sm' (32px), 'md' (44px), 'lg' (60px), 'xl' (80px)
     export let disableLowWarning = false;
+    export let hex = false;
 
-    $: height = size === 'sm' ? 32 : (size === 'lg' ? 60 : (size === 'xl' ? 80 : 44));
+    $: height = hex ? 32 : (size === 'sm' ? 32 : (size === 'lg' ? 60 : (size === 'xl' ? 80 : 44)));
 
     let digits = [0, 0, 0];
     $: isLow = !disableLowWarning && time <= 10 && time > 0;
@@ -20,11 +21,11 @@
     }
 </script>
 
-<div class="flex flex-col items-center select-none {showLabel ? 'my-2' : ''}">
-    {#if showLabel}
-        <p class="font-display text-xs sm:text-sm text-yellow-400 mb-1.5 uppercase tracking-widest">{$t.timeRemaining || 'Time Remaining'}</p>
+<div class="flex flex-col items-center select-none {showLabel && !hex ? 'my-1.5' : ''}">
+    {#if showLabel && !hex}
+        <p class="font-display text-xs sm:text-sm text-amber-300 mb-1 uppercase tracking-widest">{$t.timeRemaining || 'Time Remaining'}</p>
     {/if}
-    <div class="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 bg-neutral-950/90 border-2 border-neutral-800 rounded-2xl shadow-inner backdrop-blur-md">
+    <div class="{hex ? 'cut-hex px-6 py-2 bg-[#070610] border-2' : 'cut-sm px-3 py-1.5 bg-[#070610] border-2 shadow-inner'} flex items-center gap-1.5 sm:gap-2 {isLow ? 'border-danger' : (hex ? 'border-amber-400/90' : 'border-[#332e59]')}">
         <SevenSegmentDigit digit={digits[0]} {isLow} {height} />
         <SevenSegmentDigit digit={digits[1]} {isLow} {height} />
         <SevenSegmentDigit digit={digits[2]} {isLow} {height} />

@@ -48,9 +48,16 @@ export function calculateGameSuperlatives(game) {
             });
         }
 
-        // Winning answer length
-        if (battle.winnerId && battle.answers?.[battle.winnerId]) {
-            const rawAns = battle.answers[battle.winnerId];
+        // Winning answer length (including tied winners)
+        const winningIds = battle.winnerId
+            ? [battle.winnerId]
+            : Object.entries(battle.scoreBreakdown || {})
+                .filter(([, bd]) => (bd?.winBonus || 0) > 0)
+                .map(([cId]) => cId);
+
+        winningIds.forEach(wId => {
+            const rawAns = battle.answers?.[wId];
+            if (!rawAns) return;
             let ansText = '';
             if (typeof rawAns === 'string' && rawAns !== TIMEOUT_ANSWER_PLACEHOLDER) {
                 ansText = rawAns;
@@ -62,17 +69,17 @@ export function calculateGameSuperlatives(game) {
             if (wordTokens.length > 0) {
                 const count = wordTokens.length;
                 if (!shortestWin || count < shortestWin.count) {
-                    shortestWin = { playerId: battle.winnerId, playerIds: [battle.winnerId], count, snippet: ansText };
-                } else if (count === shortestWin.count && !shortestWin.playerIds.includes(battle.winnerId)) {
-                    shortestWin.playerIds.push(battle.winnerId);
+                    shortestWin = { playerId: wId, playerIds: [wId], count, snippet: ansText };
+                } else if (count === shortestWin.count && !shortestWin.playerIds.includes(wId)) {
+                    shortestWin.playerIds.push(wId);
                 }
                 if (!longestWin || count > longestWin.count) {
-                    longestWin = { playerId: battle.winnerId, playerIds: [battle.winnerId], count, snippet: ansText };
-                } else if (count === longestWin.count && !longestWin.playerIds.includes(battle.winnerId)) {
-                    longestWin.playerIds.push(battle.winnerId);
+                    longestWin = { playerId: wId, playerIds: [wId], count, snippet: ansText };
+                } else if (count === longestWin.count && !longestWin.playerIds.includes(wId)) {
+                    longestWin.playerIds.push(wId);
                 }
             }
-        }
+        });
     });
 
     const getTopPlayer = (statsMap) => {
@@ -114,8 +121,23 @@ export function endGame(io, game) {
     game.superlatives = calculateGameSuperlatives(game);
     game.phase = 'results';
     game.phaseEndTime = null;
-    helpers.playSoundOnClients(io, game, `vo_final_scores_${game.language}`);
+    const voLang = (game.language === 'ua' || game.language === 'uk') ? 'uk' : 'en';
+    helpers.playSoundOnClients(io, game, `vo_final_scores_${voLang}`);
     helpers.broadcastGameState(io, game.id);
+
+    // Strip heavy ephemeral word bank / token arrays from battleHistory once results are broadcast
+    if (Array.isArray(game.battleHistory)) {
+        game.battleHistory.forEach(b => {
+            if (b && typeof b === 'object') {
+                delete b.wordBanks;
+                delete b.promptTokens;
+                delete b.answerTileIds;
+            }
+        });
+    }
+    game.reserveQuestions = {};
+    game.partialAnswers = {};
+    game.preGeneratedFallbackWords = [];
 }
 
 export function resetGameForRestart(game) {
@@ -131,6 +153,7 @@ export function resetGameForRestart(game) {
     timerService.clearPhaseTimer(game);
     if (game.hostReassignmentTimerId) clearTimeout(game.hostReassignmentTimerId);
     if (game.playerReconnectionTimers) Object.values(game.playerReconnectionTimers).forEach(timerId => clearTimeout(timerId));
+    if (game.playerAwayTimers) Object.values(game.playerAwayTimers).forEach(timerId => clearTimeout(timerId));
     if (game.inactivityTimeoutId) clearTimeout(game.inactivityTimeoutId);
 
     const preservedUsedFallbackThemes = [...new Set([
@@ -185,6 +208,7 @@ export function resetGameForRestart(game) {
         prefetchedFinalRoundPromise: null,
         currentVotingBattleIndex: 0,
         playerReconnectionTimers: {},
+        playerAwayTimers: {},
         hostReassignmentTimerId: null,
         inactivityTimeoutId: null,
     });

@@ -73,6 +73,33 @@ describe('Superlatives, FormatConfig & Question Re-Roll Mechanics', () => {
             expect(superlatives.shakespeare).toBeDefined();
             expect(superlatives.shakespeare.playerId).toBe('p2');
         });
+
+        it('includes tied battle winners in minimalist and shakespeare calculations', () => {
+            const tiedGame = {
+                players: [
+                    { id: 'p1', name: 'Alice', score: 600 },
+                    { id: 'p2', name: 'Bob', score: 600 }
+                ],
+                battleHistory: [
+                    {
+                        id: 'b-tie-0',
+                        winnerId: null,
+                        answers: {
+                            p1: 'Short punch',
+                            p2: 'An extraordinarily verbose winning answer for everyone'
+                        },
+                        scoreBreakdown: {
+                            p1: { winBonus: 100 },
+                            p2: { winBonus: 100 }
+                        }
+                    }
+                ],
+                battleSchedule: []
+            };
+            const sups = calculateGameSuperlatives(tiedGame);
+            expect(sups.minimalist?.playerId).toBe('p1');
+            expect(sups.shakespeare?.playerId).toBe('p2');
+        });
     });
 
     describe('generateBattleSchedule with FormatConfig', () => {

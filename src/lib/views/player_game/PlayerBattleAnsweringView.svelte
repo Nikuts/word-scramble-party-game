@@ -1,21 +1,22 @@
+<!-- src/lib/views/player_game/PlayerBattleAnsweringView.svelte -->
 <script>
-    import { onMount } from 'svelte';
     import Sortable from 'sortablejs';
-    import { t, sendMessage, getPartialAnswers, clearConsumedPartialAnswers, gameState, currentPlayer } from '../../../stores.js';
+    import { t, language, sendMessage, sendReaction, getPartialAnswers, clearConsumedPartialAnswers, gameState } from '../../../stores.js';
+    import { formatWordsLabel } from '../../../ui_text.js';
     import { formatAnswerText } from '../../utils.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
     import PixelAvatar from '../../shared/PixelAvatar.svelte';
+    import ArcadeIcon from '../../shared/ArcadeIcon.svelte';
 
     export let timer;
     export let battlesToAnswer = [];
     export let gameId;
     export let playerId;
-    
-    let battleForms = {}; // Holds state for each battle a player is in
-    let showPromptTooltip = false;
+
+    let battleForms = {};
     let nextAnswerWordSeq = 0;
-    
-    $: currentBattleToAnswer = battlesToAnswer[0]; // Always show the first unanswered battle
+
+    $: currentBattleToAnswer = battlesToAnswer[0];
 
     $: allAssignedBattles = $gameState?.battleSchedule?.filter(b => b.competitors.includes(playerId)) || [];
     $: totalAssigned = allAssignedBattles.length || 1;
@@ -25,20 +26,6 @@
     $: currentPlayerObj = $gameState?.players?.find(p => p.id === playerId);
     $: hasUsedTimeBoost = currentPlayerObj?.hasUsedTimeBoost || false;
 
-    onMount(() => {
-        if (typeof localStorage !== 'undefined') {
-            const seen = localStorage.getItem('seenPromptWordTooltip');
-            if (!seen) showPromptTooltip = true;
-        }
-    });
-
-    function dismissPromptTooltip() {
-        showPromptTooltip = false;
-        if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('seenPromptWordTooltip', 'true');
-        }
-    }
-
     function handleTimeBoost() {
         if (hasUsedTimeBoost || !$gameState || !playerId) return;
         sendMessage('use-time-boost', {
@@ -46,7 +33,7 @@
             playerId: playerId,
         });
     }
-    
+
     $: if (battlesToAnswer && battlesToAnswer.length > 0 && playerId) {
         ensureBattleFormsInitialized(battlesToAnswer, playerId);
     }
@@ -95,15 +82,9 @@
     }
 
     function getWordCountLabel(count, dict) {
-        if (!dict?.wordsGenitive) return dict?.words || 'WORDS';
-        const mod100 = count % 100;
-        const mod10 = count % 10;
-        if ((mod100 >= 11 && mod100 <= 14) || mod10 === 0 || mod10 >= 5) {
-            return dict.wordsGenitive;
-        }
-        return dict.words || 'WORDS';
+        return formatWordsLabel(count, dict, $language);
     }
-    
+
     function ensureBattleFormsInitialized(battles, pId) {
         if (!battles || !battles.length || !pId) return;
         const activeScheduleIds = new Set(($gameState?.battleSchedule || battles).map(b => b.id));
@@ -205,8 +186,8 @@
             }
             if (partialAnswer) consumedPartials = true;
         });
-        
-        battleForms = {...battleForms};
+
+        battleForms = { ...battleForms };
         if (consumedPartials) {
             clearConsumedPartialAnswers();
         }
@@ -214,7 +195,6 @@
 
     function sortableList(node, list) {
         let currentList = list;
-
         const sortable = new Sortable(node, {
             animation: 150,
             ghostClass: 'sortable-ghost',
@@ -223,31 +203,22 @@
             onEnd: (evt) => {
                 const { oldIndex, newIndex } = evt;
                 if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return;
-                
                 const reorderedList = [...currentList];
                 const [movedItem] = reorderedList.splice(oldIndex, 1);
                 reorderedList.splice(newIndex, 0, movedItem);
-
-                node.dispatchEvent(new CustomEvent('listUpdated', {
-                    detail: reorderedList
-                }));
+                node.dispatchEvent(new CustomEvent('listUpdated', { detail: reorderedList }));
             }
         });
 
         return {
-            update(newList) {
-                currentList = newList;
-            },
-            destroy() {
-                sortable.destroy();
-            }
+            update(newList) { currentList = newList; },
+            destroy() { sortable.destroy(); }
         };
     }
-    
+
     function handleListUpdate(newList, battleId, lineType = null) {
         const form = battleForms[battleId];
         if (!form) return;
-
         const cleanNewList = newList.filter(Boolean);
 
         if (form.isFinal && lineType) {
@@ -256,31 +227,27 @@
         } else {
             form.answerWords = cleanNewList;
         }
-        
+
         battleForms = { ...battleForms };
         saveBattlePartial(battleId);
     }
-    
+
     function addWordToAnswer(word, battleId) {
         const form = battleForms[battleId];
         if (!form) return;
-        
+
         const newAnswerWord = { ...word, id: `ans-${++nextAnswerWordSeq}` };
         const targetLine = form.isFinal ? form.activeLine : 'main';
 
         if (form.isFinal) {
-            if (form.activeLine === 'title') {
-                form.titleWords = [...form.titleWords, newAnswerWord];
-            } else {
-                form.taglineWords = [...form.taglineWords, newAnswerWord];
-            }
+            if (form.activeLine === 'title') form.titleWords = [...form.titleWords, newAnswerWord];
+            else form.taglineWords = [...form.taglineWords, newAnswerWord];
         } else {
             form.answerWords = [...form.answerWords, newAnswerWord];
         }
 
         form.undoStack = [...(form.undoStack || []), { wordId: newAnswerWord.id, lineType: targetLine }];
-
-        battleForms = {...battleForms};
+        battleForms = { ...battleForms };
         saveBattlePartial(battleId);
     }
 
@@ -292,17 +259,14 @@
         if (!lastAction) return;
 
         if (form.isFinal) {
-            if (lastAction.lineType === 'title') {
-                form.titleWords = form.titleWords.filter(w => w && w.id !== lastAction.wordId);
-            } else {
-                form.taglineWords = form.taglineWords.filter(w => w && w.id !== lastAction.wordId);
-            }
+            if (lastAction.lineType === 'title') form.titleWords = form.titleWords.filter(w => w && w.id !== lastAction.wordId);
+            else form.taglineWords = form.taglineWords.filter(w => w && w.id !== lastAction.wordId);
         } else {
             form.answerWords = form.answerWords.filter(w => w && w.id !== lastAction.wordId);
         }
 
         form.undoStack = [...form.undoStack];
-        battleForms = {...battleForms};
+        battleForms = { ...battleForms };
         saveBattlePartial(battleId);
     }
 
@@ -316,7 +280,7 @@
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         form.wordBankWords = shuffled;
-        battleForms = {...battleForms};
+        battleForms = { ...battleForms };
     }
 
     function deleteWord(wordId, battleId) {
@@ -326,7 +290,6 @@
         if (form.isFinal) {
             const initialLengthTitle = form.titleWords.length;
             form.titleWords = form.titleWords.filter(w => w && w.id !== wordId);
-            
             if (form.titleWords.length === initialLengthTitle) {
                 form.taglineWords = form.taglineWords.filter(w => w && w.id !== wordId);
             }
@@ -338,7 +301,7 @@
             form.undoStack = form.undoStack.filter(item => item.wordId !== wordId);
         }
 
-        battleForms = {...battleForms};
+        battleForms = { ...battleForms };
         saveBattlePartial(battleId);
     }
 
@@ -363,14 +326,14 @@
             form.undoStack = [];
         }
 
-        battleForms = {...battleForms};
+        battleForms = { ...battleForms };
         saveBattlePartial(battleId);
     }
 
     function saveBattlePartial(battleId) {
         const form = battleForms[battleId];
         if (!form) return;
-        
+
         let payload;
         if (form.isFinal) {
             const titleIds = (form.titleWords || []).map(w => w?.tileId).filter(Boolean);
@@ -398,7 +361,7 @@
     function submitBattleAnswer(battleId) {
         const form = battleForms[battleId];
         if (!form) return;
-        
+
         let answer;
         let tileIds;
         if (form.isFinal) {
@@ -419,16 +382,14 @@
             tileIds = answerWords.map(w => w.tileId).filter(Boolean);
             answer = formatWordTokens(answerWords);
         }
-        
+
         sendMessage('submit-battle-answer', { gameId: gameId, playerId: playerId, battleId, tileIds, answer });
     }
 
-    function handleSendReaction() {
+    function handleSendAvatarReaction() {
         const activeGameId = gameId || $gameState?.id;
         if (!activeGameId) return;
-        sendMessage('send-lobby-emoji', {
-            gameId: activeGameId
-        });
+        sendReaction('avatar');
     }
 </script>
 
@@ -444,238 +405,243 @@
         opacity: 0.4;
     }
 </style>
-<div class="w-full h-full flex flex-col p-3 pb-10 max-w-md mx-auto select-none font-sans overflow-y-auto overscroll-contain box-border">
+
+<div class="w-full h-full flex flex-col p-3 pb-8 max-w-md md:max-w-5xl mx-auto select-none font-sans overflow-y-auto overscroll-contain box-border">
     {#if battlesToAnswer && battlesToAnswer.length > 0 && battleForms[battlesToAnswer[0].id]}
         {@const battle = battlesToAnswer[0]}
         {@const battleForm = battleForms[battle.id]}
         {@const hasAnswerWords = battleForm ? (battleForm.isFinal ? (battleForm.titleWords.length > 0 || battleForm.taglineWords.length > 0) : battleForm.answerWords.length > 0) : false}
 
-        <!-- Top Header & Timer -->
-        <header class="flex flex-col items-center justify-center flex-shrink-0 pt-0.5 mb-2">
-            <div class="mb-1">
-                <SevenSegmentDisplay time={timer} showLabel={false} size="sm" />
-            </div>
-            
-            <!-- Battle Pill Indicator -->
-            <div class="px-3.5 py-1 rounded-full bg-pink-950/80 border border-pink-500/50 shadow-[0_0_12px_rgba(236,72,153,0.3)]">
-                <span class="text-xs font-display font-black text-pink-300 uppercase tracking-wider">
-                    {battleForm.isFinal ? ($t.finalBattle || 'FINAL MOVIE BATTLE') : (battle.competitors.length === 4 ? ($t.quadLabel || '🔥 4-WAY BRAWL') : (battle.competitors.length === 3 ? ($t.brawlLabel || '💥 3-WAY BRAWL') : ($t.battlePrompt || 'BATTLE')))} {currentBattleNum}/{totalAssigned}
+        <header class="flex flex-row items-center justify-between gap-2 flex-shrink-0 pt-0.5 mb-2.5">
+            <div class="fighter-crest bg-pink-950/90 border border-pink-400 text-pink-200 text-xs sm:text-sm">
+                <ArcadeIcon name="sword" className="w-3.5 h-3.5" />
+                <span>
+                    {battleForm.isFinal ? ($t.finalBattle || 'FINAL MOVIE BATTLE') : (battle.competitors.length === 4 ? ($t.quadLabel || '4-WAY BRAWL') : (battle.competitors.length === 3 ? ($t.brawlLabel || '3-WAY BRAWL') : ($t.battleShort || 'BATTLE')))} {currentBattleNum}/{totalAssigned}
                 </span>
             </div>
+            <SevenSegmentDisplay time={timer} showLabel={false} size="sm" />
         </header>
 
         {#if battleForm}
-            <!-- Battle Prompt Card with Header +30s Badge and Word Tapping Hint -->
-            <div class="bg-neutral-950/90 border border-neutral-800 rounded-2xl p-3 shadow-lg flex-shrink-0 mb-2.5">
-                <div class="flex items-center justify-between mb-1.5">
-                    <span class="text-xs font-display font-bold text-pink-400 uppercase tracking-widest">
-                        {battleForm.isFinal ? ($t.movieGenre || 'MOVIE GENRE') : ($t.prompt || 'PROMPT')}
-                    </span>
-                    
-                    <!-- +30s Time Boost Badge -->
-                    <button
-                        type="button"
-                        on:click={handleTimeBoost}
-                        disabled={hasUsedTimeBoost}
-                        class="px-2.5 py-1 rounded-lg border font-mono text-xs font-bold uppercase transition-all {
-                            hasUsedTimeBoost 
-                            ? 'bg-neutral-900 border-neutral-700 text-neutral-400 opacity-65 cursor-not-allowed' 
-                            : 'bg-amber-950/80 border-amber-500/60 text-amber-200 hover:bg-amber-900 shadow-sm cursor-pointer'
-                        }"
-                    >
-                        {$t.timeBoost || '+30s'} ({hasUsedTimeBoost ? '0' : '1'})
-                    </button>
-                </div>
-
-                <!-- Prompt Words (Tappable into answer) -->
-                <div class="text-sm sm:text-base font-sans font-medium text-slate-100 text-center leading-snug py-1">
-                    {#if battleForm.isFinal && (battle.genre || battle.formatConfig?.genre)}
-                        <p class="font-display font-black text-sm text-amber-300 uppercase tracking-wider mb-1">{battle.genre || battle.formatConfig?.genre}</p>
-                    {/if}
-                    <div class="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1.5">
-                        {#each getPromptWordGroups(battleForm.promptWords, battle, battleForm.isFinal) as group (group[0].id)}
-                            <span class="inline-flex items-baseline">
-                                {#each group as word (word.id)}
-                                    <button
-                                        type="button"
-                                        on:click={() => addWordToAnswer(word, battle.id)}
-                                        class="hover:text-cyan-300 hover:underline transition-colors cursor-pointer text-left inline bg-transparent p-0 border-0 font-bold text-sm sm:text-base"
-                                        title={$t.promptWordsLabel || 'Tap to use prompt word'}
-                                    >
-                                        {word.text}
-                                    </button>
-                                {/each}
+            <!-- Responsive: Single Col on Phone, 2 Cols (Composer Left + Word Bank Right) on Tablet/PC -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start pb-6">
+                <!-- Prompt + Answer Dropzone(s) -->
+                <div class="order-1 md:col-span-5 md:col-start-1 md:row-start-1 space-y-2.5">
+                    <div class="bg-[#131126] border-2 border-[#332e59] cut-md p-3">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-xs font-display text-pink-300 uppercase tracking-widest">
+                                {battleForm.isFinal ? ($t.movieGenre || 'MOVIE GENRE') : ($t.prompt || 'PROMPT')}
                             </span>
-                        {/each}
-                    </div>
-                </div>
 
-                <!-- Subtle Prompt Words Helper Hint -->
-                <div class="mt-1 pt-1 border-t border-neutral-900 text-center">
-                    <span class="text-[10px] font-sans text-slate-400">
-                        {$t.promptTappingHint || '💡 You can also tap words from the prompt above!'}
-                    </span>
-                </div>
-            </div>
+                            <button
+                                type="button"
+                                on:click={handleTimeBoost}
+                                disabled={hasUsedTimeBoost}
+                                class="cut-sm px-2.5 py-1 border font-mono text-xs font-bold uppercase transition-colors inline-flex items-center gap-1 {
+                                    hasUsedTimeBoost
+                                    ? 'bg-neutral-900 border-neutral-600 text-slate-400 opacity-75 cursor-not-allowed'
+                                    : 'bg-amber-950/80 border-amber-400 text-amber-200 hover:bg-amber-900 cursor-pointer'
+                                }"
+                            >
+                                <ArcadeIcon name="clock" className="w-3 h-3" />
+                                <span>{$t.timeBoost || '+30s'} ({hasUsedTimeBoost ? '0' : '1'})</span>
+                            </button>
+                        </div>
 
-            <!-- Answer Dropzone (SortableJS Enabled) -->
-            <div class="flex-shrink-0 mb-2.5">
-                {#if battleForm.isFinal}
-                    <!-- Movie Title -->
-                    <div class="flex items-center justify-between text-xs font-display font-bold uppercase tracking-widest text-slate-400 mb-1">
-                        <span class="{battleForm.activeLine === 'title' ? 'text-pink-400 font-black' : ''}">🎬 {$t.movieTitle || 'Movie Title'}</span>
-                        {#if battleForm.titleWords.length > 0}
-                            <button type="button" class="text-red-400 hover:text-red-300 font-sans text-xs cursor-pointer font-bold" on:click={() => clearLine(battle.id, 'title')}>✕ {$t.clear || 'Clear'}</button>
-                        {/if}
-                    </div>
-                    <button
-                        type="button"
-                        aria-label="Select Movie Title for adding words"
-                        use:sortableList={battleForm.titleWords}
-                        on:listUpdated={e => handleListUpdate(e.detail, battle.id, 'title')}
-                        class="w-full text-left min-h-[2.75rem] p-2.5 bg-neutral-950/90 border-2 border-dashed rounded-xl flex flex-wrap gap-2 items-center mb-2 {battleForm.activeLine === 'title' ? 'border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.3)] bg-pink-950/10' : 'border-neutral-800'}"
-                        on:click={() => battleForms[battle.id].activeLine = 'title'}
-                    >
-                        {#if battleForm.titleWords.length === 0}
-                            <span class="text-xs sm:text-sm text-slate-500 italic pl-1">{$t.clickWordsHintFinal || 'Tap words to assemble title'}</span>
-                        {/if}
-                        {#each battleForm.titleWords as word (word.id)}
-                            <div class="answer-word px-2.5 py-1 bg-pink-950/80 border border-pink-400/90 text-pink-100 font-bold text-xs sm:text-sm rounded-lg shadow-sm flex items-center gap-1.5">
-                                <span>{word.text}</span>
-                                <button type="button" class="delete-word-btn text-pink-400 hover:text-white font-bold ml-1 cursor-pointer text-sm" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
-                            </div>
-                        {/each}
-                    </button>
-
-                    <!-- Movie Tagline -->
-                    <div class="flex items-center justify-between text-xs font-display font-bold uppercase tracking-widest text-slate-400 mb-1">
-                        <span class="{battleForm.activeLine === 'tagline' ? 'text-pink-400 font-black' : ''}">💬 {$t.movieTagline || 'Tagline'}</span>
-                        {#if battleForm.taglineWords.length > 0}
-                            <button type="button" class="text-red-400 hover:text-red-300 font-sans text-xs cursor-pointer font-bold" on:click={() => clearLine(battle.id, 'tagline')}>✕ {$t.clear || 'Clear'}</button>
-                        {/if}
-                    </div>
-                    <button
-                        type="button"
-                        aria-label="Select Movie Tagline for adding words"
-                        use:sortableList={battleForm.taglineWords}
-                        on:listUpdated={e => handleListUpdate(e.detail, battle.id, 'tagline')}
-                        class="w-full text-left min-h-[2.75rem] p-2.5 bg-neutral-950/90 border-2 border-dashed rounded-xl flex flex-wrap gap-2 items-center {battleForm.activeLine === 'tagline' ? 'border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.3)] bg-pink-950/10' : 'border-neutral-800'}"
-                        on:click={() => battleForms[battle.id].activeLine = 'tagline'}
-                    >
-                        {#if battleForm.taglineWords.length === 0}
-                            <span class="text-xs sm:text-sm text-slate-500 italic pl-1">{$t.clickWordsHintFinal || 'Tap words to assemble tagline'}</span>
-                        {/if}
-                        {#each battleForm.taglineWords as word (word.id)}
-                            <div class="answer-word px-2.5 py-1 bg-pink-950/80 border border-pink-400/90 text-pink-100 font-bold text-xs sm:text-sm rounded-lg shadow-sm flex items-center gap-1.5">
-                                <span>{word.text}</span>
-                                <button type="button" class="delete-word-btn text-pink-400 hover:text-white font-bold ml-1 cursor-pointer text-sm" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
-                            </div>
-                        {/each}
-                    </button>
-                {:else}
-                    <!-- Single Battle Answer Dropzone -->
-                    <div class="flex items-center justify-between text-xs font-display font-bold uppercase tracking-widest text-slate-400 mb-1">
-                        <span class="text-pink-400 font-bold">⚔️ {$t.yourAnswer || 'YOUR ANSWER'}</span>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-slate-400 font-mono">{countVocabularyWords(battleForm.answerWords)} {getWordCountLabel(countVocabularyWords(battleForm.answerWords), $t)}</span>
-                            {#if battleForm.answerWords.length > 0}
-                                <button type="button" class="text-red-400 hover:text-red-300 font-sans text-xs cursor-pointer font-bold" on:click={() => clearLine(battle.id)}>✕ {$t.clear || 'Clear'}</button>
+                        <div class="text-sm sm:text-base font-sans font-bold text-slate-100 text-center leading-snug py-1">
+                            {#if battleForm.isFinal && (battle.genre || battle.formatConfig?.genre)}
+                                <p class="font-display text-sm text-amber-300 uppercase tracking-wider mb-1">{battle.genre || battle.formatConfig?.genre}</p>
                             {/if}
+                            <div class="flex flex-wrap items-baseline justify-center gap-x-1.5 gap-y-1">
+                                {#each getPromptWordGroups(battleForm.promptWords, battle, battleForm.isFinal) as group (group[0].id)}
+                                    <span class="inline-flex items-baseline">
+                                        {#each group as word (word.id)}
+                                            <button
+                                                type="button"
+                                                on:click={() => addWordToAnswer(word, battle.id)}
+                                                class="hover:text-cyan-300 hover:underline transition-colors cursor-pointer text-left inline bg-transparent p-0 border-0 font-bold text-sm sm:text-base"
+                                                title={$t.promptWordsLabel || 'Tap to use prompt word'}
+                                            >
+                                                {word.text}
+                                            </button>
+                                        {/each}
+                                    </span>
+                                {/each}
+                            </div>
+                        </div>
+
+                        <div class="mt-1 pt-1 border-t border-[#332e59] text-center">
+                            <span class="text-[11px] font-sans text-slate-400">
+                                {$t.promptTappingHint || 'Tap words from the prompt above!'}
+                            </span>
                         </div>
                     </div>
-                    <div
-                        use:sortableList={battleForm.answerWords}
-                        on:listUpdated={e => handleListUpdate(e.detail, battle.id)}
-                        class="w-full min-h-[3.5rem] p-3 bg-neutral-950/90 border-2 border-dashed border-pink-500/70 rounded-2xl flex flex-wrap gap-2 items-center transition-all duration-200"
-                    >
-                        {#if battleForm.answerWords.length === 0}
-                            <span class="text-xs sm:text-sm text-slate-500 italic pl-1">{$t.clickWordsHint || 'Tap words below to build your punchline!'}</span>
-                        {/if}
-                        {#each battleForm.answerWords as word (word.id)}
-                            <div class="answer-word px-3.5 py-1.5 bg-pink-950/90 border-2 border-pink-400 text-pink-100 font-bold text-sm sm:text-base rounded-xl shadow-md flex items-center gap-2">
-                                <span>{word.text}</span>
-                                <button type="button" class="delete-word-btn text-pink-400 hover:text-white font-bold ml-1 cursor-pointer text-base" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
+
+                    <!-- Answer Dropzone -->
+                    <div>
+                        {#if battleForm.isFinal}
+                            {@const finalVocabCount = countVocabularyWords([...battleForm.titleWords, ...battleForm.taglineWords])}
+                            <div class="flex items-center justify-between text-xs font-display uppercase tracking-widest text-slate-400 mb-1">
+                                <span class="{battleForm.activeLine === 'title' ? 'text-pink-300' : ''}">{$t.movieTitle || 'Movie Title'}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-slate-400 font-mono">{finalVocabCount} {getWordCountLabel(finalVocabCount, $t)}</span>
+                                    {#if battleForm.titleWords.length > 0}
+                                        <button type="button" class="text-rose-400 hover:text-rose-300 font-sans text-xs cursor-pointer font-bold" on:click={() => clearLine(battle.id, 'title')}>✕ {$t.clear || 'Clear'}</button>
+                                    {/if}
+                                </div>
                             </div>
+                            <div
+                                role="button"
+                                tabindex="0"
+                                aria-label="Select Movie Title for adding words"
+                                use:sortableList={battleForm.titleWords}
+                                on:listUpdated={e => handleListUpdate(e.detail, battle.id, 'title')}
+                                class="w-full text-left min-h-[3rem] p-2.5 cut-sm bg-[#070610] border-2 border-dashed flex flex-wrap gap-1.5 items-center mb-2 cursor-pointer {battleForm.activeLine === 'title' ? 'border-pink-400 bg-pink-950/15' : 'border-[#332e59]'}"
+                                on:click={() => battleForms[battle.id].activeLine = 'title'}
+                                on:keydown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); battleForms[battle.id].activeLine = 'title'; } }}
+                            >
+                                {#if battleForm.titleWords.length === 0}
+                                    <span class="text-xs sm:text-sm text-slate-500 italic pl-1">{$t.clickWordsHintFinal || 'Tap words to assemble title'}</span>
+                                {/if}
+                                {#each battleForm.titleWords as word (word.id)}
+                                    <div class="answer-word keycap-answer">
+                                        <span>{word.text}</span>
+                                        <button type="button" class="delete-word-btn text-pink-300 hover:text-white font-bold ml-1 cursor-pointer text-sm" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
+                                    </div>
+                                {/each}
+                            </div>
+
+                            <div class="flex items-center justify-between text-xs font-display uppercase tracking-widest text-slate-400 mb-1">
+                                <span class="{battleForm.activeLine === 'tagline' ? 'text-pink-300' : ''}">{$t.movieTagline || 'Tagline'}</span>
+                                {#if battleForm.taglineWords.length > 0}
+                                    <button type="button" class="text-rose-400 hover:text-rose-300 font-sans text-xs cursor-pointer font-bold" on:click={() => clearLine(battle.id, 'tagline')}>✕ {$t.clear || 'Clear'}</button>
+                                {/if}
+                            </div>
+                            <div
+                                role="button"
+                                tabindex="0"
+                                aria-label="Select Movie Tagline for adding words"
+                                use:sortableList={battleForm.taglineWords}
+                                on:listUpdated={e => handleListUpdate(e.detail, battle.id, 'tagline')}
+                                class="w-full text-left min-h-[3rem] p-2.5 cut-sm bg-[#070610] border-2 border-dashed flex flex-wrap gap-1.5 items-center cursor-pointer {battleForm.activeLine === 'tagline' ? 'border-pink-400 bg-pink-950/15' : 'border-[#332e59]'}"
+                                on:click={() => battleForms[battle.id].activeLine = 'tagline'}
+                                on:keydown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); battleForms[battle.id].activeLine = 'tagline'; } }}
+                            >
+                                {#if battleForm.taglineWords.length === 0}
+                                    <span class="text-xs sm:text-sm text-slate-500 italic pl-1">{$t.clickWordsHintFinal || 'Tap words to assemble tagline'}</span>
+                                {/if}
+                                {#each battleForm.taglineWords as word (word.id)}
+                                    <div class="answer-word keycap-answer">
+                                        <span>{word.text}</span>
+                                        <button type="button" class="delete-word-btn text-pink-300 hover:text-white font-bold ml-1 cursor-pointer text-sm" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
+                                    </div>
+                                {/each}
+                            </div>
+                        {:else}
+                            <div class="flex items-center justify-between text-xs font-display uppercase tracking-widest text-slate-400 mb-1">
+                                <span class="text-pink-300">{$t.yourAnswer || 'YOUR ANSWER'}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-slate-400 font-mono">{countVocabularyWords(battleForm.answerWords)} {getWordCountLabel(countVocabularyWords(battleForm.answerWords), $t)}</span>
+                                    {#if battleForm.answerWords.length > 0}
+                                        <button type="button" class="text-rose-400 hover:text-rose-300 font-sans text-xs cursor-pointer font-bold" on:click={() => clearLine(battle.id)}>✕ {$t.clear || 'Clear'}</button>
+                                    {/if}
+                                </div>
+                            </div>
+                            <div
+                                use:sortableList={battleForm.answerWords}
+                                on:listUpdated={e => handleListUpdate(e.detail, battle.id)}
+                                class="w-full min-h-[3.75rem] p-3 cut-md bg-[#070610] border-2 border-dashed border-pink-400/75 flex flex-wrap gap-1.5 items-center"
+                            >
+                                {#if battleForm.answerWords.length === 0}
+                                    <span class="text-xs sm:text-sm text-slate-500 italic pl-1">{$t.clickWordsHint || 'Tap words below to build your punchline!'}</span>
+                                {/if}
+                                {#each battleForm.answerWords as word (word.id)}
+                                    <div class="answer-word keycap-answer">
+                                        <span>{word.text}</span>
+                                        <button type="button" class="delete-word-btn text-pink-300 hover:text-white font-bold ml-1 cursor-pointer text-base" on:click|stopPropagation={() => deleteWord(word.id, battle.id)}>&times;</button>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
+                    </div>
+
+                </div>
+
+                <!-- Right Column (Mobile Order 2): Word Bank Keycaps + Undo/Shuffle -->
+                <div class="order-2 md:col-span-7 md:col-start-6 md:row-start-1 md:row-span-2 flex flex-col">
+                    <div class="flex flex-wrap items-center justify-between gap-1.5 text-xs font-display uppercase tracking-widest text-cyan-300 mb-2">
+                        <span>{$t.wordBank || 'WORD BANK'}</span>
+                        <div class="flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                on:click={() => undoLastWord(battle.id)}
+                                disabled={!battleForm.undoStack || battleForm.undoStack.length === 0}
+                                class="cut-sm px-2.5 py-1 bg-[#131126] border border-[#332e59] text-slate-200 font-display text-xs transition-colors disabled:opacity-50 disabled:text-slate-400 disabled:cursor-not-allowed hover:border-cyan-400 cursor-pointer inline-flex items-center gap-1"
+                            >
+                                <ArcadeIcon name="undo" className="w-3.5 h-3.5" />
+                                <span>{$t.undo || 'Undo'}</span>
+                            </button>
+                            <button
+                                type="button"
+                                on:click={() => shuffleBank(battle.id)}
+                                class="cut-sm px-2.5 py-1 bg-[#131126] border border-[#332e59] text-slate-200 font-display text-xs hover:border-cyan-400 transition-colors cursor-pointer inline-flex items-center gap-1"
+                            >
+                                <ArcadeIcon name="shuffle" className="w-3.5 h-3.5" />
+                                <span>{$t.shuffleBank || 'Shuffle'}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 cut-md bg-[#131126] border-2 border-[#332e59] flex flex-wrap content-start gap-2 justify-center">
+                        {#each battleForm.wordBankWords as word (word.id)}
+                            <button
+                                type="button"
+                                data-testid="word-bank-chip"
+                                on:click={() => addWordToAnswer(word, battle.id)}
+                                class="word-bank-chip keycap-bank"
+                            >
+                                {word.text}
+                            </button>
                         {/each}
                     </div>
-                {/if}
-            </div>
-
-            <!-- Word Bank Card with Undo & Shuffle (Expansive Natural Flow) -->
-            <div class="flex-shrink-0 flex flex-col my-2">
-                <div class="flex items-center justify-between text-xs font-display font-bold uppercase tracking-widest text-cyan-400 mb-2">
-                    <span class="font-bold">🔤 {$t.wordBank || 'WORD BANK'}</span>
-                    <div class="flex items-center gap-2">
-                        <button
-                            type="button"
-                            on:click={() => undoLastWord(battle.id)}
-                            disabled={!battleForm.undoStack || battleForm.undoStack.length === 0}
-                            class="px-3 py-1 bg-neutral-900 border border-neutral-700 text-slate-200 font-display text-xs font-bold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-800 cursor-pointer"
-                        >
-                            {$t.undo || 'Undo'}
-                        </button>
-                        <button
-                            type="button"
-                            on:click={() => shuffleBank(battle.id)}
-                            class="px-3 py-1 bg-neutral-900 border border-neutral-700 text-slate-200 font-display text-xs font-bold rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                        >
-                            {$t.shuffleBank || 'Shuffle'}
-                        </button>
-                    </div>
                 </div>
 
-                <!-- Word Tiles (Expanded Arcade Cyan Chips) -->
-                <div class="p-3.5 bg-neutral-950/90 border border-neutral-800 rounded-2xl flex flex-wrap content-start gap-2.5 justify-center">
-                    {#each battleForm.wordBankWords as word (word.id)}
-                        <button
-                            type="button"
-                            data-testid="word-bank-chip"
-                            on:click={() => addWordToAnswer(word, battle.id)}
-                            class="word-bank-chip px-3.5 py-2 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/90 text-cyan-100 font-sans font-bold text-sm sm:text-base rounded-xl shadow-md active:scale-95 transition-all cursor-pointer"
-                        >
-                            {word.text}
-                        </button>
-                    {/each}
+                <!-- Single Unified Submit Button (Order 3 on Phone, Left Column under Answer on Tablet/PC) -->
+                <div class="order-3 md:col-span-5 md:col-start-1 md:row-start-2 pt-1">
+                    <button
+                        type="button"
+                        disabled={!hasAnswerWords}
+                        on:click={() => submitBattleAnswer(battle.id)}
+                        class="btn-arcade w-full py-3.5 text-base"
+                        style="--btn-color: {hasAnswerWords ? 'var(--color-secondary)' : '#334155'};"
+                    >
+                        <ArcadeIcon name="sword" className="w-5 h-5" />
+                        <span>{$t.submitBattleAnswer || 'SUBMIT BATTLE ANSWER'}</span>
+                    </button>
                 </div>
-            </div>
-
-            <!-- Submit Button Inside Natural Scroll Flow -->
-            <div class="flex-shrink-0 pt-3 pb-12">
-                <button
-                    type="button"
-                    disabled={!hasAnswerWords}
-                    on:click={() => submitBattleAnswer(battle.id)}
-                    class="btn-arcade w-full py-4 px-6 rounded-2xl font-display font-black text-base sm:text-lg uppercase tracking-wider transition-all cursor-pointer {
-                        hasAnswerWords 
-                        ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-[0_0_25px_rgba(236,72,153,0.5)] active:scale-98' 
-                        : 'bg-neutral-900 border border-neutral-800 text-neutral-600 opacity-40 cursor-not-allowed'
-                    }"
-                >
-                    ⚔️ {$t.submitBattleAnswer || 'SUBMIT BATTLE ANSWER'}
-                </button>
             </div>
         {/if}
     {:else}
-        <div class="flex-1 flex flex-col items-center justify-center p-6 text-center overflow-y-auto my-auto">
-            <SevenSegmentDisplay time={timer} size="md" />
-            <h1 class="text-2xl sm:text-3xl font-display my-3 text-emerald-400">{$t.allAnswersSubmitted || 'READY!'}</h1>
-            <p class="text-sm sm:text-base text-warning animate-pulse font-display mb-6">{$t.waitingForCompetitors}</p>
+        <div class="flex-1 flex flex-col items-center justify-center p-6 text-center overflow-y-auto my-auto max-w-md mx-auto w-full">
+            <div class="panel-arcade w-full flex flex-col items-center p-6" style="--neon-color: var(--color-accent);">
+                <SevenSegmentDisplay time={timer} size="md" />
+                <h1 class="text-2xl sm:text-3xl font-display my-3 text-emerald-400">{$t.allAnswersSubmitted || 'READY!'}</h1>
+                <p class="text-sm sm:text-base text-amber-300 font-display mb-6">{$t.waitingForCompetitors}</p>
 
-            <!-- Interactive Live Emoji Reaction Button while waiting -->
-            <div class="flex flex-col items-center gap-2 mt-2">
-                <span class="text-xs font-display text-slate-400 uppercase tracking-widest">
-                    {$t.sendReaction || 'Send Reaction'}
-                </span>
-                <button 
+                <!-- Explicit Chamfered Avatar Reaction Button -->
+                <button
                     type="button"
                     data-testid="send-reaction-btn"
-                    class="w-16 h-16 rounded-full border-2 border-pink-500 bg-pink-950/80 shadow-[0_0_25px_rgba(236,72,153,0.7)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all"
-                    on:click={handleSendReaction}
+                    on:click={handleSendAvatarReaction}
                     aria-label={$t.sendReaction || 'Send Reaction'}
+                    class="cut-sm w-full py-2.5 px-4 bg-[#1c1936] hover:bg-pink-950/80 border-2 border-pink-400 text-pink-200 flex items-center justify-center gap-3 cursor-pointer transition-colors active:scale-95"
                 >
-                    <div class="w-10 h-10">
+                    <div class="w-8 h-8 flex-shrink-0">
                         <PixelAvatar avatar={currentPlayerObj?.avatar || '🦊'} />
                     </div>
+                    <span class="font-display text-xs sm:text-sm uppercase tracking-wider">
+                        {$t.sendAvatarReaction || $t.sendReaction || 'Send Avatar Reaction'}
+                    </span>
                 </button>
             </div>
         </div>

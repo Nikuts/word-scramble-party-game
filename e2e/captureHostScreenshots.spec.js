@@ -22,9 +22,16 @@ const CAPTURES = [
     { screen: 'host_voting', vp: { width: 1228, height: 691 }, filename: 'host_voting_scaled_laptop.png', players: 14, lang: 'ua' },
     { screen: 'host_reveal', vp: { width: 1228, height: 691 }, filename: 'host_reveal_scaled_laptop.png', players: 14, lang: 'en' },
     { screen: 'host_podium', vp: { width: 1228, height: 691 }, filename: 'host_podium_scaled_laptop.png', players: 14, lang: 'en' },
+    { screen: 'host_lobby', vp: { width: 768, height: 1024 }, filename: 'host_lobby_ipad_768.png', players: 6, lang: 'en' },
+    { screen: 'host_lobby', vp: { width: 390, height: 844 }, filename: 'host_lobby_phone_390.png', players: 6, lang: 'ua' },
     { screen: 'player_lobby', vp: { width: 375, height: 667 }, filename: 'mobile_player_lobby_ua_375.png', players: 6, lang: 'ua', viewportMode: 'mobile' },
     { screen: 'player_lobby', vp: { width: 375, height: 667 }, filename: 'mobile_player_lobby_nonhost_375.png', players: 6, lang: 'en', viewportMode: 'mobile', pIndex: 1 },
+    { screen: 'player_battle_single', vp: { width: 390, height: 844 }, filename: 'mobile_player_battle_single_390.png', players: 6, lang: 'en', viewportMode: 'mobile' },
     { screen: 'player_voting', vp: { width: 390, height: 844 }, filename: 'mobile_player_voting_390.png', players: 14, lang: 'en', viewportMode: 'mobile' },
+    { screen: 'player_results', vp: { width: 390, height: 844 }, filename: 'mobile_player_results_en_390.png', players: 6, lang: 'en', viewportMode: 'mobile' },
+    { screen: 'player_results', vp: { width: 390, height: 844 }, filename: 'mobile_player_results_ua_390.png', players: 6, lang: 'ua', viewportMode: 'mobile' },
+    { screen: 'player_history', vp: { width: 375, height: 667 }, filename: 'mobile_battle_history_en_375.png', players: 6, lang: 'en', viewportMode: 'mobile' },
+    { screen: 'player_history', vp: { width: 375, height: 667 }, filename: 'mobile_battle_history_ua_375.png', players: 6, lang: 'ua', viewportMode: 'mobile' },
 ];
 
 test.describe('Capture Host UI Screenshots', () => {
@@ -35,7 +42,7 @@ test.describe('Capture Host UI Screenshots', () => {
             const pIdxParam = cap.pIndex !== undefined ? `&pIndex=${cap.pIndex}` : '';
             const url = `/?debug=${cap.screen}&players=${cap.players}&lang=${cap.lang || 'en'}&viewport=${vpParam}&hideToolbar=1${pIdxParam}`;
             await page.goto(url);
-            await page.waitForTimeout(400);
+            await page.waitForTimeout(cap.screen === 'host_reveal' ? 1150 : 400);
 
             const outPath = path.join(ARTIFACT_DIR, cap.filename);
             await page.screenshot({ path: outPath, fullPage: false });

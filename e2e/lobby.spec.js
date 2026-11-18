@@ -38,7 +38,7 @@ test.describe('Lobby & Multiplayer Session Setup', () => {
         }
 
         // Verify player count on host screen shows (3)
-        await expect(hostPage.locator('text=Players (3)')).toBeVisible();
+        await expect(hostPage.locator('text=/(?:FIGHTERS|Players|БІЙЦІ) \\(3/i')).toBeVisible();
 
         // 6. Test Avatar Selection Screen & Taken Avatar Disabling
         const player4Context = await createMobilePlayerContext(browser);
@@ -65,8 +65,10 @@ test.describe('Lobby & Multiplayer Session Setup', () => {
         await p4Page.click('#confirmAvatarBtn');
         await expect(p4Page.locator('text=This name is already taken')).toBeVisible();
 
-        // Dave opens Edit Profile and edits name to "SuperDave"
-        await p4Page.click('button:has-text("Edit Profile")');
+        // Dave remains in Edit Profile after error and edits name to "SuperDave"
+        if (await p4Page.locator('button:has-text("Edit Profile")').isVisible()) {
+            await p4Page.click('button:has-text("Edit Profile")');
+        }
         await p4Page.locator('#profile-name-input').fill('SuperDave');
         await p4Page.click('#confirmAvatarBtn');
         await expect(p4Page.locator('text=SuperDave').first()).toBeVisible();

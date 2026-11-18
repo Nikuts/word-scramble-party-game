@@ -3,6 +3,7 @@ import * as manager from '../manager.js';
 import * as battleService from '../services/battleService.js';
 import * as timerService from '../services/timerService.js';
 import * as helpers from '../helpers.js';
+import { TIMEOUT_ANSWER_PLACEHOLDER } from '../../src/lib/config.js';
 
 export function handleSubmitAnswer(io, socket, { gameId, playerId, questionId, answer }) {
     const game = manager.getGame(gameId);
@@ -18,14 +19,20 @@ export function handleSubmitAnswer(io, socket, { gameId, playerId, questionId, a
     // Idempotency check: only update if answer hasn't been set.
     if (question && !question.answer) {
         question.answer = answer;
+        if (game.partialAnswers?.[questionId] !== undefined) {
+            delete game.partialAnswers[questionId];
+        }
     } else {
         return; // Don't proceed if answer already exists
     }
     
     pa.submittedAll = pa.questions.every(q => !!q.answer);
     
-    const participatingPlayerIds = Object.keys(game.playerAnswers);
-    const allDone = participatingPlayerIds.length > 0 && participatingPlayerIds.every(id => game.playerAnswers[id]?.submittedAll);
+    const connectedIds = game.players
+        .filter(p => p.socketId !== null)
+        .map(p => p.id)
+        .filter(id => game.playerAnswers[id]);
+    const allDone = connectedIds.length > 0 && connectedIds.every(id => game.playerAnswers[id]?.submittedAll);
         
     if (allDone) {
         battleService.prepareBattlePhase(io, game);
@@ -84,14 +91,19 @@ export function handleSubmitBattleAnswer(io, socket, { gameId, playerId, battleI
         if (!resolved) return;
 
         battle.answers[player.id] = resolved.answer;
+        if (game.partialAnswers?.[`b-${battleId}-${player.id}`] !== undefined) {
+            delete game.partialAnswers[`b-${battleId}-${player.id}`];
+        }
         if (!battle.answerTileIds) battle.answerTileIds = {};
         if (resolved.tileIds) {
             battle.answerTileIds[player.id] = resolved.tileIds;
         }
         battleService.recordPlayerUsedBundles(game, player.id, resolved.usedBundles);
         
-        const allCompetitors = new Set(game.battleSchedule.flatMap(b => b.competitors));
-        const allAnswered = [...allCompetitors].every(cId => 
+        const connectedIds = new Set(game.players.filter(p => p.socketId !== null).map(p => p.id));
+        const activeCompetitors = [...new Set(game.battleSchedule.flatMap(b => b.competitors))]
+            .filter(cId => connectedIds.has(cId));
+        const allAnswered = activeCompetitors.length > 0 && activeCompetitors.every(cId => 
             game.battleSchedule
                 .filter(b => b.competitors.includes(cId))
                 .every(b => !!b.answers[cId])
@@ -128,12 +140,16 @@ export function handleVote(io, socket, { gameId, playerId, battleId, voteForPlay
     }
     if (!resolvedTargetId || !battle.competitors.includes(resolvedTargetId)) return;
 
+    const targetAns = battle.answers?.[resolvedTargetId];
+    if (!targetAns || targetAns === TIMEOUT_ANSWER_PLACEHOLDER || targetAns.title === TIMEOUT_ANSWER_PLACEHOLDER) {
+        return;
+    }
+
     battle.votes[player.id] = resolvedTargetId;
 
-    const votersForThisBattle = game.players.filter(p => p.socketId && !battle.competitors.includes(p.id));
-    const votesCastForThisBattle = Object.keys(battle.votes).length;
+    const votersForThisBattle = game.players.filter(p => p.socketId !== null && !battle.competitors.includes(p.id));
     
-    if (votersForThisBattle.length === votesCastForThisBattle) {
+    if (votersForThisBattle.length > 0 && votersForThisBattle.every(p => Boolean(battle.votes[p.id]))) {
         console.log(`[Game ${game.id}] All votes are in for battle ${battle.id}. Advancing.`);
         io.to(game.id).emit('all-votes-in', { battleId: battle.id });
         battleService.processVoteAndStartReveal(io, game, false);
@@ -159,7 +175,9 @@ export function handleRerollQuestion(io, socket, { gameId, playerId, questionId 
     let newQuestionText = reservePool.shift();
 
     if (!newQuestionText) {
-        newQuestionText = 'What is the weirdest secret you would never tell your boss?';
+        newQuestionText = (game.language === 'ua' || game.language === 'uk')
+            ? 'Який найдивніший секрет ти ніколи не розкажеш своєму босу?'
+            : 'What is the weirdest secret you would never tell your boss?';
     }
 
     question.text = newQuestionText;

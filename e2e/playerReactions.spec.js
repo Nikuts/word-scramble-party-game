@@ -71,13 +71,14 @@ test.describe('In-Game Live Emoji Reactions E2E', () => {
             p1Page.locator('[data-testid="send-reaction-btn"], button.btn-arcade:has-text("Vote"), h1:has-text("Voting")').first()
         ).toBeVisible({ timeout: 25000 });
 
-        // Competitors (Alice & Bob in Battle 1) see the avatar reaction button immediately while waiting for Charlie to vote!
+        // Competitors (Alice & Bob in Battle 1) see the 4 SVG reaction buttons (HYPE, LOL, POOP, KING) while waiting for Charlie to vote
         let foundReactionPlayer = null;
         for (let attempt = 0; attempt < 20; attempt++) {
             for (const p of players) {
-                const btn = p.page.locator('[data-testid="send-reaction-btn"]').first();
-                if (await btn.isVisible().catch(() => false)) {
-                    await btn.click();
+                const poopBtn = p.page.locator('[data-testid="send-reaction-btn"][data-reaction="poop"]').first();
+                if (await poopBtn.isVisible().catch(() => false)) {
+                    await expect(poopBtn).toContainText('POOP');
+                    await poopBtn.click();
                     foundReactionPlayer = p;
                     break;
                 }
@@ -85,10 +86,11 @@ test.describe('In-Game Live Emoji Reactions E2E', () => {
             if (foundReactionPlayer) break;
             await hostPage.waitForTimeout(300);
         }
+        expect(foundReactionPlayer).not.toBeNull();
 
-        // 8. Verify Host Display renders the flying avatar reaction
+        // 8. Verify Host Display renders the flying POOP SVG badge in Voting phase (zero avatar img)
         await expect(
-            hostPage.locator('.flying-emoji img').first()
+            hostPage.locator('.flying-emoji svg[aria-label="POOP"]').first()
         ).toBeVisible({ timeout: 10000 });
 
         // Cleanup

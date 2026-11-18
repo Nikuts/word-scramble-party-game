@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPrompt } from '../geminiService.js';
+import { getPrompt, computeRoundRequestTimeoutMs } from '../geminiService.js';
 
 describe('Language-Specific Prompt Engine (English & Ukrainian)', () => {
 
@@ -103,11 +103,33 @@ describe('Language-Specific Prompt Engine (English & Ukrainian)', () => {
         });
     });
 
-    describe('Fallback Resolution', () => {
+    describe('Fallback Resolution & Scaling', () => {
         it('should default to English when no language parameter is provided', async () => {
             const prompt = await getPrompt('themes', { themeTypeInstruction: 'default test' });
             expect(prompt).toContain('default test');
             expect(prompt).toContain('comedy writer');
+        });
+
+        it('scales round request timeout for larger player counts without exceeding 18s', () => {
+            expect(computeRoundRequestTimeoutMs(4)).toBe(8000);
+            expect(computeRoundRequestTimeoutMs(14)).toBe(15000);
+            expect(computeRoundRequestTimeoutMs(30)).toBe(18000);
+        });
+
+        it('keeps Ukrainian fallbackWords instructions free of hardcoded generic connector lists', async () => {
+            const prompt = await getPrompt('roundData', {
+                numPlayers: '6',
+                theme: 'Сільський Клуб',
+                sillyMode: 'OFF',
+                is18PlusMode: 'OFF',
+                numQuestionSetsToGenerate: '8',
+                numQuestionsPerPlayer: '3',
+                playerQuestionInstructions: 'Тест',
+                battlePromptToneInstruction: 'Тест',
+                battlePromptStructureInstruction: 'Тест',
+                numBattlePrompts: '6'
+            }, 'ua');
+            expect(prompt).not.toContain('наприклад: "і", "та", "але"');
         });
     });
 });

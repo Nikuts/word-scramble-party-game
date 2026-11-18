@@ -94,17 +94,52 @@ test.describe('Battle History & Multi-Competitor Recap View', () => {
         // 7. Verify Battle History View opens
         await expect(p1Page.locator('h1:has-text("Battle History"), h1:has-text("Історія Битв")')).toBeVisible();
 
-        // Verify "Back to Scores" button is visible
-        const backBtn = p1Page.locator('button:has-text("Back to Scores"), button:has-text("Назад до результатів")');
+        // Verify "Back to Scores" button and All/My Battles filter tabs are visible
+        const backBtn = p1Page.locator('button:has-text("Back to Scores"), button:has-text("До результатів"), button:has-text("Назад до результатів")');
         await expect(backBtn).toBeVisible();
+
+        const myBattlesBtn = p1Page.locator('button:has-text("My Battles"), button:has-text("Мої битви")');
+        const allBattlesBtn = p1Page.locator('button:has-text("All Battles"), button:has-text("Усі Битви")');
+        await expect(allBattlesBtn).toBeVisible();
+        await expect(myBattlesBtn).toBeVisible();
 
         // Verify battle recap cards exist
         const battleCards = p1Page.locator('.battle-card-history');
+        const totalCards = await battleCards.count();
+        expect(totalCards).toBeGreaterThan(0);
         await expect(battleCards.first()).toBeVisible();
 
-        // Verify Save buttons are present on cards
+        await myBattlesBtn.click();
+        const myCards = await battleCards.count();
+        expect(myCards).toBeGreaterThan(0);
+        expect(myCards).toBeLessThanOrEqual(totalCards);
+        await allBattlesBtn.click();
+        expect(await battleCards.count()).toBe(totalCards);
+
+        // Verify Save Vertical & Save Landscape pure-Canvas PNG downloads
         const saveVerticalBtn = p1Page.locator('button:has-text("Save Vertical"), button:has-text("Зберегти вертикально")').first();
+        const saveLandscapeBtn = p1Page.locator('button:has-text("Save Landscape"), button:has-text("Зберегти горизонтально")').first();
         await expect(saveVerticalBtn).toBeVisible();
+        await expect(saveLandscapeBtn).toBeVisible();
+
+        const [dlVert] = await Promise.all([
+            p1Page.waitForEvent('download', { timeout: 15000 }),
+            saveVerticalBtn.click()
+        ]);
+        expect(dlVert.suggestedFilename()).toMatch(/^battle-recap-.*-vertical\.png$/);
+        const vertPath = await dlVert.path();
+        const fs = await import('fs');
+        expect(fs.statSync(vertPath).size).toBeGreaterThan(10000);
+        fs.copyFileSync(vertPath, 'C:/Users/nikku/.gemini/antigravity/brain/0ba4d08c-fc46-46a2-8c3d-d610f6006523/verified_canvas_vertical.png');
+
+        const [dlLand] = await Promise.all([
+            p1Page.waitForEvent('download', { timeout: 15000 }),
+            saveLandscapeBtn.click()
+        ]);
+        expect(dlLand.suggestedFilename()).toMatch(/^battle-recap-.*-landscape\.png$/);
+        const landPath = await dlLand.path();
+        expect(fs.statSync(landPath).size).toBeGreaterThan(10000);
+        fs.copyFileSync(landPath, 'C:/Users/nikku/.gemini/antigravity/brain/0ba4d08c-fc46-46a2-8c3d-d610f6006523/verified_canvas_landscape.png');
 
         // Click Back to Scores and ensure navigation back to final scores
         await backBtn.click();

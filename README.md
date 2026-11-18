@@ -1,6 +1,6 @@
 # Word Scramble Party Game
 
-A real-time, local multiplayer word game for 3 to 14 players. The game leverages the Google Gemini API for dynamic content generation, creating a unique experience every time you play. It features creative question-answering, "word scramble" style battles using players' own words, dynamic 1-on-1 showdowns and 3-way brawls, and a climactic final dialogue battle.
+A real-time, local multiplayer word game for 3 to 14 players. The game leverages the Google Gemini API for dynamic content generation, creating a unique experience every time you play. It features creative question-answering, "word scramble" style battles using players' own words, dynamic 1-on-1 showdowns, 3-way brawls, and 4-way brawls, and a climactic final dialogue battle.
 
 **Core Technologies:** Node.js, Express, Socket.io, Svelte, TailwindCSS, Gemini API.
 
@@ -83,10 +83,10 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
     - **Fair Tie-Handling:** If a battle vote results in a tie, points are split evenly (`Math.floor`). This also applies if one or both competitors fail to submit an answer in time; the voting screen is skipped and points are awarded fairly. The final results screen also awards winner status and superlative accolades to all players who tie.
 - **Smart Word Bank Balance Guard & Guaranteed Punctuation:** Automatically inspects assigned word banks in 1-on-1, 3-way, and 4-way battles and guarantees a minimum baseline of essential grammatical connectors (`and`, `but`, `because`, `with` / `і`, `але`, `бо`, `щоб`) and linkage words, while appending a dedicated **Guaranteed Punctuation Palette** (`.`, `,`, `!`, `?`, `:`, `-`) as standalone tiles at the end of each bank.
 - **Instant Question Re-Roll:** Players can swap out one difficult question per round with a single tap. Spare questions are pre-generated up-front in the background, enabling $<10\text{ms}$ instantaneous swaps without network spinners.
-- **In-Game Live Player Avatar Reactions:** Across the lobby, question/battle waiting rooms, battle voting, battle reveal, and final results screens, players can tap their avatar reaction button to broadcast floating animated pixel-art avatar reactions to the main Host TV display in real-time.
-- **Post-Game Awards Ceremony (Superlatives & Accolades):** The final results screen crowns fun data-driven awards alongside 1st, 2nd, and 3rd place:
+- **In-Game Live Reactions:** In the lobby and question/battle waiting rooms, players can tap their avatar reaction button to send floating pixel-art avatar bursts onto the Host TV display; during battle voting, reveal, and final results screens, players use 4 chamfered SVG Arcade Reaction buttons (`HYPE`, `LOL`, `POOP`, `KING`) in real time.
+- **Post-Game Awards Ceremony (Superlatives & Accolades):** The final results screen crowns fun data-driven awards (including tied battle winners in length awards) alongside 1st, 2nd, and 3rd place:
     - 🎯 **The Ammo Factory:** Player whose authored words earned the most word royalties across battles.
-    - 🌈 **The Rainbow Alchemist:** Player who combined words from 3+ distinct players the most.
+    - 🌈 **The Rainbow Alchemist:** Player who combined words from 3+ distinct players (2+ in 3-player games) the most.
     - 🧹 **The Clean Sweeper:** Player with the most unanimous 100% battle victories.
     - 🪶 **The Minimalist:** Shortest answer that still won a battle.
     - 💬 **The Shakespeare:** Longest winning sentence masterpiece.
@@ -103,7 +103,7 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
   - **Enlarged High-Visibility Elements:** High-contrast retro arcade fonts, large player avatars, room codes (`text-5xl font-black text-amber-300`), large scores, prominent word reveal cards, and adaptive 2-column rosters for 4–14 players maximize legibility from across the living room.
   - **Automated Viewport Bounding Box Verification:** Dedicated Playwright boundary tests (`e2e/hostViewportBounds.spec.js`) verify that `scrollHeight <= innerHeight + 2` and `scrollWidth <= innerWidth + 2` with bounding rect assertions across all host screens and player extremes (3P, 6P, 8P, 14P) across 7 distinct device viewports.
 - **Responsive Live Lobby:** Players can rapidly send their avatar from their phone, which animates and flies across the main Host Display. Game settings configured by the host, such as the Color Theme, Silly Mode, and 18+ Mode, are also clearly visible to all players on the main display.
-- **Reliable Dependencies:** All external libraries (like `canvas-confetti` and `html2canvas`) are bundled with the application, removing reliance on external CDNs and improving load times and offline availability.
+- **Reliable Offline-Ready Exports & Dependencies:** External runtime helpers like `canvas-confetti` are bundled cleanly, and battle recap PNG exports render directly via pure HTML5 `<canvas>` (`battleRecapCanvas.js`) with chamfered corners and zero external font CDN flakiness.
 
 ---
 
@@ -191,20 +191,20 @@ To add tactical depth and party chaos, players have access to **powerups** and *
   - **Room-Wide Announcement:** Triggers an animated neon broadcast banner across all connected screens (`⚡ PlayerName used +30s Time Boost!`).
   - **Strictly One-Time Use:** Each player receives exactly **1 Time Boost token per entire game**. Once activated, it flips to `+30S (0)` and is permanently spent.
 - **👑 Author Royalties (+50 / +75 / +100 PTS per answer):**
-  - Whenever an opponent uses non-stopword words that you authored into a battle answer that earns votes (or wins via auto-win), you passively earn a flat royalty (**+50 in Round 1, +75 in Round 2, +100 in Round 3**) per answer.
+  - Whenever an opponent uses non-stopword words that you authored into a valid battle answer (`>= 3` vocabulary words when receiving `0` votes, or any voted / auto-won answer), you passively earn a flat royalty (**+50 in Round 1, +75 in Round 2, +100 in Round 3**) per answer.
 - **🌈 Variety Rainbow Bonus (+100 / +200 / +400 PTS):**
-  - Awarded to any player whose voted battle answer successfully weaves together non-stopword words authored by **3 or more distinct players**.
+  - Awarded to any player whose valid battle answer (`>= 3` vocabulary words when receiving `0` votes, or any voted / auto-won answer) successfully weaves together non-stopword words authored by **3 or more distinct players** (**2 or more distinct other players** in 3-player games).
 
 ### 5. Game End & Post-Game (Phase 3C Final Results)
 - **Split-Stage Host TV Presentation:**
-  - **Grand 3-Tier Olympic Podium (Left Stage):** 1st Place Gold Champion (with bouncing crown flourish), 2nd Place Silver Runner-Up, and 3rd Place Bronze Podium. Pedestal heights dynamically scale in real-time between $68\text{px}$ and $175\text{px}$ proportional to scores, maintaining the step hierarchy ($1\text{st} > 2\text{nd} > 3\text{rd}$) even if 3rd place finishes with 0 points. For 3-player matches, the podium centers symmetrically across the screen.
+  - **Grand 3-Tier Olympic Podium (Left Stage):** 1st Place Gold Champion (with bouncing crown flourish), 2nd Place Silver Runner-Up, and 3rd Place Bronze Podium. Pedestal heights scale dynamically proportional to scores via fluid responsive sizing, maintaining the step hierarchy ($1\text{st} > 2\text{nd} > 3\text{rd}$) even if 3rd place finishes with 0 points. For 3-player matches, the podium centers symmetrically across the screen.
   - **Adaptive Leaderboard Roster (Right Stage):** For 4 to 14 players, displays non-podium players (#4 to #14) in compact horizontal rank pills (1-column for 4–6 players, 2-column grid for 7–14 players).
   - **Special Accolades Showcase (Bottom Stage):** 5 dedicated superlative cards (The Ammo Factory, The Rainbow Alchemist, The Clean Sweeper, The Minimalist, The Shakespeare) centered horizontally across the bottom with zero text truncation or scrollbars across laptops (1366x768) and Smart TVs.
 - **Mobile Player Results View:**
-  - **Personal Hero Card:** Prominently showcases the player's 115px pixel avatar, animated crown for champions, rank pill badge (`👑 1ST PLACE - CHAMPION!`, `🥈 2ND PLACE`, `🥉 3RD PLACE`, `🎮 #4 - PARTICIPANT`), and inline final score with glowing font.
+  - **Personal Hero Card:** Showcases the player's crisp pixel avatar, animated crown for champions, rank pill badge (`👑 1ST PLACE - CHAMPION!`, `🥈 2ND PLACE`, `🥉 3RD PLACE`, `🎮 #4 - PARTICIPANT`), and inline final score with glowing font.
   - **Personal Accolades & GG Banner:** Highlights any awards earned by the player (including shared awards on ties) with centered descriptions.
-  - **Role-Aware Controls:** The room Host receives dedicated `[🔄 PLAY AGAIN]` and `[🏠 MENU]` action buttons, while non-host participants see a clean `Waiting for host to start a new game...` status.
-  - **Battle History & Reaction Button:** Both host and participants can tap `[📜 VIEW BATTLE HISTORY]` to inspect and export match cards, or tap their live avatar reaction button to float their pixel-art avatar across the main TV screen.
+  - **Role-Aware Controls:** The room Host receives dedicated `[🔄 PLAY AGAIN]` action controls, while non-host participants see a clean `Waiting for host to start a new game...` status.
+  - **Battle History & Reaction Controls:** Both host and participants can tap `[📜 VIEW BATTLE HISTORY]` to inspect and export Canvas-rendered match cards, or send the 4 SVG Arcade Reactions onto the main TV screen.
 
 ---
 
@@ -306,51 +306,53 @@ This application is fully compatible with Google AI Studio's built-in hosting an
 - **Persistent AI Connection Pooling (`geminiService.js`):** Persistent HTTP Keep-Alive sockets eliminate TCP/TLS handshake latency (~100–250ms saved per prompt) across background round pre-fetches.
 - **Automated Memory Lifecycle & Garbage Collection (`game/manager.js`):** Periodic 30-minute background sweep automatically prunes abandoned rooms older than 2 hours with no active socket connections, releasing memory and timers.
 - **High-Performance Word Bank Engine (`wordBankEngine.js`):** Sub-millisecond in-process generation (<2ms) with resilient Node.js `Worker` thread fallback.
-- **Dynamic Code-Splitting & Reactivity:** Lazy-loaded `html2canvas`, Rollup manual vendor chunking (shrinking initial client JS from 508 kB to 195 kB), and 200ms debounced Phase 1 draft syncs.
+- **Dynamic Code-Splitting & Reactivity:** Pure HTML5 `<canvas>` battle recap exporter (`battleRecapCanvas.js`), Rollup manual vendor chunking (shrinking initial client JS), and 200ms debounced Phase 1 draft syncs.
 - **Lightweight Timer Tick Broadcasting:** Server phase timers broadcast lightweight countdown ticks (`timer-tick`) across the 1-second interval, avoiding deep game state serialization on non-state-changing seconds.
 - **CSS Paint & Layout Containment:** CSS `contain: layout style;` is applied to active answer dropzones, word bank grids, and arcade panels, isolating browser style calculations and layout reflows.
 
 ### Full-Width Host Arena Harmonization (100% Screen Width, Zero-Scroll)
 - **Unified Screen Architecture:** Replaced legacy 25% sidebars across all host screens with a cohesive 100% full-width arena layout that scales seamlessly from laptops (1366x768) to 4K Smart TVs (1920x1080+).
-- **Top Glowing Theme Marquee:** A centered neon marquee (`bg-black/80 border-2 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]`) anchors the chosen game topic prominently at the top of every phase.
-- **Hero Get Ready Splashes:** Energetic arcade splash screens for round starts, battle introductions, and voting countdowns with 7-segment digital displays.
+- **Top Glowing Theme Marquee:** A centered chamfered marquee anchors the chosen game topic prominently at the top of every phase alongside quick Host utility controls (`TV ON/OFF`, `END GAME`).
+- **Hero Get Ready Splashes:** Crisp Chamfered Arcade (`Russo One` + `JetBrains Mono`) splash screens for round starts, battle introductions, and voting countdowns with 7-segment digital displays and a compact Live Standings strip.
 - **100% Width Battle Voting Arena:** Option cards dynamically expand across the entire screen width (Option A Cyan, Option B Fuchsia, Option C Amber, Option D Emerald), providing generous typography and whitespace for 1v1, 3-way, and 4-way battles without vertical scrollbars.
-- **Anonymous Live Voter Gauge:** Displays live real-time voter progress (`🗳️ X / Y Voters`) while maintaining complete voting anonymity on the TV screen, plus a brief `"🗳️ ALL VOTES IN!"` flash banner before reveal.
-- **High-Impact Reveal Arena:** Features floating `👑 WINNER!` banners, author color-coded word highlights, centered `🌈 RAINBOW VARIETY` bonus badges, breakdown pills (`🗳️ Votes`, `🏆 Win Bonus`, `🧹 Sweep Bonus`), and voter avatar attribution chips. Reveal duration scales with competitor count (`5s + 3s * competitors`, `+5s` in Slowpoke mode).
-- **Adaptive Bottom Score Ribbon:** A compact, responsive bottom ribbon renders real-time scores, avatars, and winner crowns for 3 to 14 players without early text truncation.
+- **Anonymous Live Voter Gauge:** Displays live real-time voter progress (`X / Y Voted`) while maintaining complete voting anonymity on the TV screen, plus a brief `"ALL VOTES IN!"` flash banner on controllers before reveal.
+- **2-Beat Dramatic Reveal Arena (`HostReveal.svelte`):** Displays responsive multi-card battle results with a **1.0s Beat 1** showcasing rainbow word-author attribution + subtle author color legend and inline royalties summary, followed by **Beat 2 (`1.0s`)** revealing `👑 CHAMPION` / `TIE!` crests, total points & breakdown pills (`Votes`, `Win`, `Sweep`, `Rainbow`, `Royalties (+X)`), capped named voter chips (`+N more`), and celebratory confetti. Reveal duration scales with competitor count (`5s + 3s * competitors`, `+2s` in Slowpoke mode).
+- **Split Live Reactions:** Lobby and Answering Waiting screens render a single Avatar Reaction button (sending floating pixel avatars onto the TV), while Voting Spectator, Reveal, and Podium screens render 4 chamfered SVG Arcade Reaction buttons (`HYPE`, `LOL`, `POOP`, `KING`).
 
 ### Sequential Battle & Voting State Machine
 - The game flow is managed by a phase-based state machine on the server. The battle phase is now a loop: `battle_voting` -> `battle_result_reveal`. The server advances an index (`currentVotingBattleIndex`) and transitions between these two phases until all battles are complete, at which point it moves to the next round. This creates the sequential "vote-reveal-next" experience.
 
 ### AI Integration & Resilient Fallback System
-- **Gemini API (`geminiService.js`):** Encapsulates communication with the Google Gemini API using the `@google/genai` SDK, enforcing structured JSON schemas (`responseSchema`), per-request timeouts (`8000ms`), and custom theme sanitization (`sanitizeThemeForPrompt`).
-- **Multi-Model Fallback Chain:** To protect against temporary API traffic spikes or regional 503 "High Demand" errors, requests automatically cascade across a resilient model fallback chain (`gemini-3.8-flash` → `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite`).
+- **Gemini API (`geminiService.js`):** Encapsulates communication with the Google Gemini API using the `@google/genai` SDK, enforcing structured JSON schemas (`responseSchema`), dynamic per-request timeouts (`8000ms–18000ms` scaled by player count), per-model `429` (`10m`) / `503` (`25s`) cooldowns, and custom theme sanitization (`sanitizeThemeForPrompt`).
+- **Multi-Model Fallback Chain:** To protect against temporary API traffic spikes or regional 503 "High Demand" errors, requests automatically cascade across a resilient model fallback chain (`gemini-3.8-flash` → `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite`), cooling down quota-exhausted models cleanly so subsequent requests skip straight to healthy models.
 - **Exponential Backoff & Jitter:** Transient errors (503 Service Unavailable, 429 Resource Exhausted, 500) trigger intelligent backoff retries before switching candidate models.
 - **Language-Dedicated Prompt Architecture (`prompts/en/` & `prompts/ua/`):**
-  - Dedicated prompt files per language (`prompts/en/` and `prompts/ua/`, with backward-compatible `uk` alias support) eliminate cross-language instruction bleed and prime the AI with native cultural and comedic archetypes.
+  - Dedicated prompt files per language (`prompts/en/` and `prompts/ua/`, with backward-compatible `uk` alias support) eliminate cross-language instruction bleed, reinforce natural anti-surzhyk phrasing and original theme generation, and prime the AI with native cultural and comedic archetypes.
   - **Ukrainian Grammar & Case Safeguards:** Strictly enforces open situational colon-terminated prompt setups (`Слоган на білборді:`, `Попереджувальний напис на дверях:`, `1-зірковий відгук відвідувача:`) and bans case-governing prepositions (`для ____`, `проти ____`, `через ____`), eliminating grammatical mismatches when players assemble scrambled word tiles.
-  - **Expanded Universal Connectors (`ESSENTIAL_CONNECTORS`):** Generates guaranteed case-independent "linguistic glue" for Ukrainian (`і`, `та`, `але`, `бо`, `щоб`, `дуже`, `завжди`, `ніколи`, `просто`, `раптом`, `навіть`, `це`, `було`, `треба`, `можна`, `ось`, `тільки`) and English (`and`, `but`, `because`, `with`, `just`, `even`, `if`, etc.).
+  - **Expanded Universal Connectors (`ESSENTIAL_CONNECTORS`):** Generates guaranteed case-independent "linguistic glue" for Ukrainian (`і`, `та`, `але`, `бо`, `щоб`, `не`, `як`, `що`, `вже`, `ще`, `все`, `коли`, `хто`, `дуже`, `завжди`, `ніколи`, `просто`, `раптом`, `навіть`, `це`, `було`, `треба`, `можна`, `ось`, `тільки`, `наче`, `ніби`, `тому`, `зате`) and English (`and`, `but`, `because`, `with`, `just`, `even`, `if`, etc.).
   - **Typographic Apostrophe Tokenization:** Full regex tokenization support for ASCII `'`, Unicode curly `’`, and official Ukrainian typographic modifier apostrophe `ʼ` (U+02BC, e.g. `мʼясо`, `звʼязок`, `імʼя`).
 - **Zero-Stall Fallback Packs:** If all AI models are unreachable or the error threshold is reached, the server seamlessly falls back to rich, human-authored bilingual content packs (`game/fallback/`), guaranteeing smooth gameplay without game interruptions.
 
 ### Smart TV & Low Power Display Optimization
-- **Auto-Detection (`isSmartTV`):** Detects Smart TV browsers via User-Agent signatures (LG webOS, Samsung Tizen, Android TV, Google TV, Apple TV, Fire TV sticks, Roku, Hisense, etc.) and `@media (display-mode: tv)`.
-- **Manual Host Switch:** Hosts can toggle **"📺 TV / Low Power Mode"** ON/OFF at any time directly from the Main Menu or Host Lobby, persisting preference to `localStorage`.
+- **Auto-Detection & Two-Way Sync (`isSmartTV` + `game.tvMode`):** Detects Smart TV browsers (LG webOS, Samsung Tizen, Android TV, Google TV, Apple TV, Fire TV, Roku, Hisense) automatically when creating the Host Display and syncs `tvMode` across the room state (`set-tv-mode`), allowing toggling from either the Host TV Header/Lobby or the Host Player's phone Lobby controls.
 - **Targeted Performance Enhancements (Active in TV Mode):**
-  - **Static Background:** Freezes the 60 FPS full-screen 3D synthwave canvas grid to reduce GPU compositing overhead.
-  - **Zero-Glow Shader Mode:** Eliminates heavy multi-layer box shadows and dynamic text glows, rendering high-contrast, crisp retro borders.
-  - **Confetti & Particle Throttling:** Caps particle quantities during score and winner reveals.
-  - **Paint & Layout Containment:** Uses CSS `contain: layout paint;` on the host dashboard containers to prevent layout thrashing on high-resolution 4K TV screens.
+  - **Static Background & Zero-Blur Pass:** Freezes the 3D synthwave grid and disables GPU `backdrop-filter` blurs/multi-layer shadows.
+  - **Reaction Concurrency Cap & Confetti Throttle:** Caps floating Host TV reactions to **6 concurrent animated badges** (`2.6s` linear pass) and reduces confetti particle counts cleanly for smooth Smart TV frame rates.
+  - **Paint & Layout Containment:** Uses CSS `contain: layout paint;` and `100vh`/`100dvh` safe fallbacks on host dashboard containers.
+
+### Background App-Switching & Silent Reconnect
+- **25s "Away" Grace Window (`PLAYER_AWAY_GRACE_MS`):** Brief mobile backgrounding/app-switching marks disconnected players as `AWAY` (preserving `LOCKED IN` if their phase answers are complete) for 25 seconds before showing `OFFLINE`.
+- **Silent Non-Blocking Resume:** Extended Socket.IO `pingTimeout` (60s) combined with fast `visibilitychange`/`pageshow`/`focus` auto-rejoin and a non-blocking top `"Reconnecting..."` banner prevents jarring full-screen disconnects during quick phone task switches.
 
 ### Word Bank Generation Algorithm (`wordBankEngine.js`)
 The word bank engine uses a **4-Tier Slot-Balanced Algorithm** that guarantees every battle bank is balanced by **distinct word count** while keeping syntactic clauses intact:
 
 1. **Slot-Level Balancing:** Each `(playerId × battleIndex)` slot is balanced directly by **distinct word count** (case-insensitive, punctuation stripped). Duplicate words within clauses stay visible as separate tiles for natural sentence building, but count only once toward minimum/target thresholds.
-2. **Tier 1 — Fresh Clauses (Globally Unused per `bundleId`):** Clauses from the current round (followed by earlier rounds) that the player did not author, has never been shown (`playerSeenChunks` keyed by `bundleId`), and **whose specific `bundleId` instance has never been used in a battle answer by any player** (if identical phrases are written as separate answers—by different players or in different question answers by the same player—each gets its own `bundleId` and remains independently eligible until that instance is used). Clauses that have never been shown to anyone (`shownFrequency === 0`) are prioritized first. Each clause is assigned to at most one slot per round (no fan-out), prioritizing slots with the fewest distinct words and authors not yet represented in the slot.
+2. **Tier 1 — Fresh Clauses (`bundleId`-Tracked & Retired on Use):** Current-round clauses (and never-before-shown earlier-round clauses) that the player did not author, has never seen (`playerSeenChunks`), and **whose clause content words / `bundleId` have never been used in any battle answer**. Clauses are assigned to at most one slot per round (no fan-out), prioritizing slots with the fewest distinct words and authors not yet represented in the slot.
 3. **Soft Target & No Hard Trim:** After Tier 1, `softTarget = min(maxBankSize, max(minBankSize, round(avgDistinctAfterTier1)))`. Slots below `softTarget` are topped up in Tiers 2–4; slots above `softTarget` or `maxBankSize` are **never trimmed**.
-4. **Tier 2 — Shown-But-Unused Clauses:** Clauses shown to the player in an earlier round where **no player** used any of the clause's non-connector/non-stopword words in past battles, preferring the least-shown clauses.
-5. **Tier 3 — AI Helper Phrases (Without Replacement):** 25–35 varied thematic helper phrases (2–5 words each) generated per round are distributed without replacement across deficit slots, skipping any word already in the slot, used in past battles, or previously shown to the player.
-6. **Tier 4 — Static Fallback Phrases (80+ per Language, Cross-Round Deduplicated):** Bilingual fallback phrases (`game/fallback/words.js`) top up any remaining deficit slots if Tier 3 is exhausted, tracking shown and battle-used fallback words across rounds so fallback clauses do not repeat across players or rounds.
+4. **Tier 2 — Unused Earlier-Round Clauses (Strictly for New Players):** Earlier-round clauses that were already shown in a previous round (to someone else) and never used in any battle answer are redistributed strictly to **different players who have never seen them** (a player never sees the same chunk twice across rounds), preferring the least-shown clauses.
+5. **Tier 3 — Scaled AI Helper Phrases (Without Replacement):** Dynamic count (`25–35` up to `60–75` scaled by player count) of vivid thematic helper phrases (2–4 words each) distributed without replacement across deficit slots, skipping any word already in the slot, used in past battles, or previously shown to the player.
+6. **Tier 4 — Static Fallback Phrases (Finite-Verb Phrasing, Cross-Round Deduplicated):** Bilingual fallback phrases (`game/fallback/words.js`, tuned with active finite verbs instead of `-ing`/`-ти` stagnation) top up any remaining deficit slots if Tier 3 is exhausted, tracking shown and battle-used fallback words across rounds.
 7. **Smart Balance Guard & Guaranteed Punctuation:** Guarantees $\ge 4$ essential connectors per bank and appends the **Guaranteed Punctuation Palette** (`.`, `,`, `!`, `?`, `:`, `-`). Deterministic tile IDs (`p_0...`, `b_0...`) are assigned to all prompt and bank tokens, and `bundleId`s are marked seen at the end only for clauses that actually appear in a player's bank.
 
 ### Scoring System (`calculateBattlePoints`)
@@ -358,9 +360,9 @@ The word bank engine uses a **4-Tier Slot-Balanced Algorithm** that guarantees e
   - **Battle Vote Pool (`POINTS_PER_ROUND`):** `1,000 pts` (Round 1) → `2,000 pts` (Round 2) → `4,000 pts` (Round 3 / Finale). Each competitor earns `Math.floor((votes / totalVotes) * battlePool)`.
   - **Victory Bonus:** `+200 pts` (R1) → `+400 pts` (R2) → `+800 pts` (R3) awarded to the sole winner, or split via `Math.floor(winBonus / topCompetitors.length)` on a tie.
   - **Clean Sweep Bonus:** `+150 pts` (R1) → `+300 pts` (R2) → `+600 pts` (R3) awarded when `totalVotes >= 2` and a single winner receives 100% of cast votes.
-  - **Flat Word Royalties:** When another player uses non-stopword words you wrote in an answer that earns votes (or auto-wins), you receive a flat royalty (`+50` in R1, `+75` in R2, `+100` in R3) per answer. Common stopwords and connectors (`I`, `a`, `the`, `is`, `and`, etc.) are excluded from authorship credit.
-  - **Rainbow Variety Bonus:** `+100 pts` (R1) → `+200 pts` (R2) → `+400 pts` (R3) awarded to competitors whose voted answer unites non-stopword words from 3 or more distinct player authors.
-- **Auto-Win:** If only one competitor submits an answer in time, they receive an average pool share `Math.floor(battlePool / competitors.length) + winBonus` (with `0` Clean Sweep bonus) plus applicable word royalties and Rainbow bonus.
+  - **Flat Word Royalties:** When another player uses non-stopword words you wrote in a valid answer (`>= 3` vocabulary words when receiving `0` votes, or any voted / auto-won answer), you receive a flat royalty (`+50` in R1, `+75` in R2, `+100` in R3) per answer. Common stopwords and connectors (`I`, `a`, `the`, `is`, `and`, etc.) are excluded from authorship credit.
+  - **Rainbow Variety Bonus:** `+100 pts` (R1) → `+200 pts` (R2) → `+400 pts` (R3) awarded to competitors whose valid answer unites non-stopword words from **3 or more distinct authors** (**2 or more distinct other players** in 3-player games).
+- **Auto-Win:** If only one competitor submits an answer in time, they receive **100% of `battlePool + winBonus`** (with `0` Clean Sweep bonus) plus applicable word royalties and Rainbow bonus. Timed-out placeholder answers are rejected during voting and ignored in point calculations.
 - **Ties:** If top competitors tie on votes, the victory bonus is split via `Math.floor(winBonus / topCompetitors.length)`.
 
 ---
@@ -371,8 +373,8 @@ The word bank engine uses a **4-Tier Slot-Balanced Algorithm** that guarantees e
 - **`POINTS_PER_ROUND`, `VICTORY_BONUS_PER_ROUND`, `CLEAN_SWEEP_BONUS_PER_ROUND`, `FLAT_ROYALTY_PER_ROUND`, `RAINBOW_BONUS_PER_ROUND`**: Configurable scaled scoring matrix per round.
 - **`WORD_BANK_SIZES`**: Defines tiered minimum (`25 / 40 / 50` distinct words) and soft-target maximum (`50 / 65 / 80`) word bank sizes across the three rounds.
 - **`SOUNDS_ON_HOST_ONLY`**: Boolean (`true` by default) controlling where timer tick sounds play (`true` = Host Display audio + mobile haptic vibration during the final 5 seconds).
-- **`getBattleRevealDurationSeconds`**: Scales battle reveal timers by competitor count (`5s + 3s * competitors`, plus `+5s` in Slowpoke mode).
-- **Timers:** All phase timings are defined for both normal and "Slowpoke" modes. This includes fixed timers for transitions and voting, and per-item timers for the Question phase (based on number of questions) and Battle Answering phase (based on number of battles).
+- **`getBattleRevealDurationSeconds`**: Scales battle reveal timers by competitor count (`5s + 3s * competitors`, plus `+2s` in Slowpoke mode; Auto-Win `12s` normal / `14s` Slowpoke).
+- **Timers:** All phase timings are defined for both normal and "Slowpoke" modes. Final Round (Round 3) battle timers give extra composing/reading room (`125s`/battle answering & `35s` voting in Normal; `165s`/battle answering & `55s` voting in Slowpoke).
 - **`PLAYER_RECONNECTION_TIMEOUT`**: The grace period for players to rejoin (in milliseconds).
 - **`AVATARS`**: The full list of 21 available emoji characters for avatars.
 - **`AVATAR_MAP`**: A map linking emoji characters to their corresponding image file names (e.g., `'🐸': 'frog'`).
@@ -416,16 +418,21 @@ Fast backend tests verifying game algorithms, scheduling, validation schemas, an
 4. **Round Pre-fetching (`test/roundPrefetch.test.js`):** Asynchronous background data pre-fetching during active rounds to eliminate transition lag.
 5. **Fallback Content (`test/fallbackContent.test.js`):** Bilingual fallback packs, theme non-repetition, and prompt structure verification.
 6. **Game State Manager (`test/manager.test.js`):** Room lifecycle, game instance registration, retrieval, and deletion.
-7. **Scoring Algorithms & Bonuses (`test/scoringBonuses.test.js`):** Vote-share pool distribution (`POINTS_PER_ROUND`), Flat Word Royalties with stopword filtering, Rainbow Bonus (3+ distinct author word combinations), Clean Sweeps (`totalVotes >= 2`), `Math.floor` tie victory bonus splitting, and auto-win average pool share scoring.
+7. **Scoring Algorithms & Bonuses (`test/scoringBonuses.test.js`):** Vote-share pool distribution (`POINTS_PER_ROUND`), Flat Word Royalties with stopword filtering (including 3+ word 0-vote answers), Rainbow Bonus (3+ authors in 4P+, 2+ authors in 3P), Clean Sweeps (`totalVotes >= 2`), `Math.floor` tie victory bonus splitting, and 100% pool auto-win scoring.
 8. **Disconnection & Reconnection Resiliency (`test/reconnection.test.js`):** Player token reconnection, partial answer recovery cache, host display socket reattachment, host reassignment timers upon host disconnect, and automatic game timer pausing when all players disconnect.
 9. **Multi-Round Cumulative Scoring & Preservation (`test/cumulativeScoreTracking.test.js`):** Multi-round point accumulation, cross-round score persistence from Round 1 through Round 3, word royalty attribution to non-competing authors, and final podium sorted rankings without data loss.
 10. **Multi-Competitor Brawls & 11-Player Hybrid Fairness Matrix (`test/multiCompetitorAnd11PlayerBattles.test.js`):** 3-way brawls (1 vs 1 vs 1) and 4-competitor matchups (Answer A vs B vs C vs D), multi-competitor clean sweeps, 2-way, 3-way, and 4-way victory bonus splits, and the 11-player hybrid matrix (4 quads + 2 trios) and 13-player hybrid matrix (5 quads + 2 trios) with strict 2-battle participation, opponent uniqueness, and round-by-round trio rotation.
-11. **Word Bank Engine & Smart Balance Guard (`test/wordBankEngine.test.js`):** 4-tier slot-balanced word bank assembly, distinct word counting, no-trim guarantee above max, end-of-pipeline `bundleId` seen tracking, Tier 2 unused clause filtering, 0% self-authored words guarantee, and connector guard ensuring $\ge 4$ essential connectors in English and Ukrainian.
+11. **Word Bank Engine & Smart Balance Guard (`test/wordBankEngine.test.js`):** 4-tier slot-balanced word bank assembly, distinct word counting, no-trim guarantee above max, end-of-pipeline `bundleId` seen tracking, Tier 2 strict cross-player redistribution without same-player repeats, 0% self-authored words guarantee, and connector guard ensuring $\ge 4$ essential connectors in English and Ukrainian.
 12. **Superlatives, FormatConfig & Question Re-Roll (`test/superlativesAndRoundMechanics.test.js`):** End-game accolades (Ammo Factory, Rainbow Alchemist, Clean Sweeper, Minimalist, Shakespeare) with multi-player tie support, data-driven `formatConfig` schema, and reserve question re-roll mechanics.
 13. **Multi-Game Concurrency & Session Isolation (`test/multiGameIsolation.test.js`):** Simultaneous independent game rooms, collision-proof 4-character alphanumeric room ID generation, isolated phase transitions, and $O(1)$ socket lookup performance.
 14. **Integrity & Concurrency Safeguards (`test/integrityFixes.test.js`):** Phase transition generation locks (`isTransitioning`), atomic question submission, single-round re-roll enforcement, language-filtered theme fallbacks, and partial battle draft recovery.
 15. **Per-Client Privacy & Tile-ID Attribution (`test/privacyAndTileSubmission.test.js`):** Per-client state filtering (`getClientGameState` for host vs player), opaque `optionId` voting without leaking competitor `playerId`s, and tile-ID answer submission (`tileIds` / `partTileIds`) with exact duplicate-word authorship attribution.
 16. **UX Quick Wins, Gemini Schemas & Shared Config (`test/uxAndStep4.test.js`):** Competitor-scaled battle reveal durations (`getBattleRevealDurationSeconds`), custom theme prompt sanitization (`sanitizeThemeForPrompt`), structured Gemini `responseSchema` declarations, and `"all-votes-in"` broadcast verification.
+17. **Avatar & Name Management (`test/avatarAndNameManagement.test.js`):** Lobby avatar auto-assignment, collision prevention, and duplicate/trimmed display name validation.
+18. **Gemini Prompt Integrity (`test/geminiPrompts.test.js`):** Prompt template variable loading, EN/UA language routing, and prompt constraints validation.
+19. **Player Reactions (`test/playerReactions.test.js`):** Reaction socket validation, rate limiting, and host broadcast throttling.
+20. **Time Boost & Lobby Enhancements (`test/timeBoostAndLobbyEnhancements.test.js`):** +30s Time Boost clamping rules, one-time usage per game, and lobby configuration toggles.
+21. **UI Localization & Plurals (`test/uiTextAndPlurals.test.js`):** EN/UK dictionary completeness, Cyrillic typography checks, and Slavic singular/paucal/genitive pluralization rules.
 
 ---
 
@@ -475,6 +482,11 @@ End-to-End browser tests simulating real multiplayer game sessions with **1 Desk
    - Round 3 Finale format: Movie Genre & Premise, Movie Title builder, and Movie Tagline builder with workspace switching.
    - Final movie battle voting with Title + Tagline dialogue comparison.
    - Game Over screen, winner celebration podium, and "Play Again" button validation.
+7. **Battle History & Canvas Recap Export (`e2e/battleHistory.spec.js`):** Verifies post-game personal battle recap drawer and pure Canvas PNG card generation (`battleRecapCanvas.js`).
+8. **Live Reactions & Arcade Buttons (`e2e/playerReactions.spec.js`):** Verifies lobby avatar bursts and the 4 SVG Arcade reactions across voting/reveal/results screens.
+9. **12-Player Game Flow (`e2e/twelvePlayersPlaythrough.spec.js`):** End-to-end 12-player session verifying 6 quad battles per round, voting, and scoreboards.
+10. **Viewport Bounds & Multi-Screen Audits (`e2e/hostViewportBounds.spec.js`, `e2e/mobileViewportBounds.spec.js`, `e2e/multiViewportVerification.spec.js`):** Ensures zero horizontal overflow across TV (`1920x1080`), Laptop (`1366x768`, `1228x691`), iPad (`1024x768`, `768x1024`, `820x1180`), and Mobile (`390x844`) viewports.
+11. **Screenshot & Visual Capture Suites (`e2e/captureHostScreenshots.spec.js`, `e2e/captureTabletHostScreenshots.spec.js`, `e2e/screenshotsPlaythrough.spec.js`):** Automated visual regression & DevHarness captures across TV, tablet, laptop, and mobile viewports.
 
 ---
 
@@ -484,20 +496,18 @@ End-to-End browser tests simulating real multiplayer game sessions with **1 Desk
   - **Smart Word Bank Balance Guard (`wordBankEngine.js`):** Automatically injects guaranteed linguistic connectors (`and`, `but`, `because`, `with` / `і`, `але`, `бо`, `щоб`) into 1-on-1, 3-way, and 4-way word banks if harvested player chunks lack linkage words, preventing all-noun deadlock in large brawls.
   - **Instant Question Re-Roll System:** Pre-generates spare question pools during round generation, allowing players to swap out 1 question per round with $<10\text{ms}$ latency and instant local state reset.
   - **Smart "Undo" & Word Bank Shuffle:** Adds a dedicated action history stack to the mobile workspace for accurate word pops regardless of drag-and-drop movements, alongside an instant word bank shuffle button.
-  - **In-Voting Live Player Avatar Reactions:** Allows voters, competitors, and spectators to send their floating pixel-art avatar directly to the Host TV screen while waiting for other votes to complete.
+  - **In-Game Live Arcade Reactions:** Allows voters, competitors, and spectators to trigger the 4 SVG Arcade reactions (`HYPE`, `LOL`, `POOP`, `KING`) on the Host TV screen while waiting (and avatar bursts in the lobby and question/battle waiting rooms).
   - **Anonymous Live Voter Progress Gauge:** Host display renders an active anonymous voter progress bar (`🗳️ X/Y Voters`) during voting without compromising secret voting.
   - **Post-Game Awards Ceremony (Superlatives & Accolades):** Algorithmic awards for **The Ammo Factory**, **The Rainbow Alchemist**, **The Clean Sweeper**, **The Minimalist**, and **The Shakespeare** displayed on both TV podium and mobile controller results.
   - **Data-Driven Battle Format Architecture (`formatConfig`):** Encapsulates single-line, multi-line, and future role-based round types into a unified schema across backend and frontend.
 - **`v1.4.0` (Performance & Optimization)**:
-  - **Dynamic Code-Splitting & Lazy Loading:** Lazy-loads `html2canvas` on demand and splits vendor dependencies (`socket.io-client`, `sortablejs`, `canvas-confetti`, `qrcode-generator`), reducing the initial application bundle from 508 kB down to 195 kB (~60% decrease).
+  - **Dynamic Code-Splitting & Native Canvas Export:** Native HTML5 Canvas rendering (`src/lib/battleRecapCanvas.js`) paired with split vendor bundles (`socket.io-client`, `sortablejs`, `canvas-confetti`, `qrcode-generator`), keeping initial client bundle footprints fast and self-contained.
   - **Instant Word Bank Engine (`wordBankEngine.js`):** Sub-millisecond in-process word bank synthesis (<2ms) with resilient worker thread fallback, eliminating round transition stutter.
   - **Debounced Phase 1 Typing Synchronization:** 200ms debounce on draft syncing cuts network packet volume by 90% during simultaneous 14-player typing while keeping local input 100% responsive.
   - **Lightweight Timer Tick Broadcasting (`timer-tick`):** Avoids serializing massive cumulative game state objects on 1-second interval ticks.
   - **CSS Layout Containment:** Applied `contain: layout style;` to active panels and word bank containers to prevent browser reflows during tile manipulation.
 - **`v1.3.0`**:
-  - **Prompt Engine Versioning & Feature Flag (`PROMPT_VERSION`):** Configurable via Render.com environment variable (`v2` vs `v1`).
-  - **`v2` Situational Battle Prompts & Ukrainian Grammar Safeguards:** Streamlined prompt engine designed specifically for casual party play and limited word banks (30–50 words). Uses fast reaction micro-scenarios in Phase 1, open colon-terminated situational prompts (slogans, rules, warnings, reviews, bad excuses) in Phase 2, strictly bans case-governing prepositions in Ukrainian, and enriches fallback words with essential connectors.
-  - **`v1` Classic Engine Preservation:** Full backward compatibility preserved under `prompts/v1/`.
+  - **Situational Battle Prompts & Ukrainian Grammar Safeguards (`prompts/en/` & `prompts/ua/`):** Streamlined prompt engine designed specifically for casual party play and limited word banks (30–50 words). Uses fast reaction micro-scenarios in Phase 1, open colon-terminated situational prompts (slogans, rules, warnings, reviews, bad excuses) in Phase 2, strictly bans case-governing prepositions in Ukrainian, and enriches fallback words with essential connectors.
 - **`v1.2.0`**:
   - **14-Player Scale, 3-Way & 4-Way Brawls:** Expanded lobby capacity to 14 players. For 10+ player lobbies, battles automatically partition into high-energy 4-player quads (**"🔥 4-Way Brawl"**) and 3-player trios (**"💥 3-Way Brawl"**), reducing total voting rounds to just 5-7 battles.
   - **Balanced Hybrid Pairing Matrix:** 11 and 13-player matches partition into quads and trios with round-by-round rotation, guaranteeing 2 battles per player with unique opponents and zero duos.

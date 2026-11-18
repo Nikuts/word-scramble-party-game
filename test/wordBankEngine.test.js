@@ -240,7 +240,7 @@ describe('Word Bank Engine (4-Tier Slot-Balanced Algorithm, §6)', () => {
         });
     });
 
-    it('populates Tier 2 only with clauses shown before where the player used NONE of the non-connector words', () => {
+    it('populates Tier 2 only with unused earlier-round chunks strictly for different players who never saw them', () => {
         const answerHistory = [
             { round: 1, playerId: 'p2', answer: 'spectacular velvet submarine, Mysterious goldencompass' }
         ];
@@ -250,16 +250,17 @@ describe('Word Bank Engine (4-Tier Slot-Balanced Algorithm, §6)', () => {
         const unusedChunk = chunks[1]; // 'Mysterious goldencompass'
 
         const schedule = [
-            { id: 'b1', competitors: ['p1', 'p2'], prompt: 'Round 2 battle:' }
+            { id: 'b1', competitors: ['p1', 'p3'], prompt: 'Round 2 battle:' }
         ];
 
-        // p1 was shown both chunks in Round 1, and used the word 'submarine' in a Round 1 battle answer
+        // p1 was shown both chunks in Round 1 and used 'submarine'; p3 never saw either chunk
         const result = generateWordBanksDirectly({
             language: 'en',
-            players: [{ id: 'p1', name: 'Alice' }, { id: 'p2', name: 'Bob' }],
+            players: [{ id: 'p1', name: 'Alice' }, { id: 'p2', name: 'Bob' }, { id: 'p3', name: 'Charlie' }],
             playerAnswers: {
-                p1: { questions: [{ answer: 'Fresh Alice words for Bob' }] },
-                p2: { questions: [{ answer: 'Fresh Bob words for Alice' }] }
+                p1: { questions: [{ answer: 'Fresh Alice words for Charlie' }] },
+                p2: { questions: [{ answer: 'Fresh Bob extra words' }] },
+                p3: { questions: [{ answer: 'Fresh Charlie words for Alice' }] }
             },
             answerHistory,
             battleSchedule: schedule,
@@ -280,15 +281,21 @@ describe('Word Bank Engine (4-Tier Slot-Balanced Algorithm, §6)', () => {
         });
 
         const bankP1 = result.battleScheduleWithBanks[0].wordBanks.p1;
+        const bankP3 = result.battleScheduleWithBanks[0].wordBanks.p3;
         const p1Bundles = new Set(bankP1.map(t => t.bundleId).filter(Boolean));
+        const p3Bundles = new Set(bankP3.map(t => t.bundleId).filter(Boolean));
 
-        // Unused seen chunk is included in Tier 2
-        expect(p1Bundles.has(unusedChunk.bundleId)).toBe(true);
-        const tier2Toks = bankP1.filter(t => t.bundleId === unusedChunk.bundleId);
+        // p1 must NEVER receive a chunk they already saw in Round 1 (even unusedChunk)
+        expect(p1Bundles.has(unusedChunk.bundleId)).toBe(false);
+        expect(p1Bundles.has(usedChunk.bundleId)).toBe(false);
+
+        // p3 did NOT see unusedChunk in Round 1 and no content word was used -> p3 receives it in Tier 2
+        expect(p3Bundles.has(unusedChunk.bundleId)).toBe(true);
+        const tier2Toks = bankP3.filter(t => t.bundleId === unusedChunk.bundleId);
         expect(tier2Toks.every(t => t.tier === 2)).toBe(true);
 
-        // Used seen chunk ('submarine' was used by p1) is excluded from Tier 2
-        expect(p1Bundles.has(usedChunk.bundleId)).toBe(false);
+        // usedChunk ('submarine' was used globally) stays retired for p3 as well
+        expect(p3Bundles.has(usedChunk.bundleId)).toBe(false);
     });
 
     it('never assigns the same clause (bundleId) to two banks in the same round, except identical text by different authors', () => {
@@ -692,5 +699,88 @@ describe('Word Bank Engine (4-Tier Slot-Balanced Algorithm, §6)', () => {
         const p3ClauseTexts = getBundleTextsForPlayer('p3');
         const duplicateMatches = p3ClauseTexts.filter(t => t === 'radioactive pancake wizard');
         expect(duplicateMatches.length).toBeLessThanOrEqual(1);
+    });
+
+    it('avoids stacking near-identical content-word clauses from different authors into the same bank', () => {
+        const answers = {
+            p1: { questions: [{ answer: 'radioactive pancake wizard comet' }] },
+            p2: { questions: [{ answer: 'radioactive pancake wizard nova' }] },
+            p3: { questions: [{ answer: 'velvet chainsaw pickle orchestra' }] },
+            p4: { questions: [{ answer: 'haunted espresso toaster parade' }] }
+        };
+
+        const result = generateWordBanksDirectly({
+            language: 'en',
+            players: mockPlayers,
+            playerAnswers: answers,
+            answerHistory: [],
+            battleSchedule: JSON.parse(JSON.stringify(mockBattleSchedule)),
+            preGeneratedFallbackWords: ['spark', 'drift', 'chaos', 'goblin', 'velvet', 'comet', 'lantern', 'mango', 'thunder', 'pocket'],
+            currentRound: 1,
+            playerSeenChunks: {}
+        });
+
+        // For every battle slot belonging to p3 or p4, p1's and p2's near-identical pancake wizard answers must not stack in the same bank
+        result.battleScheduleWithBanks.forEach(battle => {
+            ['p3', 'p4'].forEach(pid => {
+                if (!battle.wordBanks?.[pid]) return;
+                const p1Tokens = battle.wordBanks[pid].filter(t => t.authorId === 'p1');
+                const p2Tokens = battle.wordBanks[pid].filter(t => t.authorId === 'p2');
+                expect(p1Tokens.length > 0 && p2Tokens.length > 0).toBe(false);
+            });
+        });
+    });
+
+    it('refuses to stack heavy content-word duplicates into an already-seeded bank even when chunks > slots', () => {
+        const answers = {
+            p1: {
+                questions: [
+                    { answer: 'turbo squirrel cheese pizza galaxy' },
+                    { answer: 'velvet saxophone waffle astronaut' }
+                ]
+            },
+            p2: {
+                questions: [
+                    { answer: 'turbo squirrel cheese pizza nebula' },
+                    { answer: 'cosmic trampoline pickle orchestra' }
+                ]
+            },
+            p3: {
+                questions: [
+                    { answer: 'magnetic hamster banjo tornado' },
+                    { answer: 'disco flamingo toaster volcano' }
+                ]
+            },
+            p4: {
+                questions: [
+                    { answer: 'quantum pretzel octopus safari' },
+                    { answer: 'neon kangaroo pancakes circus' }
+                ]
+            }
+        };
+
+        const result = generateWordBanksDirectly({
+            language: 'en',
+            players: mockPlayers,
+            playerAnswers: answers,
+            answerHistory: [],
+            battleSchedule: JSON.parse(JSON.stringify(mockBattleSchedule)),
+            preGeneratedFallbackWords: ['spark', 'drift', 'chaos', 'lantern', 'mango', 'thunder', 'pocket', 'comet', 'velvet', 'bubble'],
+            currentRound: 1,
+            playerSeenChunks: {}
+        });
+
+        result.battleScheduleWithBanks.forEach(battle => {
+            ['p1', 'p2', 'p3', 'p4'].forEach(pid => {
+                if (!battle.wordBanks?.[pid]) return;
+                const p1Dup = battle.wordBanks[pid].filter(t => t.authorId === 'p1' && t.text.toLowerCase() === 'squirrel');
+                const p2Dup = battle.wordBanks[pid].filter(t => t.authorId === 'p2' && t.text.toLowerCase() === 'squirrel');
+                expect(p1Dup.length > 0 && p2Dup.length > 0).toBe(false);
+            });
+        });
+    });
+
+    it('includes versatile Ukrainian glue connectors in ESSENTIAL_CONNECTORS.uk', () => {
+        expect(ESSENTIAL_CONNECTORS.uk).toEqual(expect.arrayContaining(['не', 'як', 'що', 'вже', 'ще', 'все', 'коли', 'хто', 'наче', 'ніби', 'тому', 'зате']));
     });
 });

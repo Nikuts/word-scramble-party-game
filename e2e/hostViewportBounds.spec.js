@@ -68,7 +68,7 @@ test.describe('Host Screen Viewport Bounds & Tablet/Mobile Usability Audit', () 
                         }
 
                         // 3. Top Utility Controls (TV MODE, Close Lobby, END GAME)
-                        const tvModeBtn = page.locator('button:has-text("TV MODE"), button:has-text("TV ON"), button:has-text("TV OFF")');
+                        const tvModeBtn = page.locator('button:has-text("TV MODE"), button:has-text("TV ON"), button:has-text("TV OFF"), button:has-text("ТБ УВІМК"), button:has-text("ТБ ВИМК")');
                         if (await tvModeBtn.count() > 0) {
                             await expect(tvModeBtn.first()).toBeVisible();
                             const box = await tvModeBtn.first().boundingBox();
@@ -82,6 +82,17 @@ test.describe('Host Screen Viewport Bounds & Tablet/Mobile Usability Audit', () 
 
                             const fontSize = await qrTile.evaluate(el => parseFloat(window.getComputedStyle(el).fontSize));
                             expect(fontSize).toBeGreaterThanOrEqual(20);
+
+                            // Assert theme selection/custom input never collides with mode toggle cards on any viewport
+                            const themeInput = page.locator('main section').nth(1).locator('input[type="text"]');
+                            const modeGrid = page.locator('main section').nth(1).locator('.grid-cols-3');
+                            if (await themeInput.isVisible() && await modeGrid.isVisible()) {
+                                const inputBox = await themeInput.boundingBox();
+                                const modesBox = await modeGrid.boundingBox();
+                                if (inputBox && modesBox) {
+                                    expect(inputBox.y + inputBox.height, `Theme input overlapped mode toggle cards on ${vp.name}`).toBeLessThanOrEqual(modesBox.y + 2);
+                                }
+                            }
 
                             // Orientation hint check on portrait devices
                             if (!vp.isLandscape) {

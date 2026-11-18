@@ -21,7 +21,8 @@ export function getFallbackRoundData(language, usedThemes = []) {
     
     const playerQuestions = helpers.shuffleArray([...randomThemePack.playerQuestions]);
     const battlePrompts = helpers.shuffleArray([...randomThemePack.battlePrompts]);
-    const fallbackWords = (FALLBACK_WORDS[language] || FALLBACK_WORDS.en).flat();
+    const fallbackWords = (FALLBACK_WORDS[language] || FALLBACK_WORDS.en)
+        .map(arr => Array.isArray(arr) ? arr.join(' ') : String(arr));
 
     return {
         theme: randomThemePack.theme,
@@ -44,7 +45,12 @@ export function prefetchNextRoundData(game) {
     const expectedTheme = game.theme;
 
     console.log(`[Game ${game.id}] 🚀 Background prefetching data for Round ${nextRoundIndex}...`);
-    
+    const recentAvoidPrompts = [
+        ...(game.usedQuestions || []).slice(-15),
+        ...(game.usedBattlePrompts || []).slice(-12),
+        ...(game.preGeneratedBattlePrompts || []).slice(-12)
+    ];
+
     game.prefetchedRoundPromise = (async () => {
         try {
             const data = await generateRoundData(
@@ -53,7 +59,8 @@ export function prefetchNextRoundData(game) {
                 numPlayers,
                 numQuestionsPerPlayer,
                 game.sillyMode,
-                game.is18PlusMode
+                game.is18PlusMode,
+                recentAvoidPrompts
             );
             if (data && (game.gameInstanceId || 1) === expectedInstanceId && game.phase !== 'lobby' && game.theme === expectedTheme) {
                 game.prefetchedRoundData = { roundIndex: nextRoundIndex, gameInstanceId: expectedInstanceId, data };
@@ -70,7 +77,14 @@ export function prefetchNextRoundData(game) {
     if (nextRoundIndex === QUESTIONS_PER_ROUND.length && !game.prefetchedFinalRoundPrompts && !game.prefetchedFinalRoundPromise) {
         game.prefetchedFinalRoundPromise = (async () => {
             try {
-                const finalPrompts = await generateFinalRoundData(expectedTheme, game.language, numPlayers, game.is18PlusMode);
+                const { generateBattlePairings } = await import('./battleService.js');
+                const battleGroups = generateBattlePairings(
+                    game.players.map(p => p.id),
+                    nextRoundIndex,
+                    game.pairHistory || null
+                );
+                const numFinalPromptsNeeded = battleGroups.length || numPlayers;
+                const finalPrompts = await generateFinalRoundData(expectedTheme, game.language, numFinalPromptsNeeded, game.is18PlusMode);
                 if (finalPrompts && (game.gameInstanceId || 1) === expectedInstanceId && game.phase !== 'lobby' && game.theme === expectedTheme) {
                     game.prefetchedFinalRoundPrompts = finalPrompts;
                     console.log(`[Game ${game.id}] ✅ Pre-fetch completed for Final Round Movie Prompts`);
@@ -86,6 +100,7 @@ export function prefetchNextRoundData(game) {
 
 export async function startNextRound(io, game) {
     if (!game) return;
+    const expectedInstanceId = game.gameInstanceId || 1;
     
     timerService.clearPhaseTimer(game);
     
@@ -117,7 +132,6 @@ export async function startNextRound(io, game) {
     game.partialAnswers = {};
     helpers.broadcastGameState(io, game.id);
 
-    const MAX_RETRIES = 3;
     let roundData = null;
     let finalTheme = game.theme;
     
@@ -158,31 +172,38 @@ export async function startNextRound(io, game) {
             roundData = { ...fallbackData };
             if (!finalTheme) finalTheme = fallbackData.theme;
         } else {
-            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-                try {
-                    const data = await generateRoundData(game.theme, game.language, numPlayers, numQuestionsPerPlayer, game.sillyMode, game.is18PlusMode);
-                    if (data) {
-                        roundData = data;
-                        game.geminiApiErrorCount = 0;
-                        break;
-                    }
-                } catch (error) {
-                    console.error(`[Game ${game.id}] Attempt ${attempt} failed with error:`, error);
+            const recentAvoidPrompts = [
+                ...(game.usedQuestions || []).slice(-12),
+                ...(game.usedBattlePrompts || []).slice(-10)
+            ];
+            // generateRoundData already traverses candidate models & backoff internally
+            try {
+                const data = await generateRoundData(
+                    game.theme,
+                    game.language,
+                    numPlayers,
+                    numQuestionsPerPlayer,
+                    game.sillyMode,
+                    game.is18PlusMode,
+                    recentAvoidPrompts
+                );
+                if (data) {
+                    roundData = data;
+                    game.geminiApiErrorCount = 0;
+                } else {
+                    game.geminiApiErrorCount++;
                 }
-                
+            } catch (error) {
+                console.error(`[Game ${game.id}] Synchronous AI round generation error:`, error);
                 game.geminiApiErrorCount++;
-                if (game.geminiApiErrorCount >= 3) {
-                    console.log(`[Game ${game.id}] Gemini API failed ${game.geminiApiErrorCount} times. Switching to fallback content.`);
-                    const fallbackData = getFallbackRoundData(game.language, game.usedFallbackThemes);
-                    game.usedFallbackThemes.push(fallbackData.theme);
-                    roundData = { ...fallbackData };
-                    if (!finalTheme) finalTheme = fallbackData.theme;
-                    break;
-                }
-                if (attempt < MAX_RETRIES) {
-                    const waitTime = Math.pow(2, attempt) * 1000;
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-                }
+            }
+
+            if (!roundData && game.geminiApiErrorCount >= 3) {
+                console.log(`[Game ${game.id}] Gemini API failed ${game.geminiApiErrorCount} times. Switching to fallback content.`);
+                const fallbackData = getFallbackRoundData(game.language, game.usedFallbackThemes);
+                game.usedFallbackThemes.push(fallbackData.theme);
+                roundData = { ...fallbackData };
+                if (!finalTheme) finalTheme = fallbackData.theme;
             }
         }
     }
@@ -193,6 +214,11 @@ export async function startNextRound(io, game) {
         game.usedFallbackThemes.push(fallbackData.theme);
         roundData = { ...fallbackData };
         if (!finalTheme) finalTheme = fallbackData.theme;
+    }
+
+    if (manager.getGame(game.id) !== game || game.phase !== 'generating_round' || (game.gameInstanceId || 1) !== expectedInstanceId) {
+        console.log(`[Game ${game.id}] Aborting stale startNextRound.`);
+        return;
     }
 
     game.theme = finalTheme;
@@ -284,7 +310,8 @@ export async function startNextRound(io, game) {
     // 🚀 Start background prefetching of next round immediately while players prepare and answer!
     prefetchNextRoundData(game);
 
-    helpers.playSoundOnClients(io, game, `vo_get_ready_questions_${game.language}`);
+    const voLang = (game.language === 'ua' || game.language === 'uk') ? 'uk' : 'en';
+    helpers.playSoundOnClients(io, game, `vo_get_ready_questions_${voLang}`);
     const getReadyDuration = timerService.getTimerValue(game, GET_READY_SECONDS, SLOWPOKE_GET_READY_SECONDS);
     timerService.startPhaseTimer(io, game, 'get_ready', getReadyDuration, (io, g) => startQuestionPhase(io, g, numQuestionsPerPlayer));
 }

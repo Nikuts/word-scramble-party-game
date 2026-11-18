@@ -11,13 +11,21 @@ import {
     AVATARS
 } from '../../src/lib/config.js';
 
+function normalizePlayerName(name) {
+    return String(name || '').normalize('NFC').replace(/\s+/g, ' ').trim();
+}
+
 export async function generateInitialThemes(io, game) {
+    const reqId = (game.themeRequestSeq = (game.themeRequestSeq || 0) + 1);
     game.isGeneratingThemes = true;
     helpers.broadcastGameState(io, game.id);
 
     const usedThemesSet = new Set([
         ...(game.usedFallbackThemes || []),
-        ...(game.usedThemesHistory || [])
+        ...(game.usedThemesHistory || []),
+        ...(game.preGeneratedThemes?.en || []),
+        ...(game.preGeneratedThemes?.uk || []),
+        ...(game.preGeneratedThemes?.ua || [])
     ]);
     const pickFallbackThemes = (packs) => {
         const allThemes = (packs || []).map(p => p.theme);
@@ -32,30 +40,41 @@ export async function generateInitialThemes(io, game) {
         ua: pickFallbackThemes(FALLBACK_CONTENT.ua || FALLBACK_CONTENT.uk)
     };
     
+    const isStillCurrent = () => (
+        manager.getGame(game.id) === game &&
+        game.phase === 'lobby' &&
+        game.themeRequestSeq === reqId
+    );
+
     try {
         let generatedThemes = null;
         if (game.geminiApiErrorCount < 3) {
-            generatedThemes = await generateThemes(game.is18PlusMode, game.sillyMode);
+            generatedThemes = await generateThemes(game.is18PlusMode, game.sillyMode, Array.from(usedThemesSet));
+            if (!isStillCurrent()) return;
             if (generatedThemes) {
                 game.geminiApiErrorCount = 0;
             }
         }
         
+        if (!isStillCurrent()) return;
         game.preGeneratedThemes = generatedThemes || fallbackThemes;
         if (!generatedThemes) {
             game.geminiApiErrorCount++;
         }
     } catch (e) {
+        if (!isStillCurrent()) return;
         console.error("Error generating initial themes:", e);
         game.preGeneratedThemes = fallbackThemes;
         game.geminiApiErrorCount++;
     } finally {
-        game.isGeneratingThemes = false;
-        helpers.broadcastGameState(io, game.id);
+        if (isStillCurrent()) {
+            game.isGeneratingThemes = false;
+            helpers.broadcastGameState(io, game.id);
+        }
     }
 }
 
-export async function handleCreateGame(io, socket, { language }) {
+export async function handleCreateGame(io, socket, { language, tvMode = false }) {
     const capacity = manager.checkServerCapacity();
     if (!capacity.allowed) {
         return socket.emit('error-message', {
@@ -87,6 +106,7 @@ export async function handleCreateGame(io, socket, { language }) {
         phaseTimerId: null,
         hostReassignmentTimerId: null,
         playerReconnectionTimers: {},
+        playerAwayTimers: {},
         inactivityTimeoutId: null, // For lobby cleanup
         playerActionCooldowns: new Map(),
         theme: '',
@@ -94,6 +114,7 @@ export async function handleCreateGame(io, socket, { language }) {
         sillyMode: false,
         is18PlusMode: false,
         slowpokeMode: false,
+        tvMode: Boolean(tvMode),
         soundsOnHostOnly: SOUNDS_ON_HOST_ONLY,
         isGeneratingThemes: false,
         answerHistory: [],
@@ -119,7 +140,7 @@ export async function handleCreateGame(io, socket, { language }) {
     const INACTIVITY_TIMEOUT = 1 * 60 * 60 * 1000; // 1 hour
     game.inactivityTimeoutId = setTimeout(() => {
         const gameToCheck = manager.getGame(gameId);
-        if (gameToCheck && gameToCheck.phase === 'lobby') {
+        if (gameToCheck === game && gameToCheck.phase === 'lobby') {
             io.to(gameId).emit('error-message', { key: 'gameClosedInactivity', defaultText: 'Game was closed due to inactivity.', fatal: true });
             io.in(gameId).disconnectSockets(true);
             manager.deleteGame(gameId);
@@ -135,11 +156,16 @@ export function handleJoinGame(io, socket, { gameId, playerName, language, avata
     if (game.phase !== 'lobby') return socket.emit('error-message', { key: 'gameAlreadyStarted', defaultText: "Game has already started.", fatal: false });
     if (game.players.length >= MAX_PLAYERS) return socket.emit('error-message', { key: 'lobbyFull', defaultText: "Lobby is full.", fatal: false });
 
-    const takenNames = game.players.map(p => p.name.toLowerCase());
+    const normalizedPlayerName = normalizePlayerName(playerName);
+    if (!normalizedPlayerName) {
+        return socket.emit('error-message', { key: 'invalidName', defaultText: "Please enter a valid name.", fatal: false });
+    }
+
+    const takenNames = game.players.map(p => normalizePlayerName(p.name).toLowerCase());
     const takenAvatars = game.players.map(p => p.avatar);
     const errorContext = { takenAvatars };
 
-    if (takenNames.includes(playerName.toLowerCase())) {
+    if (takenNames.includes(normalizedPlayerName.toLowerCase())) {
         return socket.emit('error-message', { key: 'nameTaken', defaultText: "This name is already taken.", context: errorContext, fatal: false });
     }
 
@@ -152,7 +178,7 @@ export function handleJoinGame(io, socket, { gameId, playerName, language, avata
     const player = {
         id: helpers.generatePlayerId(),
         token: helpers.generatePlayerToken(),
-        name: playerName,
+        name: normalizedPlayerName,
         avatar: assignedAvatar,
         socketId: socket.id,
         score: 0,
@@ -196,10 +222,10 @@ export function handleChangeName(io, socket, { gameId, newName }) {
     const player = helpers.getAuthenticatedPlayer(game, socket);
     if (!player) return;
 
-    const trimmedName = (newName || '').trim();
+    const trimmedName = normalizePlayerName(newName);
     if (!trimmedName) return;
 
-    const takenNames = game.players.filter(p => p.id !== player.id).map(p => p.name.toLowerCase());
+    const takenNames = game.players.filter(p => p.id !== player.id).map(p => normalizePlayerName(p.name).toLowerCase());
     if (takenNames.includes(trimmedName.toLowerCase())) {
         return socket.emit('error-message', { key: 'nameTaken', defaultText: "This name is already taken.", fatal: false });
     }
@@ -263,6 +289,14 @@ export function handleSetSlowpokeMode(io, socket, { gameId, slowpokeMode }) {
     }
 }
 
+export function handleSetTvMode(io, socket, { gameId, tvMode }) {
+    const game = manager.getGame(gameId);
+    if (game && helpers.isHostOrHostDisplay(game, socket)) {
+        game.tvMode = Boolean(tvMode);
+        helpers.broadcastGameState(io, gameId);
+    }
+}
+
 export async function handleSet18PlusMode(io, socket, { gameId, is18PlusMode }) {
     const game = manager.getGame(gameId);
     if (game?.phase === 'lobby' && helpers.isHostOrHostDisplay(game, socket)) {
@@ -298,7 +332,7 @@ export function handleStartGame(io, socket, { gameId }) {
     }
 }
 
-export function handleSendLobbyEmoji(io, socket, { gameId, emoji }) {
+export function handleSendLobbyEmoji(io, socket, { gameId, emoji, reaction }) {
     const game = manager.getGame(gameId);
     if (!game) return;
     const player = game.players.find(p => p.socketId === socket.id);
@@ -315,6 +349,7 @@ export function handleSendLobbyEmoji(io, socket, { gameId, emoji }) {
             io.to(game.hostDisplaySocketId).emit('lobby-emoji-sent', {
                 avatar: player.avatar,
                 emoji: emoji || null,
+                ...(reaction ? { reaction } : {}),
                 playerName: player.name
             });
         }

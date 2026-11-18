@@ -56,6 +56,11 @@ export const WORD_BANK_SIZES = {
     3: { min: 50, max: 80 }     // Round 3 (Final Round)
 };
 
+// --- Reactions & Reconnection Grace ---
+export const REACTION_TYPES = ['avatar', 'hype', 'lol', 'poop', 'king'];
+export const TV_MAX_CONCURRENT_REACTIONS = 6;
+export const PLAYER_AWAY_GRACE_MS = 25000;
+
 // --- Timings (in seconds) ---
 export const GET_READY_SECONDS = 5;
 export const BATTLE_GET_READY_SECONDS = 5;
@@ -70,26 +75,26 @@ export const SECONDS_PER_QUESTION = 60;
 
 // Time for the simultaneous battle answering phase is calculated per battle.
 export const SECONDS_PER_BATTLE_ANSWER = 85; // For regular rounds
-export const FINAL_BATTLE_SECONDS_PER_ANSWER = 105; // For the final round
+export const FINAL_BATTLE_SECONDS_PER_ANSWER = 125; // For the final round (2-part dialogue)
 
 // Time allotted per battle during the voting phase.
 export const SECONDS_PER_VOTE = 20;
-export const FINAL_BATTLE_SECONDS_PER_VOTE = 30; // Extra time for reading dialogue answers.
+export const FINAL_BATTLE_SECONDS_PER_VOTE = 35; // Extra time for reading dialogue answers.
 
 // --- Timings (in seconds) - SLOWPOKE MODE ---
 export const SLOWPOKE_GET_READY_SECONDS = 5;
 export const SLOWPOKE_BATTLE_GET_READY_SECONDS = 5;
 export const SLOWPOKE_VOTING_GET_READY_SECONDS = 5;
-export const SLOWPOKE_REVEAL_EXTRA_SECONDS = 5;
-export const SLOWPOKE_SINGLE_BATTLE_REVEAL_SECONDS = 16; // Slowpoke fallback for 2 competitors (11 + 5)
-export const SLOWPOKE_AUTO_WIN_REVEAL_SECONDS = 17;
+export const SLOWPOKE_REVEAL_EXTRA_SECONDS = 2;
+export const SLOWPOKE_SINGLE_BATTLE_REVEAL_SECONDS = 13; // Slowpoke fallback for 2 competitors (11 + 2)
+export const SLOWPOKE_AUTO_WIN_REVEAL_SECONDS = 14;
 
 export const SLOWPOKE_SECONDS_PER_QUESTION = 90;
 
 export const SLOWPOKE_SECONDS_PER_BATTLE_ANSWER = 120;
-export const SLOWPOKE_FINAL_BATTLE_SECONDS_PER_ANSWER = 140;
+export const SLOWPOKE_FINAL_BATTLE_SECONDS_PER_ANSWER = 165;
 export const SLOWPOKE_SECONDS_PER_VOTE = 35;
-export const SLOWPOKE_FINAL_BATTLE_SECONDS_PER_VOTE = 50;
+export const SLOWPOKE_FINAL_BATTLE_SECONDS_PER_VOTE = 55;
 
 /**
  * Calculates the reveal duration in seconds scaled by the number of competitors (U1: 5s + 3s * competitors).

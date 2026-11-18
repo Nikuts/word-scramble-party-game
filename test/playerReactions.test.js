@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as manager from '../game/manager.js';
 import { handleSendLobbyEmoji } from '../game/handlers/lobbyHandlers.js';
 import { sendReactionSchema } from '../game/validationSchemas.js';
+import { REACTION_TYPES, TV_MAX_CONCURRENT_REACTIONS } from '../shared/config.js';
 import { UI_TEXT } from '../src/ui_text.js';
 import { playSound, soundEngine } from '../src/lib/utils.js';
 
@@ -161,5 +162,28 @@ describe('Player Reaction Emojis System', () => {
         const beforeCount = soundEngine.getPlayCount('sfx_time_boost');
         playSound('sfx_time_boost');
         expect(soundEngine.getPlayCount('sfx_time_boost')).toBe(beforeCount + 1);
+    });
+
+    it('supports SVG arcade reactions (hype, lol, poop, king) and defines TV concurrency cap', () => {
+        expect(REACTION_TYPES).toEqual(['avatar', 'hype', 'lol', 'poop', 'king']);
+        expect(TV_MAX_CONCURRENT_REACTIONS).toBe(6);
+
+        for (const rType of ['hype', 'lol', 'poop', 'king']) {
+            const parsed = sendReactionSchema.safeParse({ gameId: 'TEST', reaction: rType });
+            expect(parsed.success).toBe(true);
+        }
+
+        const rejectedLegacy = sendReactionSchema.safeParse({ gameId: 'TEST', reaction: 'gg' });
+        expect(rejectedLegacy.success).toBe(false);
+
+        game.phase = 'battle_result_reveal';
+        game.playerActionCooldowns.set('emoji-player-alice', 0);
+        handleSendLobbyEmoji(io, socket, { gameId: 'TEST', reaction: 'poop' });
+        expect(mockHostEmit).toHaveBeenCalledWith('lobby-emoji-sent', {
+            avatar: '👽',
+            emoji: null,
+            reaction: 'poop',
+            playerName: 'Alice'
+        });
     });
 });

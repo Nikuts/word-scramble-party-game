@@ -7,6 +7,7 @@ import { generateFinalRoundData } from '../../geminiService.js';
 import { getFallbackFinalRoundPrompts } from '../fallback/index.js';
 import * as helpers from '../helpers.js';
 import * as timerService from './timerService.js';
+import * as manager from '../manager.js';
 import * as roundService from './roundService.js';
 import { generateWordBanksDirectly, isStopwordOrConnector } from './wordBankEngine.js';
 
@@ -89,22 +90,37 @@ export function generateWordBanksWithWorker(game) {
             }
         });
 
+        let settled = false;
+        const finish = (cb) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeoutId);
+            worker.terminate().catch(() => {});
+            cb();
+        };
+
+        const timeoutId = setTimeout(() => {
+            finish(() => reject(new Error('Word bank worker timed out after 5000ms')));
+        }, 5000);
+
         worker.on('message', (result) => {
             if (result.error) {
-                reject(new Error(result.error));
+                finish(() => reject(new Error(result.error)));
             } else {
-                resolve({ 
-                    battleScheduleWithBanks: result.battleScheduleWithBanks, 
-                    updatedPlayerSeenChunks: result.updatedPlayerSeenChunks 
-                });
+                finish(() => resolve({
+                    battleScheduleWithBanks: result.battleScheduleWithBanks,
+                    updatedPlayerSeenChunks: result.updatedPlayerSeenChunks
+                }));
             }
         });
 
-        worker.on('error', reject);
+        worker.on('error', (err) => {
+            finish(() => reject(err));
+        });
 
         worker.on('exit', (code) => {
             if (code !== 0) {
-                reject(new Error(`Worker stopped with exit code ${code}`));
+                finish(() => reject(new Error(`Worker stopped with exit code ${code}`)));
             }
         });
     });
@@ -590,7 +606,9 @@ export async function prepareBattlePhase(io, game) {
     if (!game || game.phase !== 'question') return;
 
     console.log(`[Game ${game.id}] Preparing Battle Phase.`);
+    const expectedInstanceId = game.gameInstanceId || 1;
     game.phase = 'preparing_battles';
+    helpers.broadcastGameState(io, game.id);
     timerService.clearPhaseTimer(game);
     roundService.finalizeMissingQuestionAnswers(game);
 
@@ -645,17 +663,27 @@ export async function prepareBattlePhase(io, game) {
         promptsForThisRound = game.preGeneratedBattlePrompts;
     }
     
+    if (manager.getGame(game.id) !== game || game.phase !== 'preparing_battles' || (game.gameInstanceId || 1) !== expectedInstanceId) {
+        console.log(`[Game ${game.id}] Aborting stale prepareBattlePhase before schedule.`);
+        return;
+    }
+
     generateBattleSchedule(game, promptsForThisRound, isFinalRound);
     
     if (game.battleSchedule.length > 0) {
         try {
             console.log(`[Game ${game.id}] ⚡ Generating word banks for battle schedule...`);
             const { battleScheduleWithBanks, updatedPlayerSeenChunks } = await generateWordBanks(game);
+            if (manager.getGame(game.id) !== game || game.phase !== 'preparing_battles' || (game.gameInstanceId || 1) !== expectedInstanceId) {
+                console.log(`[Game ${game.id}] Aborting stale prepareBattlePhase after word banks.`);
+                return;
+            }
             game.battleSchedule = battleScheduleWithBanks;
             game.playerSeenChunks = updatedPlayerSeenChunks;
             console.log(`[Game ${game.id}] Word banks generated successfully.`);
             
-            helpers.playSoundOnClients(io, game, `vo_battle_incoming_${game.language}`);
+            const voLang = (game.language === 'ua' || game.language === 'uk') ? 'uk' : 'en';
+            helpers.playSoundOnClients(io, game, `vo_battle_incoming_${voLang}`);
             const duration = timerService.getTimerValue(game, BATTLE_GET_READY_SECONDS, SLOWPOKE_BATTLE_GET_READY_SECONDS);
             timerService.startPhaseTimer(io, game, 'battle_get_ready', duration, startBattleAnsweringPhase);
 
@@ -720,7 +748,8 @@ export function startVotingGetReadyPhase(io, game) {
     if (game.phase !== 'battle_answering') return;
     finalizeMissingBattleAnswers(game);
     game.currentVotingBattleIndex = 0; // Reset for the new round of voting.
-    helpers.playSoundOnClients(io, game, `vo_voting_starts_${game.language}`);
+    const voLang = (game.language === 'ua' || game.language === 'uk') ? 'uk' : 'en';
+    helpers.playSoundOnClients(io, game, `vo_voting_starts_${voLang}`);
     const duration = timerService.getTimerValue(game, VOTING_GET_READY_SECONDS, SLOWPOKE_VOTING_GET_READY_SECONDS);
     timerService.startPhaseTimer(io, game, 'voting_get_ready', duration, startVotingPhase);
 }
@@ -827,7 +856,7 @@ export function calculateBattlePoints(game, battle) {
     });
 
     Object.values(battle.votes || {}).forEach(vId => {
-        if (vId in voteCounts) {
+        if (vId in voteCounts && answeredCompetitors.includes(vId)) {
             voteCounts[vId]++;
         }
     });
@@ -840,9 +869,9 @@ export function calculateBattlePoints(game, battle) {
 
     if (answeredCompetitors.length === 1) {
         // Auto-win for the single competitor who submitted an answer:
-        // Scores an average vote-share win (Math.floor(battlePool / competitors.length) + winBonus) with 0 sweepBonus
+        // Awards 100% of battlePool + winBonus (with 0 sweepBonus)
         const winnerId = answeredCompetitors[0];
-        const autoWinVotePoints = Math.floor(battlePool / Math.max(1, competitors.length));
+        const autoWinVotePoints = battlePool;
         compPoints[winnerId] = autoWinVotePoints + winBonus;
         battle.winnerId = winnerId;
         voteCounts[winnerId] = 1; // Eligible for royalties & rainbow bonus calculation
@@ -900,7 +929,13 @@ export function calculateBattlePoints(game, battle) {
     };
 
     const processCompetitorRoyalties = (competitorId, competitorVotes) => {
-        if (competitorVotes <= 0) return 0; // Only award royalties & rainbow if answer earned votes (or auto-won)
+        if (!answeredCompetitors.includes(competitorId)) return 0;
+
+        // Even with 0 votes, award royalties & rainbow as long as the answer has >= 3 real words
+        const ansCleanWordCount = tokenizeAnswer(battle.answers?.[competitorId])
+            .map(w => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+            .filter(Boolean).length;
+        if (competitorVotes <= 0 && ansCleanWordCount < 3) return 0;
 
         const distinctAuthors = new Set();
         const submittedTileIds = battle.answerTileIds?.[competitorId];
@@ -921,7 +956,7 @@ export function calculateBattlePoints(game, battle) {
             });
         } else {
             const ansWords = tokenizeAnswer(battle.answers[competitorId]).map(w => w.toLowerCase());
-            const bankTokens = battle.wordBanks[competitorId] || [];
+            const bankTokens = battle.wordBanks?.[competitorId] || [];
 
             ansWords.forEach(wordText => {
                 const cleanWord = wordText.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').toLowerCase();
@@ -956,8 +991,9 @@ export function calculateBattlePoints(game, battle) {
             }
         });
 
-        // Rainbow Bonus if 3+ distinct other players' words were harmonized
-        if (distinctAuthors.size >= 3) {
+        // Rainbow Bonus if >= 3 distinct authors (or >= 2 in 3-player games) were harmonized
+        const rainbowThreshold = (game.players?.length === 3) ? 2 : 3;
+        if (distinctAuthors.size >= rainbowThreshold) {
             return rainbowBonus;
         }
         return 0;

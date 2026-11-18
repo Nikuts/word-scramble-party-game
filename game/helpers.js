@@ -240,8 +240,9 @@ function sanitizeBattleScheduleForViewer(game, viewer) {
             votingOptions.forEach(opt => {
                 anonymousAnswers[opt.optionId] = opt.answer;
             });
-            const votedCount = Object.keys(b.votes || {}).length;
-            const totalVoters = (game.players || []).filter(p => p.socketId && !(b.competitors || []).includes(p.id)).length;
+            const eligibleVoters = (game.players || []).filter(p => !(b.competitors || []).includes(p.id) && (p.socketId !== null || b.votes?.[p.id]));
+            const totalVoters = eligibleVoters.length;
+            const votedCount = eligibleVoters.filter(p => Boolean(b.votes?.[p.id])).length;
             const isCompetitor = isPlayer ? Boolean(b.competitors?.includes(playerId)) : false;
             const hasVoted = isPlayer ? Boolean(b.votes?.[playerId]) : false;
 
@@ -320,15 +321,16 @@ function sanitizeBattleHistoryForViewer(game) {
     }));
 }
 
-export function getSanitizedGameState(game, viewer = { role: 'hostDisplay' }) {
+export function getSanitizedGameState(game, viewer = { role: 'hostDisplay' }, precomputed = null) {
     if (!game) return null;
 
     // Sanitize players first, removing sensitive tokens.
-    const sanitizedPlayers = (game.players || []).map(p => ({
+    const sanitizedPlayers = precomputed?.sanitizedPlayers || (game.players || []).map(p => ({
         id: p.id,
         name: p.name,
         avatar: p.avatar,
         socketId: p.socketId,
+        isAway: Boolean(!p.socketId && p.isAway),
         score: p.score,
         isHost: p.isHost,
         hasUsedTimeBoost: !!p.hasUsedTimeBoost,
@@ -336,9 +338,11 @@ export function getSanitizedGameState(game, viewer = { role: 'hostDisplay' }) {
     
     // Calculate remaining time on the server to be the source of truth.
     // If phaseEndTime is not set, there is no active timer.
-    const remainingTime = game.phaseEndTime && !game.isPaused
-        ? Math.max(0, Math.round((game.phaseEndTime - Date.now()) / 1000))
-        : 0;
+    const remainingTime = precomputed?.remainingTime !== undefined
+        ? precomputed.remainingTime
+        : (game.phaseEndTime && !game.isPaused
+            ? Math.max(0, Math.round((game.phaseEndTime - Date.now()) / 1000))
+            : 0);
 
     // Explicitly build the state object that will be sent to clients.
     const sanitizedGame = {
@@ -356,6 +360,7 @@ export function getSanitizedGameState(game, viewer = { role: 'hostDisplay' }) {
         sillyMode: game.sillyMode,
         is18PlusMode: game.is18PlusMode,
         slowpokeMode: game.slowpokeMode,
+        tvMode: Boolean(game.tvMode),
         soundsOnHostOnly: game.soundsOnHostOnly,
         isGeneratingThemes: game.isGeneratingThemes,
         geminiApiErrorCount: game.geminiApiErrorCount, // For host player UI
@@ -365,7 +370,7 @@ export function getSanitizedGameState(game, viewer = { role: 'hostDisplay' }) {
         players: sanitizedPlayers,
         playerAnswers: sanitizePlayerAnswersForViewer(game, viewer),
         battleSchedule: sanitizeBattleScheduleForViewer(game, viewer),
-        battleHistory: sanitizeBattleHistoryForViewer(game),
+        battleHistory: precomputed?.battleHistory ?? sanitizeBattleHistoryForViewer(game),
         superlatives: game.superlatives || null,
     };
 
@@ -377,23 +382,40 @@ export function broadcastGameState(io, gameId) {
     const game = getGame(gameId);
     if (!game) return;
 
+    const precomputed = {
+        sanitizedPlayers: (game.players || []).map(p => ({
+            id: p.id,
+            name: p.name,
+            avatar: p.avatar,
+            socketId: p.socketId,
+            isAway: Boolean(!p.socketId && p.isAway),
+            score: p.score,
+            isHost: p.isHost,
+            hasUsedTimeBoost: !!p.hasUsedTimeBoost,
+        })),
+        remainingTime: game.phaseEndTime && !game.isPaused
+            ? Math.max(0, Math.round((game.phaseEndTime - Date.now()) / 1000))
+            : 0,
+        battleHistory: game.phase === 'results' ? sanitizeBattleHistoryForViewer(game) : []
+    };
+
     let sentAny = false;
     if (game.hostDisplaySocketId) {
-        const hostState = getSanitizedGameState(game, { role: 'hostDisplay' });
+        const hostState = getSanitizedGameState(game, { role: 'hostDisplay' }, precomputed);
         io.to(game.hostDisplaySocketId).emit('game-state-update', hostState);
         sentAny = true;
     }
 
     (game.players || []).forEach(p => {
         if (p.socketId) {
-            const playerState = getSanitizedGameState(game, { role: 'player', playerId: p.id });
+            const playerState = getSanitizedGameState(game, { role: 'player', playerId: p.id }, precomputed);
             io.to(p.socketId).emit('game-state-update', playerState);
             sentAny = true;
         }
     });
 
     if (!sentAny) {
-        const defaultState = getSanitizedGameState(game, { role: 'hostDisplay' });
+        const defaultState = getSanitizedGameState(game, { role: 'hostDisplay' }, precomputed);
         io.to(gameId).emit('game-state-update', defaultState);
     }
 }
@@ -487,7 +509,23 @@ export function getChunksFromText(text) {
         // using Unicode-aware boundary (?=[^\p{L}\p{N}]|$) to handle Cyrillic and English conjunctions
         const subParts = trimmedChunk.split(/\s+(?=(?:because|although|however|when|while|бо|тому що|якщо|коли|хоча|але)(?:[^\p{L}\p{N}]|$))/iu);
 
-        subParts.forEach(part => {
+        const splitParts = [];
+        subParts.forEach(subPart => {
+            const subWords = subPart.trim().split(/\s+/).filter(Boolean);
+            if (subWords.length >= 5) {
+                const coordParts = subPart.split(/\s+(?=(?:and|but|so|or|і|та|й|або|зате)(?:[^\p{L}\p{N}]|$))/iu);
+                if (
+                    coordParts.length > 1 &&
+                    coordParts.every(cp => cp.replace(/^[.,!?;:—–"()\[\]{}-]+|[.,!?;:—–"()\[\]{}-]+$/gu, '').trim().split(/\s+/).filter(Boolean).length >= 2)
+                ) {
+                    splitParts.push(...coordParts);
+                    return;
+                }
+            }
+            splitParts.push(subPart);
+        });
+
+        splitParts.forEach(part => {
             const cleanChunk = part.replace(/^[.,!?;:—–"()\[\]{}-]+\s*|\s*[.,!?;:—–"()\[\]{}-]+$/gu, '').trim();
             if (!cleanChunk) return;
 

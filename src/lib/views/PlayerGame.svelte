@@ -2,7 +2,7 @@
     import { gamePhase, currentPlayerDetails, hasConfirmedAvatar } from '../../stores.js';
     import PlayerAvatarSelect from './PlayerAvatarSelect.svelte';
     import PlayerLobby from './PlayerLobby.svelte';
-    import PlayerGameView from './PlayerGameView.svelte';
+    import PlayerGameView from './player_game/PlayerGameView.svelte';
     import LoadingSpinner from '../shared/LoadingSpinner.svelte';
 
     let lastSeenPhase = null;

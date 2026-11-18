@@ -1,8 +1,12 @@
 <!-- src/lib/views/player_game/PlayerBattleRevealView.svelte -->
 <script>
-    import { t, sendMessage, gameState } from '../../../stores.js';
+    import { t, language } from '../../../stores.js';
+    import { formatVotesLabel } from '../../../ui_text.js';
     import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
     import PixelAvatar from '../../shared/PixelAvatar.svelte';
+    import ArcadeIcon from '../../shared/ArcadeIcon.svelte';
+    import SvgReactionButtons from '../../shared/SvgReactionButtons.svelte';
+    import { TIMEOUT_ANSWER_PLACEHOLDER } from '../../../../shared/config.js';
 
     export let timer;
     export let battle = null;
@@ -12,7 +16,8 @@
 
     $: isCompetitor = battle && player && battle.competitors?.includes(player.id);
     $: isWinner = isCompetitor && (battle.winnerId === player.id || (Array.isArray(battle.winnerId) && battle.winnerId.includes(player.id)));
-    
+    $: isTieWinner = Boolean(isCompetitor && !isWinner && !battle?.winnerId && (myScoreBreakdown.winBonus || 0) > 0);
+
     $: myScoreBreakdown = (isCompetitor && battle?.scoreBreakdown?.[player.id]) || {
         votes: 0,
         votePoints: 0,
@@ -22,63 +27,56 @@
         total: 0
     };
 
+    $: myRoyaltyPts = (battle?.royalties || []).reduce(
+        (s, r) => (r.authorId === player?.id || (player?.name && r.authorName === player.name)) ? s + (r.points || 0) : s,
+        0
+    );
     $: pointsAwarded = (isCompetitor && battle?.pointsAwarded?.[player.id]) || 0;
-    
-    // Players who voted for me
+
     $: votersForMe = Object.entries(battle?.votes || {})
-        .filter(([_, votedForId]) => votedForId === player?.id)
-        .map(([voterId, _]) => players.find(p => p.id === voterId))
+        .filter(([, votedForId]) => votedForId === player?.id)
+        .map(([voterId]) => players.find(p => p.id === voterId))
         .filter(Boolean);
 
     function renderAnswer(answer) {
         if (typeof answer === 'string') {
-            if (answer === '::TIMEOUT::') return `(${$t.noAnswerSubmitted || 'No answer'})`;
+            if (answer === TIMEOUT_ANSWER_PLACEHOLDER) return `(${$t.noAnswerSubmitted || 'No answer'})`;
             return answer;
         }
         if (typeof answer === 'object' && answer !== null && (answer.title || answer.tagline)) {
             let title = (answer.title || '').trim();
             let tagline = (answer.tagline || '').trim();
-            if (title === '::TIMEOUT::') title = `(${$t.noAnswerSubmitted || 'No answer'})`;
+            if (title === TIMEOUT_ANSWER_PLACEHOLDER) title = `(${$t.noAnswerSubmitted || 'No answer'})`;
             return `"${title}"\n${tagline}`;
         }
         return `(${$t.noAnswerSubmitted || 'No answer'})`;
     }
-
-    function sendReaction() {
-        const activeGameId = gameId || $gameState?.id;
-        if (!battle || !player || !activeGameId) return;
-        sendMessage('send-lobby-emoji', {
-            gameId: activeGameId
-        });
-    }
 </script>
 
-<div class="w-full h-full max-h-full min-h-0 flex flex-col justify-between p-3 pb-[max(8px,env(safe-area-inset-bottom))] max-w-md mx-auto select-none font-sans overflow-hidden box-border">
+<div class="w-full h-full max-h-full min-h-0 flex flex-col justify-between p-3 pb-[max(8px,env(safe-area-inset-bottom))] max-w-md md:max-w-3xl mx-auto select-none font-sans overflow-hidden box-border" data-game-id={gameId}>
     
-    <!-- Top Header: Bounded Format Badge & Countdown Timer -->
-    <header class="flex items-center justify-between gap-2 mb-2 flex-shrink-0 bg-neutral-950/90 border border-neutral-800 rounded-xl px-3 py-1.5 backdrop-blur-md">
-        <span class="inline-flex items-center justify-center px-3 py-0.5 rounded-full text-[11px] font-display font-black uppercase tracking-wider bg-purple-950 text-purple-300 border border-purple-500/50 flex-shrink-0">
+    <!-- Top Header -->
+    <header class="flex items-center justify-between gap-2 mb-2 flex-shrink-0 bg-[#131126] border border-[#332e59] cut-sm px-3 py-1.5">
+        <span class="fighter-crest text-[11px] font-display bg-purple-950 text-purple-300 border border-purple-400/60">
             {#if battle?.competitors?.length === 4}
-                {$t.quadLabel || '🔥 4-WAY BRAWL'}
+                {$t.quadLabel || '4-WAY BRAWL'}
             {:else if battle?.competitors?.length === 3}
-                {$t.brawlLabel || '💥 3-WAY BRAWL'}
+                {$t.brawlLabel || '3-WAY BRAWL'}
             {:else}
-                {$t.duoLabel || '⚡ 1-ON-1 SHOWDOWN'}
+                {$t.duoLabel || '1-ON-1 SHOWDOWN'}
             {/if}
         </span>
-        <div class="flex-shrink-0">
-            <SevenSegmentDisplay time={timer} showLabel={false} size="sm" disableLowWarning={true} />
-        </div>
+        <SevenSegmentDisplay time={timer} showLabel={false} size="sm" disableLowWarning={true} />
     </header>
 
     <!-- Battle Prompt -->
     {#if battle?.prompt || battle?.premise || battle?.genre}
-        <div class="bg-neutral-950/90 border border-neutral-800 rounded-2xl p-3 mb-2.5 text-center shadow-md flex-shrink-0">
-            <span class="text-xs font-display font-bold text-cyan-400 uppercase tracking-widest block mb-1">
+        <div class="bg-[#131126] border border-[#332e59] cut-md p-2.5 sm:p-3 mb-2 text-center flex-shrink-0">
+            <span class="text-[11px] font-display text-cyan-300 uppercase tracking-widest block mb-0.5">
                 {battle?.genre ? ($t.moviePitch || 'MOVIE PREMISE') : ($t.battlePrompt || 'BATTLE PROMPT')}
             </span>
             {#if battle?.genre}
-                <span class="inline-block px-2 py-0.5 rounded bg-amber-950 border border-amber-500/60 text-amber-300 font-display text-[10px] mb-1">
+                <span class="fighter-crest bg-amber-950/90 border border-amber-400/60 text-amber-300 text-[10px] mb-1">
                     {battle.genre}
                 </span>
             {/if}
@@ -89,76 +87,69 @@
     {/if}
 
     {#if isCompetitor}
-        <!-- 🏆 Competitor Results Card (Winner or Runner-up) -->
-        <main class="flex-1 min-h-0 flex flex-col justify-start p-3 sm:p-4 bg-neutral-950/90 border-2 {isWinner ? 'border-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.5)]' : 'border-slate-600'} rounded-2xl overflow-y-auto">
-            
-            <div class="my-auto w-full flex flex-col gap-2.5">
-                <!-- Status Banner -->
-                <div class="w-full py-1.5 px-3 rounded-xl text-center font-display font-black text-xs sm:text-base uppercase tracking-wider mb-2 {
-                    isWinner 
-                    ? 'bg-amber-400 text-black shadow-md' 
-                    : 'bg-neutral-800 text-slate-300'
+        <main class="my-auto w-full flex flex-col justify-start p-3 sm:p-4 bg-[#131126] border-2 {isWinner || isTieWinner ? 'border-amber-400' : 'border-[#332e59]'} cut-md overflow-y-auto min-h-0">
+            <div class="w-full flex flex-col gap-2.5">
+                <div class="w-full py-1.5 px-3 cut-sm text-center font-display text-xs sm:text-base uppercase tracking-wider inline-flex items-center justify-center gap-1.5 {
+                    isWinner || isTieWinner ? 'bg-amber-400 text-black' : 'bg-[#1c1936] text-slate-300 border border-[#332e59]'
                 }">
-                    <span>{isWinner ? ($t.youWonTheBattle || '👑 YOU WON THE BATTLE!') : ($t.runnerUp || 'RUNNER-UP')}</span>
+                    {#if isWinner}
+                        <ArcadeIcon name="crown" className="w-4 h-4" />
+                    {/if}
+                    <span>{isWinner ? ($t.youWonTheBattle || 'YOU WON THE BATTLE!').replace(/^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u, '') : (isTieWinner ? ($t.tie || 'TIE!') : ($t.runnerUp || 'RUNNER-UP'))}</span>
                 </div>
 
-                <!-- Punchline -->
-                <div class="text-center my-1.5 sm:my-2">
-                    <span class="text-[10px] font-display font-bold text-slate-400 uppercase tracking-widest block mb-1">
+                <div class="text-center my-1">
+                    <span class="text-[10px] font-display text-slate-400 uppercase tracking-widest block mb-1">
                         {$t.yourAnswer || 'Your Punchline'}
                     </span>
-                    <div class="bg-black/80 border border-neutral-700 rounded-xl p-2.5 sm:p-3 text-sm sm:text-base font-bold text-white leading-relaxed whitespace-pre-wrap break-words">
+                    <div class="bg-[#070610] border border-[#332e59] cut-sm p-2.5 sm:p-3 text-sm sm:text-base font-bold text-white leading-relaxed whitespace-pre-wrap break-words">
                         {renderAnswer(battle?.answers?.[player?.id])}
                     </div>
                 </div>
 
-                <!-- Points Breakdown -->
-                <div class="flex flex-col items-center justify-center my-1.5 sm:my-2.5 text-center">
-                    <span class="font-display font-black text-2xl sm:text-4xl text-amber-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">
+                <div class="flex flex-col items-center justify-center my-1 text-center">
+                    <span class="font-display text-2xl sm:text-4xl text-amber-300">
                         +{pointsAwarded.toLocaleString()} {$t.pts || 'PTS'}
                     </span>
-                    
-                    {#if myScoreBreakdown.rainbowBonus > 0}
-                        <div class="flex justify-center my-1">
-                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-display font-black tracking-wide bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-cyan-500/20 border border-pink-400 text-pink-300 shadow-[0_0_10px_rgba(236,72,153,0.4)] animate-pulse">
-                                {$t.rainbowBadge || '🌈 Rainbow Bonus'} (+{myScoreBreakdown.rainbowBonus})
-                            </span>
-                        </div>
-                    {/if}
 
-                    <div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 mt-1 text-[11px] sm:text-xs font-mono">
-                        <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-200 font-bold">
-                            🗳️ {myScoreBreakdown.votes} {myScoreBreakdown.votes === 1 ? ($t.vote || 'Vote') : ($t.votes || $t.votesBreakdown || 'Votes')} (+{myScoreBreakdown.votePoints})
-                        </span>
+                    <div class="flex flex-wrap items-center justify-center gap-1.5 mt-1.5 text-[11px] sm:text-xs font-mono">
+                        {#if myScoreBreakdown.votePoints > 0}
+                            <span class="cut-sm px-2 py-0.5 bg-[#1c1936] border border-[#332e59] text-slate-200 font-bold">
+                                {myScoreBreakdown.votes} {formatVotesLabel(myScoreBreakdown.votes, $t, $language)} (+{myScoreBreakdown.votePoints})
+                            </span>
+                        {/if}
                         {#if myScoreBreakdown.winBonus > 0}
-                            <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-amber-950 border border-amber-500 text-amber-300 font-bold">
-                                🏆 {$t.winBonusBreakdown || $t.winBonus || 'Win Bonus'} (+{myScoreBreakdown.winBonus})
+                            <span class="cut-sm px-2 py-0.5 bg-amber-950 border border-amber-500 text-amber-200 font-bold">
+                                {$t.winBonusBreakdown || $t.winBonus || 'Win Bonus'} (+{myScoreBreakdown.winBonus})
                             </span>
                         {/if}
                         {#if myScoreBreakdown.sweepBonus > 0}
-                            <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-purple-950 border border-purple-500 text-purple-300 font-bold">
-                                🧹 {$t.sweepBonusBreakdown || $t.sweepBonus || 'Clean Sweep'} (+{myScoreBreakdown.sweepBonus})
+                            <span class="cut-sm px-2 py-0.5 bg-purple-950 border border-purple-400 text-purple-200 font-bold">
+                                {$t.sweepBonusBreakdown || $t.sweepBonus || 'Clean Sweep'} (+{myScoreBreakdown.sweepBonus})
                             </span>
                         {/if}
-                        {#if (battle?.royalties || []).reduce((s, r) => (r.authorId === player?.id || (player?.name && r.authorName === player.name)) ? s + (r.points || 0) : s, 0) > 0}
-                            {@const myRoyaltyPts = (battle?.royalties || []).reduce((s, r) => (r.authorId === player?.id || (player?.name && r.authorName === player.name)) ? s + (r.points || 0) : s, 0)}
-                            <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-cyan-950 border border-cyan-500 text-cyan-300 font-bold">
-                                ✨ {$t.royaltyBreakdown || 'Royalties'} (+{myRoyaltyPts})
+                        {#if myScoreBreakdown.rainbowBonus > 0}
+                            <span class="cut-sm px-2 py-0.5 bg-pink-950 border border-pink-400 text-pink-200 font-bold">
+                                {$t.rainbowBonusBreakdown || 'Rainbow'} (+{myScoreBreakdown.rainbowBonus})
+                            </span>
+                        {/if}
+                        {#if myRoyaltyPts > 0}
+                            <span class="cut-sm px-2 py-0.5 bg-cyan-950 border border-cyan-400 text-cyan-200 font-bold">
+                                {$t.royaltyBreakdown || 'Royalties'} (+{myRoyaltyPts})
                             </span>
                         {/if}
                     </div>
                 </div>
             </div>
 
-            <!-- Voters List -->
             {#if votersForMe.length > 0}
-                <div class="border-t border-neutral-800 pt-1.5 mt-1.5">
-                    <span class="text-[9px] font-display font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                <div class="border-t border-[#332e59] pt-2 mt-2">
+                    <span class="text-[10px] font-display text-slate-400 uppercase tracking-wider block mb-1">
                         {($t.votedForYou || 'VOTED FOR YOU').replace(/!+$/, '')}:
                     </span>
                     <div class="flex flex-wrap gap-1.5">
                         {#each votersForMe as voter}
-                            <div class="flex items-center gap-1 bg-neutral-900 border border-neutral-700 px-2 py-0.5 rounded-lg text-xs font-semibold text-slate-200">
+                            <div class="cut-sm flex items-center gap-1 bg-[#0a0914] border border-[#332e59] px-2 py-0.5 text-xs font-display text-slate-200">
                                 <div class="w-4 h-4 flex-shrink-0">
                                     <PixelAvatar avatar={voter.avatar} className="w-full h-full" />
                                 </div>
@@ -170,30 +161,23 @@
             {/if}
         </main>
     {:else}
-        <!-- 📺 Spectator / Voter View during Reveal -->
-        <main class="flex-1 min-h-0 flex flex-col justify-center items-center text-center p-4 bg-neutral-950/80 border border-neutral-800 rounded-2xl my-auto">
-            <h2 class="text-xl sm:text-2xl font-display font-black text-amber-400 uppercase tracking-wider mb-2">
+        <main class="flex-1 min-h-0 flex flex-col justify-center items-center text-center p-4 bg-[#131126] border-2 border-[#332e59] cut-md my-auto">
+            <h2 class="text-xl sm:text-2xl font-display text-amber-300 uppercase tracking-wider mb-2">
                 {$t.battleReveal || 'BATTLE RESULTS'}
             </h2>
-            <p class="text-xs sm:text-sm text-slate-300 font-sans max-w-xs animate-pulse">
+            <p class="text-xs sm:text-sm text-slate-300 font-sans max-w-xs">
                 {$t.lookAtHostScreen || 'Watch the host screen to see the winning punchline and points breakdown!'}
             </p>
+            {#if myRoyaltyPts > 0}
+                <div class="mt-3 cut-sm px-3.5 py-1.5 bg-cyan-950/90 border border-cyan-400 text-cyan-200 font-mono text-xs sm:text-sm font-bold">
+                    +{myRoyaltyPts} {$t.pts || 'PTS'} — {$t.royaltyBreakdown || 'Royalties'}
+                </div>
+            {/if}
         </main>
     {/if}
 
-    <!-- Docked Live Avatar Reaction Button -->
-    <footer class="mt-2.5 pt-2 border-t border-neutral-800 flex-shrink-0 flex flex-col items-center">
-        <span class="text-[9px] font-display font-bold text-slate-400 uppercase tracking-widest block text-center mb-1.5">
-            {$t.sendReaction || 'SEND AVATAR REACTION'}
-        </span>
-        <button
-            type="button"
-            data-testid="send-reaction-btn"
-            aria-label={$t.sendReaction || 'Send Reaction'}
-            on:click={() => sendReaction()}
-            class="w-12 h-12 rounded-full bg-neutral-900 border-2 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.5)] hover:scale-105 active:scale-95 flex items-center justify-center p-1.5 transition-transform cursor-pointer"
-        >
-            <PixelAvatar avatar={player?.avatar || '🦊'} className="w-full h-full" />
-        </button>
+    <!-- 4 SVG Arcade Reactions Footer (NO Avatars) -->
+    <footer class="mt-2 pt-2 border-t border-[#332e59] flex-shrink-0">
+        <SvgReactionButtons compact={true} />
     </footer>
 </div>

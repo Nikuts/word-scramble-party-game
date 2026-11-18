@@ -9,6 +9,17 @@ const __dirname = path.dirname(__filename);
 let ai = null;
 const primaryModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 export const GEMINI_REQUEST_TIMEOUT_MS = 8000;
+const MODEL_COOLDOWN_429_MS = 600_000;
+const MODEL_COOLDOWN_503_MS = 25_000;
+const modelCooldownUntil = new Map();
+
+export function clearModelCooldownsForTest() {
+    modelCooldownUntil.clear();
+}
+
+export function computeRoundRequestTimeoutMs(numPlayers = 4) {
+    return Math.min(18000, GEMINI_REQUEST_TIMEOUT_MS + Math.max(0, Number(numPlayers) - 4) * 700);
+}
 
 export const THEMES_RESPONSE_SCHEMA = {
     type: Type.OBJECT,
@@ -79,6 +90,10 @@ export function sanitizeThemeForPrompt(rawTheme) {
  */
 export function initAiClient() {
     if (ai) return ai;
+    if (process.env.DISABLE_GEMINI_AI === '1') {
+        console.log("Gemini AI disabled for deterministic E2E testing. Using fallback content.");
+        return null;
+    }
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     if (!apiKey) {
         console.warn("⚠️ No GEMINI_API_KEY or API_KEY found in environment variables. Falling back to pre-written content.");
@@ -130,8 +145,12 @@ async function generateContentWithFallback(prompt, customConfig = {}) {
     const timeoutMs = customConfig.timeoutMs || GEMINI_REQUEST_TIMEOUT_MS;
     const { timeoutMs: _omitTimeout, ...sdkConfig } = customConfig;
 
-    for (let mIndex = 0; mIndex < candidateModels.length; mIndex++) {
-        const candidateModel = candidateModels[mIndex];
+    const now = Date.now();
+    const activeCandidates = candidateModels.filter(m => (modelCooldownUntil.get(m) || 0) <= now);
+    const modelsToTry = activeCandidates.length > 0 ? activeCandidates : candidateModels.slice(-1);
+
+    for (let mIndex = 0; mIndex < modelsToTry.length; mIndex++) {
+        const candidateModel = modelsToTry[mIndex];
         const maxRetries = 2;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -158,18 +177,24 @@ async function generateContentWithFallback(prompt, customConfig = {}) {
                 const response = await Promise.race([requestPromise, timeoutPromise]);
 
                 if (response?.text) {
+                    modelCooldownUntil.delete(candidateModel);
                     return response.text;
                 }
             } catch (error) {
                 const errorMessage = String(error?.message || error || '');
-                const isTransientError = errorMessage.includes('503') ||
-                                         errorMessage.includes('UNAVAILABLE') ||
-                                         errorMessage.includes('high demand') ||
-                                         errorMessage.includes('429') ||
-                                         errorMessage.includes('RESOURCE_EXHAUSTED') ||
+                const isQuota429 = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED');
+                const isUnavailable503 = errorMessage.includes('503') || errorMessage.includes('UNAVAILABLE') || errorMessage.includes('high demand');
+                const isTransientError = isUnavailable503 ||
+                                         isQuota429 ||
                                          errorMessage.includes('500') ||
                                          errorMessage.includes('timed out') ||
                                          errorMessage.includes('AbortError');
+
+                if (isQuota429) {
+                    modelCooldownUntil.set(candidateModel, Date.now() + MODEL_COOLDOWN_429_MS);
+                    console.warn(`[Gemini] Quota 429 on '${candidateModel}'; cooling down 60s and switching model.`);
+                    break;
+                }
 
                 if (isTransientError) {
                     console.warn(`[Gemini] Transient error on '${candidateModel}' (attempt ${attempt}/${maxRetries}): ${errorMessage.slice(0, 100)}...`);
@@ -177,8 +202,13 @@ async function generateContentWithFallback(prompt, customConfig = {}) {
                         const jitter = Math.floor(Math.random() * 300);
                         await new Promise(r => setTimeout(r, (attempt * 400) + jitter));
                         continue;
-                    } else if (mIndex < candidateModels.length - 1) {
-                        console.warn(`[Gemini] Switching to fallback model '${candidateModels[mIndex + 1]}'`);
+                    } else {
+                        if (isUnavailable503) {
+                            modelCooldownUntil.set(candidateModel, Date.now() + MODEL_COOLDOWN_503_MS);
+                        }
+                        if (mIndex < modelsToTry.length - 1) {
+                            console.warn(`[Gemini] Switching to fallback model '${modelsToTry[mIndex + 1]}'`);
+                        }
                     }
                 } else {
                     console.error(`[Gemini] Non-transient error with model '${candidateModel}':`, error);
@@ -268,7 +298,7 @@ function parseJsonResponse(jsonString) {
  * @param {boolean} sillyMode Whether to generate silly/absurd themes.
  * @returns {Promise<object | null>} A promise that resolves to an object like { en: [], uk: [] } or null.
  */
-export async function generateThemes(is18PlusMode = false, sillyMode = false) {
+export async function generateThemes(is18PlusMode = false, sillyMode = false, avoidThemes = []) {
   const client = getAiClient();
   if (!client) {
     console.warn("AI client not available. Using fallback themes.");
@@ -289,10 +319,16 @@ export async function generateThemes(is18PlusMode = false, sillyMode = false) {
     : "веселі, яскраві та цікаві теми для вечірки, які надихають на творчі відповіді";
 
   try {
-    const [promptEn, promptUa] = await Promise.all([
+    let [promptEn, promptUa] = await Promise.all([
       getPrompt('themes', { themeTypeInstruction: enThemeInstruction }, 'en'),
       getPrompt('themes', { themeTypeInstruction: uaThemeInstruction }, 'ua')
     ]);
+
+    if (Array.isArray(avoidThemes) && avoidThemes.length > 0) {
+      const compactAvoid = avoidThemes.slice(-12).map(t => JSON.stringify(String(t))).join(', ');
+      promptEn += `\nDo NOT repeat or closely paraphrase these recent themes: ${compactAvoid}.`;
+      promptUa += `\nНЕ повторюйте та не перефразовуйте ці попередні теми: ${compactAvoid}.`;
+    }
 
     const [rawTextEn, rawTextUa] = await Promise.all([
       generateContentWithFallback(promptEn, { responseSchema: THEMES_RESPONSE_SCHEMA }),
@@ -327,7 +363,7 @@ export async function generateThemes(is18PlusMode = false, sillyMode = false) {
  * @param {boolean} is18PlusMode Whether to generate adult-oriented content.
  * @returns {Promise<{playerQuestions: string[][], battlePrompts: string[], fallbackWords: string[]} | null>}
  */
-export async function generateRoundData(theme, language, numPlayers, numQuestionsPerPlayer, sillyMode, is18PlusMode) {
+export async function generateRoundData(theme, language, numPlayers, numQuestionsPerPlayer, sillyMode, is18PlusMode, avoidPrompts = []) {
   const client = getAiClient();
   if (!client) {
     console.warn("AI client not available. Using fallback round data.");
@@ -337,6 +373,8 @@ export async function generateRoundData(theme, language, numPlayers, numQuestion
   
   const numBattlePrompts = numPlayers;
   const numQuestionSetsToGenerate = numPlayers + 2;
+  const minFallbackPhrases = Math.min(60, Math.max(25, numPlayers * 4));
+  const maxFallbackPhrases = Math.min(75, Math.max(35, numPlayers * 5));
 
   let playerQuestionInstructions;
   let battlePromptToneInstruction;
@@ -387,7 +425,7 @@ export async function generateRoundData(theme, language, numPlayers, numQuestion
     battlePromptStructureInstruction = 'Critical for Gameplay: Phrase prompts as open situational setups ending with a colon (:) or direct questions. DO NOT use fill-in-the-blanks with prepositions (avoid "In order to ____ one must ____"). Good examples: "Slogan on the billboard for this place:", "Warning sign on the front door:", "The #1 rule of this secret club:", "A 1-star review on Yelp:", "What the villain whispered before escaping:", "The worst excuse when caught red-handed:", "Customer complaint to the manager:".';
   }
 
-  const prompt = await getPrompt('roundData', {
+  let prompt = await getPrompt('roundData', {
       numPlayers,
       theme: sanitizeThemeForPrompt(theme),
       is18PlusMode: is18PlusMode ? 'ON' : 'OFF',
@@ -397,10 +435,22 @@ export async function generateRoundData(theme, language, numPlayers, numQuestion
       playerQuestionInstructions,
       battlePromptToneInstruction,
       battlePromptStructureInstruction,
-      numBattlePrompts
+      numBattlePrompts,
+      minFallbackPhrases,
+      maxFallbackPhrases
   }, language);
 
-  const rawText = await generateContentWithFallback(prompt, { responseSchema: ROUND_DATA_RESPONSE_SCHEMA });
+  if (Array.isArray(avoidPrompts) && avoidPrompts.length > 0) {
+      const compactAvoid = avoidPrompts.slice(-30).map(p => String(p).slice(0, 80)).join(' | ');
+      prompt += isUkrainian
+          ? `\nНЕ повторюйте та не перефразовуйте ці уже використані запитання/теми битв: ${compactAvoid}`
+          : `\nDo NOT repeat or paraphrase any of these previously used questions/battle prompts: ${compactAvoid}`;
+  }
+
+  const rawText = await generateContentWithFallback(prompt, {
+      responseSchema: ROUND_DATA_RESPONSE_SCHEMA,
+      timeoutMs: computeRoundRequestTimeoutMs(numPlayers)
+  });
   if (!rawText) return null;
 
   const data = parseJsonResponse(rawText);

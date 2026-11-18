@@ -195,29 +195,35 @@ describe('Scoring Algorithms (Vote-Share Pool A1, Stopwords A5, Tie Split A7)', 
             expect(game.players.find(p => p.id === 'p4').score).toBe(0);
         });
 
-        it('does NOT award royalties if the answer receives 0 votes', () => {
-            const game = createMockGame(1, 4);
+        it('awards royalties for a valid 3+ word answer even with 0 votes, while blocking <3 word answers with 0 votes', () => {
+            const game = createMockGame(1, 5);
             const battle = {
                 id: 'b_no_votes',
-                competitors: ['p1', 'p2'],
+                competitors: ['p1', 'p2', 'p5'],
                 answers: {
                     p1: 'Losing answer with borrowed words',
-                    p2: 'Winning answer'
+                    p2: 'Short one',
+                    p5: 'Winning punchline here'
                 },
-                votes: { p3: 'p2', p4: 'p2' },
+                votes: { p3: 'p5', p4: 'p5' },
                 wordBanks: {
                     p1: [
                         { text: 'borrowed', authorId: 'p3' },
                         { text: 'words', authorId: 'p4' }
                     ],
-                    p2: []
+                    p2: [
+                        { text: 'short', authorId: 'p3' }
+                    ],
+                    p5: []
                 }
             };
 
             calculateBattlePoints(game, battle);
 
-            expect(game.players.find(p => p.id === 'p3').score).toBe(0);
-            expect(game.players.find(p => p.id === 'p4').score).toBe(0);
+            // p1 has 5 words -> p3 & p4 earn 50 royalty pts even though p1 received 0 votes
+            // p2 has only 2 words (< 3) and 0 votes -> p3 does NOT earn extra royalty from p2
+            expect(game.players.find(p => p.id === 'p3').score).toBe(50);
+            expect(game.players.find(p => p.id === 'p4').score).toBe(50);
         });
 
         it('does NOT award duplicate royalties if multiple words from the same author are used', () => {
@@ -379,7 +385,7 @@ describe('Scoring Algorithms (Vote-Share Pool A1, Stopwords A5, Tie Split A7)', 
             expect(gameR3.players.find(p => p.id === 'p5').score).toBe(100);
         });
 
-        it('does NOT award Rainbow Bonus if only 2 distinct authors are used', () => {
+        it('does NOT award Rainbow Bonus in 4+ player games if only 2 distinct authors are used, but DOES in 3-player games', () => {
             const game = createMockGame(1, 4);
             const battle = {
                 id: 'b_no_rainbow',
@@ -401,13 +407,37 @@ describe('Scoring Algorithms (Vote-Share Pool A1, Stopwords A5, Tie Split A7)', 
 
             calculateBattlePoints(game, battle);
 
-            // Pool (1000) + win (200) + sweep (150) = 1350
+            // Pool (1000) + win (200) + sweep (150) = 1350 (no rainbow in 4P for 2 authors)
             expect(battle.pointsAwarded['p1']).toBe(1350);
+
+            const game3p = createMockGame(1, 3);
+            const battle3p = {
+                id: 'b_rainbow_3p',
+                competitors: ['p1', 'p2'],
+                answers: {
+                    p1: 'Quantum rocket chaos',
+                    p2: 'Normal answer'
+                },
+                votes: { p3: 'p1' },
+                wordBanks: {
+                    p1: [
+                        { text: 'quantum', authorId: 'p2' },
+                        { text: 'rocket', authorId: 'p3' }
+                    ],
+                    p2: []
+                }
+            };
+
+            calculateBattlePoints(game3p, battle3p);
+
+            // Pool (1000) + win (200) + rainbow R1 (100) = 1300
+            expect(battle3p.scoreBreakdown['p1'].rainbowBonus).toBe(100);
+            expect(battle3p.pointsAwarded['p1']).toBe(1300);
         });
     });
 
     describe('Auto-Win and Timeout Scenarios (A1)', () => {
-        it('awards average pool share + victory bonus (no sweep bonus) to single active competitor so auto-win never beats a real win', () => {
+        it('awards 100% of battle pool + victory bonus (no sweep bonus) to single active competitor', () => {
             const game = createMockGame(1, 4);
             const battle = {
                 id: 'b_autowin',
@@ -425,9 +455,9 @@ describe('Scoring Algorithms (Vote-Share Pool A1, Stopwords A5, Tie Split A7)', 
 
             calculateBattlePoints(game, battle);
 
-            // Auto-win in 2-competitor battle: Math.floor(1000 / 2) + 200 (win) + 0 (sweep) = 700
+            // Auto-win: 100% battlePool (1000) + winBonus (200) + 0 (sweep) = 1200
             expect(battle.winnerId).toBe('p1');
-            expect(battle.pointsAwarded['p1']).toBe(700);
+            expect(battle.pointsAwarded['p1']).toBe(1200);
             expect(battle.pointsAwarded['p2']).toBe(0);
             expect(battle.scoreBreakdown['p1'].sweepBonus).toBe(0);
             // Royalties are also awarded in auto-win

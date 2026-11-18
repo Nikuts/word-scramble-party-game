@@ -8,9 +8,10 @@ import {
     completeAllBattlesVoting 
 } from './helpers/gameTestHelper.js';
 import path from 'path';
+import os from 'os';
 import fs from 'fs';
 
-const SCREENSHOTS_DIR = 'C:/Users/nikku/.gemini/antigravity-ide/brain/009dc139-9a03-4c7b-9063-ffcb2566e6d1/screenshots';
+const SCREENSHOTS_DIR = process.env.PLAYWRIGHT_SCREENSHOT_DIR || path.join(os.tmpdir(), 'word-scramble-screenshots');
 
 if (!fs.existsSync(SCREENSHOTS_DIR)) {
     fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });

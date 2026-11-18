@@ -29,21 +29,22 @@ export default {
         'arcade-bg': '#1a1a1a', // Kept for simplicity in some components
       },
       fontFamily: {
-        'display': ['"Press Start 2P"', 'cursive'],
-        'body': ['"VT323"', 'monospace'],
+        'display': ['"Russo One"', 'system-ui', '-apple-system', 'sans-serif'],
+        'body': ['"JetBrains Mono"', 'system-ui', '-apple-system', 'sans-serif'],
+        'mono': ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        'sans': ['"JetBrains Mono"', 'system-ui', '-apple-system', 'sans-serif'],
       },
-      // New typographic scale for better hierarchy and readability.
-      // VT323 is a tall font, so a base of 18px (1.125rem) improves legibility.
+      // Balanced typographic scale for Russo One + JetBrains Mono
       fontSize: {
-        'xs': ['0.75rem', { lineHeight: '1.5' }],    // 12px
-        'sm': ['0.875rem', { lineHeight: '1.5' }],   // 14px
-        'base': ['1.125rem', { lineHeight: '1.5' }], // 18px
-        'lg': ['1.25rem', { lineHeight: '1.4' }],    // 20px
-        'xl': ['1.5rem', { lineHeight: '1.4' }],     // 24px
-        '2xl': ['1.875rem', { lineHeight: '1.2' }],  // 30px
-        '3xl': ['2.25rem', { lineHeight: '1.2' }],   // 36px
-        '4xl': ['3rem', { lineHeight: '1.2' }],      // 48px
-        '5xl': ['3.75rem', { lineHeight: '1.2' }],   // 60px
+        'xs': ['0.75rem', { lineHeight: '1.4' }],    // 12px
+        'sm': ['0.875rem', { lineHeight: '1.4' }],   // 14px
+        'base': ['1rem', { lineHeight: '1.45' }],    // 16px
+        'lg': ['1.125rem', { lineHeight: '1.35' }],  // 18px
+        'xl': ['1.35rem', { lineHeight: '1.3' }],    // 21.6px
+        '2xl': ['1.65rem', { lineHeight: '1.2' }],   // 26.4px
+        '3xl': ['2rem', { lineHeight: '1.15' }],     // 32px
+        '4xl': ['2.65rem', { lineHeight: '1.1' }],   // 42.4px
+        '5xl': ['3.4rem', { lineHeight: '1.08' }],   // 54.4px
       },
       // Standardized border radius values.
       borderRadius: {

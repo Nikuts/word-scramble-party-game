@@ -10,7 +10,7 @@ import {
 
 test.describe('11-Player Hybrid (1 vs 1 and 1 vs 1 vs 1) Game Flow', () => {
     test('plays 11-player game with hybrid 6 trios (1 vs 1 vs 1) and 2 duos (1 vs 1) across 8 battles per round', async ({ browser }) => {
-        test.setTimeout(300000); // 5 minutes for 11-player session with 8 battles
+        test.setTimeout(420000); // 7 minutes headroom for 11-player session under parallel workers
 
         // 1. Setup Host Display
         const hostContext = await browser.newContext();
@@ -44,7 +44,7 @@ test.describe('11-Player Hybrid (1 vs 1 and 1 vs 1 vs 1) Game Flow', () => {
         }
 
         // Verify all 11 connected on Host
-        await expect(hostPage.locator('text=Players (11)')).toBeVisible({ timeout: 20000 });
+        await expect(hostPage.locator('text=/(?:FIGHTERS|Players|БІЙЦІ) \\(11/i')).toBeVisible({ timeout: 20000 });
 
         // 3. Set Theme and Start Game from Host Player (Alice)
         const p1Page = players[0].page;

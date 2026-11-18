@@ -1,5 +1,6 @@
 // src/lib/utils.js
 import confetti from 'canvas-confetti';
+import { AVATAR_MAP, SOUNDS_ON_HOST_ONLY } from './config.js';
 
 const SOUND_ASSETS = {
     'sfx_timer_tick': '/sounds/sfx_timer_tick.mp3',
@@ -20,6 +21,16 @@ class WebAudioSoundEngine {
         this.isUnlocked = false;
         this.playCounts = new Map();
         this.loadingPromises = new Map();
+        this.hostPreloadEnabled = !SOUNDS_ON_HOST_ONLY;
+    }
+
+    enableHostPreload() {
+        this.hostPreloadEnabled = true;
+        if (this.isUnlocked) {
+            Object.entries(SOUND_ASSETS).forEach(([id, url]) => {
+                this.preloadSound(id, url);
+            });
+        }
     }
 
     initContext() {
@@ -40,6 +51,7 @@ class WebAudioSoundEngine {
         const promise = (async () => {
             try {
                 const response = await fetch(url);
+                if (!response.ok) return;
                 const arrayBuffer = await response.arrayBuffer();
                 const ctx = this.initContext();
                 if (ctx) {
@@ -62,10 +74,12 @@ class WebAudioSoundEngine {
                 await ctx.resume().catch(() => {});
             }
             this.isUnlocked = true;
-            // Pre-decode all audio assets in parallel into memory
-            Object.entries(SOUND_ASSETS).forEach(([id, url]) => {
-                this.preloadSound(id, url);
-            });
+            // Pre-decode all audio assets in parallel into memory (host display only when SOUNDS_ON_HOST_ONLY is true)
+            if (this.hostPreloadEnabled) {
+                Object.entries(SOUND_ASSETS).forEach(([id, url]) => {
+                    this.preloadSound(id, url);
+                });
+            }
         }
     }
 
@@ -118,17 +132,14 @@ class WebAudioSoundEngine {
             }
         }
 
-        // Graceful fallback to HTML5 Audio element
-        if (typeof document !== 'undefined') {
+        // Graceful lazy fallback to HTML5 Audio element if Web Audio buffer is not yet decoded
+        if (typeof Audio !== 'undefined' && SOUND_ASSETS[soundId]) {
             try {
-                const el = document.getElementById(soundId);
-                if (el) {
-                    el.currentTime = 0;
-                    el.playbackRate = pitch;
-                    el.volume = Math.max(0, Math.min(1, volume));
-                    const p = el.play();
-                    if (p && typeof p.catch === 'function') p.catch(() => {});
-                }
+                const audio = new Audio(SOUND_ASSETS[soundId]);
+                audio.playbackRate = pitch;
+                audio.volume = Math.max(0, Math.min(1, volume));
+                const p = audio.play();
+                if (p && typeof p.catch === 'function') p.catch(() => {});
             } catch (e) {
                 console.warn(`[SoundEngine] Fallback audio play failed for ${soundId}:`, e);
             }
@@ -193,7 +204,7 @@ export function triggerConfetti(options = {}) {
             shapes: ['square'],
             gravity: 1.2,
             scalar: 1.2,
-            zIndex: 30,
+            zIndex: 1,
             colors: ['#00CFFD', '#FF00A8', '#39FF14', '#facc15', '#ffffff'],
         };
         
@@ -216,6 +227,26 @@ export function tokenizeText(text) {
  * @param {string} text The text to format.
  * @returns {string} The formatted text.
  */
+const AVATAR_FALLBACK_MAP = {
+    '👽': 'alien', '🐶': 'dog', '🦆': 'duck', '⚒️': 'dwarf', '⚒': 'dwarf',
+    '🦊': 'fox', '🐸': 'frog', '👺': 'goblin', '🛡️': 'knight', '🛡': 'knight',
+    '🍄': 'mushroom', '🦜': 'parrot', '🐧': 'penguin', '🐷': 'pig', '🤖': 'robot',
+    '💀': 'skeleton', '🦠': 'slime', '🫧': 'slime', '🐱': 'sphynx', '🐈': 'sphynx',
+    '🧛': 'vampire', '🧙': 'wizard', '🐛': 'worm', '🪱': 'worm', '🧟': 'zombie',
+    '🐼': 'alien', '🐯': 'fox', '🐵': 'dog', '🦄': 'wizard', '🐙': 'octopus', '🧌': 'goblin', '🧔': 'dwarf'
+};
+
+/**
+ * Resolves a player emoji/key avatar to its static pixel-art image path.
+ * @param {string} avatar
+ * @returns {string}
+ */
+export function resolveAvatarSrc(avatar) {
+    const raw = avatar ? String(avatar).replace(/[\uFE0E\uFE0F]/g, '') : 'frog';
+    const imageName = AVATAR_MAP[avatar] || AVATAR_MAP[raw] || AVATAR_FALLBACK_MAP[avatar] || AVATAR_FALLBACK_MAP[raw] || 'frog';
+    return `/images/${imageName}.webp`;
+}
+
 export function formatAnswerText(text) {
     if (!text || typeof text !== 'string') return text || '';
     return text

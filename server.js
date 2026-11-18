@@ -40,6 +40,8 @@ const io = new SocketIOServer(server, {
         methods: ["GET", "POST"]
     },
     transports: ['websocket', 'polling'],
+    pingInterval: 25000,
+    pingTimeout: 60000,
     perMessageDeflate: false // Disable per-message deflate to eliminate CPU compression overhead on frequent timer/vote packets
 });
 
@@ -51,14 +53,15 @@ io.on('connection', (socket) => {
 const isProduction = process.env.NODE_ENV === 'production';
 const distPath = path.join(__dirname, 'dist');
 const distExists = fs.existsSync(distPath);
+let viteDevServer = null;
 
 if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
+    viteDevServer = await createViteServer({
         server: { middlewareMode: true },
         appType: 'spa'
     });
-    app.use(vite.middlewares);
+    app.use(viteDevServer.middlewares);
 } else if (distExists) {
     app.use(express.static(distPath, {
         maxAge: '1y',
@@ -76,14 +79,24 @@ if (!isProduction) {
 } else {
     console.warn("[Server] Production mode requested but dist/ not found. Falling back to Vite dev middleware.");
     const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
+    viteDevServer = await createViteServer({
         server: { middlewareMode: true },
         appType: 'spa'
     });
-    app.use(vite.middlewares);
+    app.use(viteDevServer.middlewares);
 }
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+async function handleShutdown() {
+    setTimeout(() => process.exit(0), 250).unref();
+    try { io?.close?.(); } catch {}
+    try { await viteDevServer?.close?.(); } catch {}
+    try { server.closeAllConnections?.(); } catch {}
+    server.close(() => process.exit(0));
+}
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);

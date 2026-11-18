@@ -15,7 +15,8 @@ export const playerAndGameIdSchema = z.object({
 });
 
 export const createGameSchema = z.object({
-    language: z.enum(['en', 'ua', 'uk'])
+    language: z.enum(['en', 'ua', 'uk']),
+    tvMode: z.boolean().optional()
 });
 
 export const joinGameSchema = z.object({
@@ -129,5 +130,6 @@ export const rerollQuestionSchema = z.object({
 
 export const sendReactionSchema = z.object({
     gameId: gameIdSchemaBase,
-    emoji: z.string().max(20).optional()
+    emoji: z.string().max(20).optional(),
+    reaction: z.enum(['avatar', 'hype', 'lol', 'poop', 'king']).optional()
 });

@@ -29,6 +29,7 @@
     import PlayerBattleVotingView from '../views/player_game/PlayerBattleVotingView.svelte';
     import PlayerBattleRevealView from '../views/player_game/PlayerBattleRevealView.svelte';
     import PlayerResultsView from '../views/player_game/PlayerResultsView.svelte';
+    import PlayerBattleHistoryView from '../views/player_game/PlayerBattleHistoryView.svelte';
     import HostLobby from '../views/HostLobby.svelte';
     import HostGameView from '../views/HostGameView.svelte';
     import AvatarGalleryView from './AvatarGalleryView.svelte';
@@ -60,14 +61,14 @@
         const baseBank = isUkrainian ? MOCK_WORD_BANK_UA : MOCK_WORD_BANK_EN;
         const slicedBank = baseBank.slice(0, tileCount);
 
+        const selectedPlayers = playerCount === 3 ? MOCK_PLAYERS_3_LOW_SCORE : (playerCount === 14 ? MOCK_PLAYERS_14 : MOCK_PLAYERS_6);
+        const pickedPlayer = selectedPlayers[playerIndex] || selectedPlayers[0];
         const activePlayer = {
-            id: 'p1',
-            name: 'Alice',
-            avatar: '🦊',
+            ...pickedPlayer,
             isHost: activeScreen.startsWith('host_') || playerIndex === 0,
             isReady: true,
             isConnected: true,
-            score: 2800,
+            score: pickedPlayer?.score ?? 2800,
             hasUsedTimeBoost: false
         };
 
@@ -233,8 +234,6 @@
             { id: 'q3', text: isUkrainian ? "Яку таємницю приховує ваш холодильник пізно вночі?" : "What is the most suspicious excuse for arriving 2 hours late to a party?", answer: "" }
         ];
 
-        const selectedPlayers = playerCount === 3 ? MOCK_PLAYERS_3_LOW_SCORE : (playerCount === 14 ? MOCK_PLAYERS_14 : MOCK_PLAYERS_6);
-
         gameState.set(createMockGameState({
             phase,
             language,
@@ -242,6 +241,7 @@
             theme: isUkrainian ? 'Звичайні речі, епічні передісторії' : 'Everyday Objects, Epic Backstories',
             currentRound: activeScreen.includes('movie') || activeScreen.includes('podium') ? 3 : 1,
             battleSchedule: [currentBattle],
+            battleHistory: [currentBattle],
             currentVotingBattleIndex: 0,
             currentBattleIndex: 0,
             activeBattle: currentBattle,
@@ -303,6 +303,8 @@
                         <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} gameId="TEST" players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_results'}
                         <PlayerResultsView game={$gameState} player={activePlayerObj} />
+                    {:else if activeScreen === 'player_history'}
+                        <PlayerBattleHistoryView game={$gameState} player={activePlayerObj} />
                     {:else if activeScreen === 'avatar_gallery'}
                         <AvatarGalleryView />
                     {:else}
@@ -336,6 +338,8 @@
                         <PlayerBattleRevealView timer={mockTimer} battle={mockActiveBattle} player={{ id: 'p1', name: 'Alice', avatar: '🦊' }} gameId="TEST" players={MOCK_PLAYERS} />
                     {:else if activeScreen === 'player_results'}
                         <PlayerResultsView game={$gameState} player={activePlayerObj} />
+                    {:else if activeScreen === 'player_history'}
+                        <PlayerBattleHistoryView game={$gameState} player={activePlayerObj} />
                     {:else if activeScreen === 'instructions'}
                         <div class="overflow-y-auto h-full">
                             <Instructions />

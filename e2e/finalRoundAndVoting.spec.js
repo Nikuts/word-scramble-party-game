@@ -115,7 +115,7 @@ test.describe('Full Multi-Round Lifecycle, Voting & Final Round Showdown', () =>
         // ---------------------------------------------------------------------
         // Host should display final winner results podium / game over screen
         await expect(
-            hostPage.locator('h1, h2, h3').filter({ hasText: /Winner|Game Over|Podium|Scores|Congratulations|Переможець/i }).first()
+            hostPage.locator('h1, h2, h3').filter({ hasText: /Winner|Game Over|Podium|Scores|Congratulations|Accolades|Особливі Нагороди|Переможець/i }).first()
         ).toBeVisible({ timeout: 30000 });
 
         // Verify players have accumulated multi-round points (scores well above 2000 after 3 rounds)

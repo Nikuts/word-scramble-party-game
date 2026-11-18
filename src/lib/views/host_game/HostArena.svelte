@@ -1,86 +1,146 @@
+<!-- src/lib/views/host_game/HostArena.svelte -->
 <script>
-    import { t, gameState, gamePhase, gamePlayers, phaseTimer, currentRound } from '../../../stores.js';
-    import SevenSegmentDisplay from '../../shared/SevenSegmentDisplay.svelte';
+    import { t, gameState, gamePhase, gamePlayers, currentRound } from '../../../stores.js';
     import PixelAvatar from '../../shared/PixelAvatar.svelte';
+    import ArcadeIcon from '../../shared/ArcadeIcon.svelte';
 
     export let animatedScores = {};
+
+    $: isQuestion = $gamePhase === 'question';
+    $: playerCount = $gamePlayers.length;
+
+    $: rankByPlayerId = [...$gamePlayers]
+        .sort((a, b) => ((b.score || 0) - (a.score || 0)))
+        .reduce((acc, p, idx) => { acc[p.id] = idx + 1; return acc; }, {});
+
+    $: finishedCount = $gamePlayers.filter(p => {
+        const total = isQuestion
+            ? ($gameState.playerAnswers?.[p.id]?.questions?.length || 3)
+            : ($gameState.battleSchedule?.filter(b => b.competitors?.includes(p.id))?.length || 2);
+        const done = isQuestion
+            ? ($gameState.playerAnswers?.[p.id]?.questions?.filter(q => !!q.answer)?.length || 0)
+            : ($gameState.battleSchedule?.filter(b => b.competitors?.includes(p.id) && !!b.answers?.[p.id])?.length || 0);
+        return done >= total && total > 0 && (!!p.socketId || !!p.isAway);
+    }).length;
 </script>
 
-<!-- Phase: Question & Battle Answering (Adaptive Responsive Grid) -->
-<div class="flex-shrink-0 text-center mb-1 sm:mb-1.5">
-    <div class="mb-0.5">
-        <SevenSegmentDisplay time={$phaseTimer} size="sm" />
-    </div>
-    <h1 class="text-lg sm:text-xl lg:text-2xl font-display font-black tracking-wider text-primary mt-0.5">
-        {$t.roundStatus ? $t.roundStatus.replace('{currentRound}', $currentRound) : `ROUND ${$currentRound}`} · {$gamePhase === 'question' ? ($t.questionPhase || 'QUESTION').toUpperCase() : ($currentRound === 3 ? ($t.finalRound || 'FINAL BATTLE').toUpperCase() : ($t.battlePhase || 'BATTLE').toUpperCase())}
+<!-- Prototype v5 Arena Sub-Header & Full-Space Player Progress Grid -->
+<div class="relative z-10 w-full cut-md bg-[#131126] border-2 border-cyan-400/70 px-4 sm:px-6 py-2 sm:py-2.5 2xl:py-3.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 flex-shrink-0">
+    <h1 class="font-display text-sm sm:text-lg lg:text-xl 2xl:text-2xl text-white tracking-wider uppercase m-0">
+        {($t.round || 'ROUND').toUpperCase()} {$currentRound || 1} // {isQuestion
+            ? ($t.questionPhase || 'ANSWERING QUESTIONS').toUpperCase()
+            : ($currentRound === 3 ? ($t.finalRound || 'FINAL BATTLE').toUpperCase() : ($t.battlePhase || 'ASSEMBLING BATTLE PUNCHLINES').toUpperCase())}
     </h1>
+
+    <span class="cut-sm px-3.5 sm:px-4 py-1 sm:py-1.5 bg-emerald-950/60 border border-emerald-400 text-emerald-300 font-display text-xs sm:text-sm 2xl:text-base tracking-widest uppercase">
+        {$t.finishedRatio
+            ? $t.finishedRatio.replace('{done}', finishedCount).replace('{total}', playerCount)
+            : `${finishedCount} / ${playerCount} FINISHED`}
+    </span>
 </div>
 
-<main class="flex-1 flex items-center justify-center min-h-0 py-0.5 overflow-hidden">
-    <div class="w-full max-h-full overflow-y-auto pr-1">
-        <div class="grid {$gamePlayers.length > 8 ? 'gap-1.5 sm:gap-2' : 'gap-2.5 sm:gap-3'} {$gamePlayers.length <= 4 ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 max-w-6xl' : ($gamePlayers.length <= 6 ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-6xl' : ($gamePlayers.length <= 8 ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 max-w-6xl' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 max-w-7xl'))} mx-auto">
-            {#each $gamePlayers as p (p.id)}
-                {@const isConnected = !!p.socketId}
-                {@const isQuestionPhase = $gamePhase === 'question'}
-                {@const totalItems = isQuestionPhase 
-                    ? ($gameState.playerAnswers?.[p.id]?.questions?.length || 3) 
-                    : ($gameState.battleSchedule?.filter(b => b.competitors?.includes(p.id))?.length || 1)}
-                {@const answeredItems = isQuestionPhase 
-                    ? ($gameState.playerAnswers?.[p.id]?.questions?.filter(q => !!q.answer)?.length || 0) 
-                    : ($gameState.battleSchedule?.filter(b => b.competitors?.includes(p.id) && !!b.answers?.[p.id])?.length || 0)}
-                {@const isComplete = isConnected && answeredItems >= totalItems && totalItems > 0}
-                {@const isWorking = isConnected && answeredItems > 0 && !isComplete}
-                {@const progressPct = totalItems > 0 ? Math.round((answeredItems / totalItems) * 100) : 0}
+<main class="relative z-10 lg:flex-1 lg:min-h-0 w-full lg:overflow-hidden flex items-center justify-center py-0.5">
+    <div class="w-full h-full content-center {playerCount <= 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2' : (playerCount <= 6 ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3' : (playerCount <= 8 ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'))} grid {playerCount > 8 ? 'gap-2 sm:gap-2.5 2xl:gap-4' : 'gap-2.5 sm:gap-3.5 2xl:gap-5'}">
+        {#each $gamePlayers as p (p.id)}
+            {@const isConnected = !!p.socketId}
+            {@const isAway = !isConnected && !!p.isAway}
+            {@const rank = rankByPlayerId[p.id] || 1}
+            {@const totalItems = isQuestion
+                ? ($gameState.playerAnswers?.[p.id]?.questions?.length || 3)
+                : ($gameState.battleSchedule?.filter(b => b.competitors?.includes(p.id))?.length || 2)}
+            {@const answeredItems = isQuestion
+                ? ($gameState.playerAnswers?.[p.id]?.questions?.filter(q => !!q.answer)?.length || 0)
+                : ($gameState.battleSchedule?.filter(b => b.competitors?.includes(p.id) && !!b.answers?.[p.id])?.length || 0)}
+            {@const isComplete = answeredItems >= totalItems && totalItems > 0 && (isConnected || isAway)}
+            {@const isWorking = isConnected && answeredItems > 0 && !isComplete}
+            {@const cardNeon = isComplete ? 'var(--color-accent)' : (!isConnected && !isAway ? 'var(--color-danger)' : (isAway ? 'var(--color-warning)' : (isWorking ? 'var(--color-primary)' : '#332e59')))}
+            {@const statusBoxClass = isComplete
+                ? 'bg-emerald-950/50 border-emerald-400 text-emerald-300'
+                : (!isConnected && !isAway
+                    ? 'bg-rose-950/60 border-danger text-rose-300'
+                    : (isAway
+                        ? 'bg-amber-950/50 border-amber-400 text-amber-300'
+                        : (isWorking
+                            ? 'bg-cyan-950/50 border-cyan-400 text-cyan-300'
+                            : 'bg-amber-950/35 border-amber-500/70 text-amber-300')))}
 
-                <div class="panel-arcade {$gamePlayers.length <= 6 ? 'p-4 sm:p-5 rounded-2xl' : ($gamePlayers.length <= 8 ? 'p-2.5 sm:p-3 rounded-2xl' : 'p-1.5 sm:p-2 rounded-xl')} flex flex-col justify-between border-neutral-700/90 bg-neutral-950/90 shadow-xl transition-all duration-300">
-                    <div class="flex items-center gap-2 sm:gap-2.5 {$gamePlayers.length > 8 ? 'mb-0.5' : 'mb-1'}">
-                        <div class="{$gamePlayers.length <= 6 ? 'w-14 h-14 sm:w-16 sm:h-16' : ($gamePlayers.length <= 8 ? 'w-10 h-10 sm:w-12 sm:h-12' : 'w-8 h-8 sm:w-9 sm:h-9')} flex-shrink-0">
-                            <PixelAvatar avatar={p.avatar} />
-                        </div>
-                        <div class="min-w-0 flex-1 text-left">
-                            <div class="flex items-center gap-1.5">
-                                <p class="font-black {$gamePlayers.length <= 6 ? 'text-base sm:text-lg lg:text-xl' : ($gamePlayers.length <= 8 ? 'text-sm sm:text-base' : 'text-xs sm:text-sm')} text-slate-100 line-clamp-1 break-words">{p.name}</p>
-                                {#if p.isHost}
-                                    <span class="px-1.5 py-0.5 bg-warning text-black text-[10px] font-display rounded font-black flex-shrink-0">{$t.host || 'HOST'}</span>
-                                {/if}
-                            </div>
-                            <p class="text-primary font-mono font-black {$gamePlayers.length <= 6 ? 'text-lg sm:text-xl' : ($gamePlayers.length <= 8 ? 'text-base sm:text-lg' : 'text-sm sm:text-base')} leading-tight">
-                                {Math.round(animatedScores[p.id] || p.score)} <span class="text-xs text-slate-300 font-display">{$t.pts || 'PTS'}</span>
-                            </p>
-                        </div>
+            <div
+                class="panel-arcade {playerCount <= 6 ? 'p-3.5 sm:p-5 2xl:p-7 gap-3 2xl:gap-5 lg:min-h-[180px] 2xl:min-h-[250px]' : (playerCount <= 8 ? 'p-2.5 2xl:p-4 gap-2 2xl:gap-3' : 'p-2.5 sm:p-3.5 2xl:p-5 gap-2 2xl:gap-3 lg:min-h-[125px] xl:min-h-[145px] 2xl:min-h-[195px]')} flex flex-col justify-center transition-colors min-h-0"
+                style="--neon-color: {cardNeon};"
+            >
+                <!-- Header: Avatar + Name + Crown + Score + Rank -->
+                <div class="flex items-center gap-2.5 2xl:gap-3.5 {playerCount > 8 ? 'mb-1.5' : 'mb-2'}">
+                    <div class="{playerCount <= 6 ? 'w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 2xl:w-20 2xl:h-20' : (playerCount <= 8 ? 'w-10 h-10 2xl:w-14 2xl:h-14' : 'w-9 h-9 sm:w-10 sm:h-10 xl:w-12 xl:h-12 2xl:w-16 2xl:h-16')} flex-shrink-0">
+                        <PixelAvatar avatar={p.avatar} />
                     </div>
-
-                    <div class="w-full mt-auto {$gamePlayers.length > 8 ? 'pt-0.5' : 'pt-1'}">
-                        <div class="flex items-center justify-between {$gamePlayers.length > 8 ? 'text-[11px] sm:text-xs mb-0.5' : 'text-xs sm:text-sm mb-1'} font-display font-bold">
-                            {#if !isConnected}
-                                <span class="text-danger font-bold">{$t.disconnected || 'OFFLINE'}</span>
-                            {:else if isComplete}
-                                <span class="text-emerald-400 flex items-center gap-1 font-black">
-                                    ✓ {$t.ready || 'READY!'}
-                                </span>
-                            {:else if isWorking}
-                                <span class="text-cyan-300 flex items-center gap-1 font-bold">
-                                    ✍️ {$t.answering || 'Assembling...'}
-                                </span>
-                            {:else}
-                                <span class="text-amber-300 flex items-center gap-1">
-                                    💭 {$t.thinking || 'Thinking...'}
-                                </span>
+                    <div class="min-w-0 flex-1 text-left">
+                        <div class="flex items-center gap-1.5">
+                            <p class="font-display font-black {playerCount <= 6 ? 'text-base sm:text-xl 2xl:text-2xl' : (playerCount <= 8 ? 'text-sm sm:text-base 2xl:text-xl' : 'text-xs sm:text-sm xl:text-base 2xl:text-xl')} text-white line-clamp-1 break-words">{p.name}</p>
+                            {#if rank === 1 && (p.score || 0) > 0}
+                                <ArcadeIcon name="crown" className="w-4 h-4 2xl:w-5 2xl:h-5 text-amber-300 flex-shrink-0" />
                             {/if}
-                            <span class="font-mono text-slate-200 font-bold">{answeredItems}/{totalItems}</span>
+                            {#if p.isHost}
+                                <span class="cut-sm px-1.5 py-0.5 2xl:px-2 bg-amber-400 text-black text-[9px] 2xl:text-[11px] font-display uppercase flex-shrink-0">{$t.host || 'HOST'}</span>
+                            {/if}
                         </div>
-
-                        <div class="w-full {$gamePlayers.length <= 6 ? 'h-2.5 sm:h-3' : 'h-2 sm:h-2.5'} bg-neutral-900 rounded-full overflow-hidden border border-neutral-700/60">
-                            <div 
-                                class="h-full transition-all duration-500 {
-                                    !isConnected ? 'bg-red-500' : (isComplete ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]' : (isWorking ? 'bg-cyan-400' : 'bg-amber-400'))
-                                }" 
-                                style="width: {isConnected ? progressPct : 0}%;"
-                            ></div>
+                        <div class="flex items-center gap-2 mt-0.5 2xl:mt-1">
+                            <span class="cut-sm px-2 py-0.5 2xl:px-2.5 2xl:py-1 bg-[#0a0914] border border-cyan-500/50 text-cyan-300 font-mono font-bold {playerCount > 8 ? 'text-[11px] 2xl:text-sm' : 'text-xs 2xl:text-sm'} leading-none">
+                                {Math.round(animatedScores[p.id] || p.score)} {$t.pts || 'PTS'}
+                            </span>
+                            <span class="font-mono {playerCount > 8 ? 'text-[10px] 2xl:text-sm' : 'text-xs 2xl:text-sm'} text-slate-400 font-bold">#{rank}</span>
                         </div>
                     </div>
                 </div>
-            {/each}
-        </div>
+
+                <!-- Framed Status Bar -->
+                <div class="cut-sm border px-2.5 2xl:px-3.5 {playerCount > 8 ? 'py-1.5 2xl:py-2 text-xs 2xl:text-sm' : 'py-1.5 2xl:py-2.5 text-xs sm:text-sm 2xl:text-base'} font-display uppercase tracking-wide flex items-center justify-between gap-2 {statusBoxClass}">
+                    {#if isComplete}
+                        <span class="inline-flex items-center gap-1 truncate">
+                            <ArcadeIcon name="check" className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span class="truncate">{$t.lockedIn || 'LOCKED IN'}</span>
+                        </span>
+                    {:else if !isConnected && isAway}
+                        <span class="inline-flex items-center gap-1 truncate">
+                            <ArcadeIcon name="clock" className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span class="truncate">{$t.awayStatus || 'AWAY'}</span>
+                        </span>
+                    {:else if !isConnected}
+                        <span class="truncate">{$t.disconnected || 'OFFLINE'}</span>
+                    {:else if isWorking}
+                        <span class="inline-flex items-center gap-1 truncate">
+                            <ArcadeIcon name="edit" className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span class="truncate">{$t.answering || 'ASSEMBLING...'}</span>
+                        </span>
+                    {:else}
+                        <span class="inline-flex items-center gap-1 truncate">
+                            <ArcadeIcon name="clock" className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span class="truncate">{$t.thinking || 'THINKING...'}</span>
+                        </span>
+                    {/if}
+                    <span class="font-mono font-bold flex-shrink-0">{answeredItems}/{totalItems}</span>
+                </div>
+
+                <!-- Step Bricks Footer -->
+                <div class="w-full {playerCount > 8 ? 'mt-0.5' : 'mt-1'} flex-shrink-0">
+                    {#if playerCount <= 8}
+                        <div class="flex items-center justify-between text-[10px] 2xl:text-xs font-display tracking-wider uppercase mb-1 2xl:mb-1.5">
+                            <span class="text-slate-400">{$t.promptsProgress || 'PROMPTS PROGRESS'}</span>
+                            <span class="{isComplete ? 'text-emerald-400' : (isWorking ? 'text-cyan-300' : 'text-amber-300')}">
+                                {isComplete ? ($t.allSent || 'ALL SENT') : ($t.inProgress || 'IN PROGRESS')}
+                            </span>
+                        </div>
+                    {/if}
+                    <div class="grid gap-1 2xl:gap-1.5" style="grid-template-columns: repeat({Math.max(1, totalItems)}, minmax(0, 1fr));">
+                        {#each Array(Math.max(1, totalItems)) as _, stepIdx}
+                            {@const filled = stepIdx < answeredItems}
+                            <div class="{playerCount > 8 ? 'h-3 min-h-[11px] 2xl:h-4' : (playerCount <= 6 ? 'h-3.5 min-h-[14px] lg:h-4 2xl:h-5' : 'h-3 min-h-[12px] 2xl:h-4')} cut-sm border {filled
+                                ? (isComplete ? 'bg-emerald-400 border-emerald-200' : 'bg-cyan-400 border-cyan-200')
+                                : (!isConnected && !isAway ? 'bg-rose-950 border-danger/60' : 'bg-[#121024] border-[#433c78]')
+                            } transition-colors duration-300"></div>
+                        {/each}
+                    </div>
+                </div>
+            </div>
+        {/each}
     </div>
 </main>

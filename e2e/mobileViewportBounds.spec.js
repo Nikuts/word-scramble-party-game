@@ -1,8 +1,13 @@
 // e2e/mobileViewportBounds.spec.js
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import os from 'os';
+import fs from 'fs';
 
-const ARTIFACT_DIR = 'C:/Users/nikku/.gemini/antigravity/brain/384590c5-3b22-4f96-89e2-7e50f2b5b4c3';
+const ARTIFACT_DIR = process.env.PLAYWRIGHT_SCREENSHOT_DIR || path.join(os.tmpdir(), 'word-scramble-screenshots');
+if (!fs.existsSync(ARTIFACT_DIR)) {
+    fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+}
 
 const MOBILE_VIEWPORTS = [
     { name: 'iPhone 13/14 (390x844)', width: 390, height: 844 },

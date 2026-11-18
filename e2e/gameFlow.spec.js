@@ -41,7 +41,7 @@ test.describe('Complete 3-Player Game Flow', () => {
         ];
 
         // Verify all 3 connected on Host
-        await expect(hostPage.locator('text=Players (3)')).toBeVisible();
+        await expect(hostPage.locator('text=/(?:FIGHTERS|Players|БІЙЦІ) \\(3/i')).toBeVisible();
 
         // 3. Set Theme and Start Game from Host Player (Alice)
         const customThemeInput = p1Page.locator('input[placeholder*="Custom Theme"], input[placeholder*="Власна тема"]');

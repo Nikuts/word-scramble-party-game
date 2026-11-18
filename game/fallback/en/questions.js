@@ -38,7 +38,7 @@ export const EN_HARVESTER_QUESTIONS = [
         "What happens when you accidentally microwave a tin foil burrito for 10 minutes?"
     ],
     [
-        "What is the most dramatic way to dramatically quit a boring office job?",
+        "What is the most dramatic way to quit a boring office job?",
         "What would you say if you walked in and found your refrigerator talking to you?",
         "What is the worst gift you could give someone at their housewarming party?"
     ],

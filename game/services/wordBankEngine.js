@@ -5,8 +5,8 @@ import { shuffleArray, tokenizeText, getChunksFromText } from '../helpers.js';
 
 export const ESSENTIAL_CONNECTORS = {
     en: ['and', 'but', 'because', 'with', 'never', 'always', 'secretly', 'very', 'without', 'our', 'their', 'is', 'was', 'only', 'or', 'so', 'just', 'even', 'suddenly', 'if', 'this'],
-    ua: ['і', 'та', 'але', 'бо', 'щоб', 'з', 'або', 'якщо', 'ніколи', 'завжди', 'дуже', 'таємно', 'просто', 'раптом', 'навіть', 'без', 'наш', 'їхній', 'це', 'було', 'треба', 'можна', 'ось', 'тільки'],
-    uk: ['і', 'та', 'але', 'бо', 'щоб', 'з', 'або', 'якщо', 'ніколи', 'завжди', 'дуже', 'таємно', 'просто', 'раптом', 'навіть', 'без', 'наш', 'їхній', 'це', 'було', 'треба', 'можна', 'ось', 'тільки']
+    ua: ['і', 'та', 'але', 'бо', 'щоб', 'з', 'або', 'якщо', 'не', 'як', 'що', 'вже', 'ще', 'все', 'коли', 'хто', 'ніколи', 'завжди', 'дуже', 'таємно', 'просто', 'раптом', 'навіть', 'без', 'наш', 'їхній', 'це', 'було', 'треба', 'можна', 'ось', 'тільки', 'наче', 'ніби', 'тому', 'зате'],
+    uk: ['і', 'та', 'але', 'бо', 'щоб', 'з', 'або', 'якщо', 'не', 'як', 'що', 'вже', 'ще', 'все', 'коли', 'хто', 'ніколи', 'завжди', 'дуже', 'таємно', 'просто', 'раптом', 'навіть', 'без', 'наш', 'їхній', 'це', 'було', 'треба', 'можна', 'ось', 'тільки', 'наче', 'ніби', 'тому', 'зате']
 };
 
 export const STOPWORDS = {
@@ -308,14 +308,17 @@ export function generateWordBanksDirectly({
                 tokens: [],
                 connectorTokens: [],
                 distinctWords: new Set(),
+                contentWords: new Set(),
                 authors: new Set()
             });
         });
     });
 
     const inRoundSeenTextsByPlayer = new Map();
+    const inRoundSeenContentWordsByPlayer = new Map();
     allPlayerIds.forEach(pid => {
         inRoundSeenTextsByPlayer.set(pid, new Set());
+        inRoundSeenContentWordsByPlayer.set(pid, new Set());
     });
 
     const addClauseToSlot = (slot, chunk, tier) => {
@@ -327,8 +330,19 @@ export function generateWordBanksDirectly({
             }
             inRoundSeenTextsByPlayer.get(slot.playerId).add(chunk.chunkText.trim().toLowerCase());
         }
+        const contentWords = new Set();
         chunk.words.forEach(w => {
-            slot.distinctWords.add(w.toLowerCase());
+            const lower = w.toLowerCase();
+            slot.distinctWords.add(lower);
+            if (!isStopwordOrConnector(lower, language)) {
+                contentWords.add(lower);
+                if (!slot.contentWords) slot.contentWords = new Set();
+                slot.contentWords.add(lower);
+                if (!inRoundSeenContentWordsByPlayer.has(slot.playerId)) {
+                    inRoundSeenContentWordsByPlayer.set(slot.playerId, new Set());
+                }
+                inRoundSeenContentWordsByPlayer.get(slot.playerId).add(lower);
+            }
             slot.tokens.push({
                 text: w,
                 authorId: chunk.authorId,
@@ -355,11 +369,26 @@ export function generateWordBanksDirectly({
 
     const usedBundleIdsThisRound = new Set();
 
-    // 5. Tier 1: New clauses (not authored by player, never shown to player, never used in any past battle, no fan-out across slots)
-    const tier1Pool = [...currentRoundChunks, ...pastRoundChunks];
+    // 5. Tier 1: New clauses (current round + never-before-shown past clauses, not authored by player, never used in any battle)
+    const tier1Pool = [...currentRoundChunks, ...pastRoundChunks.filter(c => (shownFrequency.get(c.bundleId) || 0) === 0)];
     tier1Pool.forEach(chunk => {
         if (usedBundleIdsThisRound.has(chunk.bundleId)) return;
         if (isChunkUsedInAnyBattle(chunk)) return;
+
+        const chunkContentWords = chunk.words
+            .map(w => w.toLowerCase())
+            .filter(w => !isStopwordOrConnector(w, language));
+        const getSlotOverlapStats = (slot) => {
+            if (chunkContentWords.length === 0) return { slotOverlap: 0, roundOverlap: 0 };
+            const seenRound = inRoundSeenContentWordsByPlayer.get(slot.playerId);
+            let slotOverlap = 0;
+            let roundOverlap = 0;
+            for (const w of chunkContentWords) {
+                if (slot.contentWords?.has(w)) slotOverlap++;
+                if (seenRound?.has(w)) roundOverlap++;
+            }
+            return { slotOverlap, roundOverlap };
+        };
 
         const eligibleSlots = slots
             .filter(slot => {
@@ -368,17 +397,42 @@ export function generateWordBanksDirectly({
                 if (seen && (seen.has(chunk.bundleId) || seen.has(chunk.chunkText))) return false;
                 const normText = chunk.chunkText ? chunk.chunkText.trim().toLowerCase() : '';
                 if (normText && inRoundSeenTextsByPlayer.get(slot.playerId)?.has(normText)) return false;
+                const overlap = getSlotOverlapStats(slot);
+                // Avoid stacking heavily overlapping multi-word clauses into an already-seeded bank when chunks > slots
+                if (chunkContentWords.length >= 2 && overlap.slotOverlap >= 2 && slot.chunks.length >= 1 && slot.distinctWords.size >= 5) {
+                    return false;
+                }
                 return true;
             })
             .sort((a, b) => {
-                // Primary: keep distinct word counts tightly balanced across all slots
-                const diff = a.distinctWords.size - b.distinctWords.size;
-                if (diff !== 0) return diff;
+                // Prevent near-identical multi-word clauses from stacking inside the same bank
+                const overlapA = getSlotOverlapStats(a);
+                const overlapB = getSlotOverlapStats(b);
+                const heavyDupA = overlapA.slotOverlap >= 2 ? 1 : 0;
+                const heavyDupB = overlapB.slotOverlap >= 2 ? 1 : 0;
+                if (heavyDupA !== heavyDupB) return heavyDupA - heavyDupB;
 
-                // Secondary: prefer slot that does not yet have words from this author (Rainbow bonus support)
+                const roundDupA = overlapA.roundOverlap >= 2 ? 1 : 0;
+                const roundDupB = overlapB.roundOverlap >= 2 ? 1 : 0;
+                if (roundDupA !== roundDupB) return roundDupA - roundDupB;
+
+                // Seed every empty slot before stacking second chunks
+                const aEmpty = a.chunks.length === 0 ? 0 : 1;
+                const bEmpty = b.chunks.length === 0 ? 0 : 1;
+                if (aEmpty !== bEmpty) return aEmpty - bEmpty;
+
+                // Avoid assigning multiple chunks from the same author to the same slot
                 const aHasAuthor = chunk.authorId && a.authors.has(chunk.authorId) ? 1 : 0;
                 const bHasAuthor = chunk.authorId && b.authors.has(chunk.authorId) ? 1 : 0;
                 if (aHasAuthor !== bHasAuthor) return aHasAuthor - bHasAuthor;
+
+                if (overlapA.slotOverlap !== overlapB.slotOverlap) {
+                    return overlapA.slotOverlap - overlapB.slotOverlap;
+                }
+
+                // Primary balance: keep distinct word counts tightly balanced across all slots
+                const diff = a.distinctWords.size - b.distinctWords.size;
+                if (diff !== 0) return diff;
 
                 return a.chunks.length - b.chunks.length;
             });
@@ -396,14 +450,10 @@ export function generateWordBanksDirectly({
         : minBankSize;
     const softTarget = Math.min(maxBankSize, Math.max(minBankSize, Math.round(avgDistinctAfterTier1)));
 
-    // 7. Tier 2: Shown in an earlier round, but unused in any past battle
-    const tier2Candidates = allAnswerChunks
-        .filter(chunk => !usedBundleIdsThisRound.has(chunk.bundleId) && !isChunkUsedInAnyBattle(chunk))
-        .sort((a, b) => {
-            const freqDiff = (shownFrequency.get(a.bundleId) || 0) - (shownFrequency.get(b.bundleId) || 0);
-            if (freqDiff !== 0) return freqDiff;
-            return (b.isCurrentRound ? 1 : 0) - (a.isCurrentRound ? 1 : 0);
-        });
+    // 7. Tier 2: Shown in an earlier round to another player, unused in any battle, dealt strictly to players who never saw it
+    const tier2Candidates = pastRoundChunks
+        .filter(chunk => (shownFrequency.get(chunk.bundleId) || 0) > 0 && !usedBundleIdsThisRound.has(chunk.bundleId) && !isChunkUsedInAnyBattle(chunk))
+        .sort((a, b) => (shownFrequency.get(a.bundleId) || 0) - (shownFrequency.get(b.bundleId) || 0));
 
     tier2Candidates.forEach(chunk => {
         if (usedBundleIdsThisRound.has(chunk.bundleId)) return;
@@ -420,7 +470,7 @@ export function generateWordBanksDirectly({
                 if (slot.distinctWords.size >= softTarget) return false;
                 if (slot.playerId === chunk.authorId) return false;
                 const seen = initialSeenByPlayer.get(slot.playerId);
-                if (!seen || (!seen.has(chunk.bundleId) && !seen.has(chunk.chunkText))) return false;
+                if (seen && (seen.has(chunk.bundleId) || seen.has(chunk.chunkText))) return false;
 
                 // Exclude if player already received identical clause text in another battle this round
                 const normText = chunk.chunkText ? chunk.chunkText.trim().toLowerCase() : '';

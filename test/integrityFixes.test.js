@@ -489,4 +489,85 @@ describe('Step 1: Integrity Fixes (B1-B4, B7-B11, R1, R2)', () => {
             expect(sups.shakespeare.count).toBe(4);
         });
     });
+
+    describe('Step 1 Audit Fixes: Stale Async Guards & Timed-Out Vote Rejection', () => {
+        it('rejects votes cast for a timed-out competitor placeholder answer', async () => {
+            const { handleVote } = await import('../game/handlers/gameplayHandlers.js');
+            const g = {
+                id: 'VTMO',
+                phase: 'battle_voting',
+                currentVotingBattleIndex: 0,
+                players: [
+                    { id: 'p1', socketId: 's1', score: 0 },
+                    { id: 'p2', socketId: 's2', score: 0 },
+                    { id: 'p3', socketId: 's3', score: 0 }
+                ],
+                battleSchedule: [{
+                    id: 'b-0',
+                    competitors: ['p1', 'p2'],
+                    optionOrder: ['p1', 'p2'],
+                    answers: { p1: 'Valid answer', p2: '::TIMEOUT::' },
+                    wordBanks: { p1: [], p2: [] },
+                    votes: {}
+                }]
+            };
+            manager.addGame('VTMO', g);
+
+            handleVote(mockIo, { id: 's3', rooms: new Set(['VTMO']) }, {
+                gameId: 'VTMO',
+                playerId: 'p3',
+                battleId: 'b-0',
+                optionId: 'opt_1'
+            });
+
+            expect(g.battleSchedule[0].votes['p3']).toBeUndefined();
+
+            handleVote(mockIo, { id: 's3', rooms: new Set(['VTMO']) }, {
+                gameId: 'VTMO',
+                playerId: 'p3',
+                battleId: 'b-0',
+                optionId: 'opt_0'
+            });
+
+            expect(g.battleSchedule[0].votes['p3']).toBe('p1');
+        });
+
+        it('getFallbackRoundData keeps multi-word phrases intact instead of flattening to single words', async () => {
+            const { getFallbackRoundData } = await import('../game/services/roundService.js');
+            const round = getFallbackRoundData('en', []);
+            expect(round.fallbackWords.some(phrase => phrase.includes(' '))).toBe(true);
+        });
+
+        it('startNextRound aborts safely when game is reset/deleted before round generation finishes', async () => {
+            const { startNextRound } = await import('../game/services/roundService.js');
+            const g = {
+                id: 'STLE',
+                phase: 'lobby',
+                language: 'en',
+                currentRound: 0,
+                gameInstanceId: 1,
+                geminiApiErrorCount: 5,
+                players: [{ id: 'p1', name: 'A', socketId: 's1' }],
+                usedQuestions: [],
+                usedBattlePrompts: [],
+                usedFallbackThemes: [],
+                battleHistory: [],
+                answerHistory: [],
+                prefetchedRoundData: {
+                    roundIndex: 1,
+                    gameInstanceId: 1,
+                    data: { playerQuestions: [['Q1']], battlePrompts: ['B1'], fallbackWords: ['w1'] }
+                },
+                prefetchedRoundPromise: Promise.resolve().then(() => {
+                    // Simulate Play Again or deletion mid-await
+                    g.gameInstanceId = 2;
+                    g.phase = 'lobby';
+                    return { playerQuestions: [['Q1']], battlePrompts: ['B1'], fallbackWords: ['w1'] };
+                })
+            };
+            manager.addGame('STLE', g);
+            await startNextRound(mockIo, g);
+            expect(g.phase).toBe('lobby');
+        });
+    });
 });

@@ -7,7 +7,7 @@ Rules for generated themes:
 - Must be instantly recognizable, humorous, and evoke vivid imagery for casual players.
 - Between 2 and 4 words long.
 - Capitalize Each Main Word.
-- Distinct Archetypes: Include 3 distinct archetypes:
+- Distinct Archetypes: Include 3 distinct archetypes (invent completely original concepts — NEVER reuse or slightly rephrase any parenthetical examples below):
   1. A concrete chaotic location or workplace (e.g. "Haunted 24-Hour Diner", "Budget Airline Flight").
   2. A bizarre profession or situation (e.g. "Worst Wedding DJ", "Rogue Kindergarten Teacher").
   3. A high-concept genre parody (e.g. "Low-Budget Superhero Team", "Medieval Fast Food Joint").

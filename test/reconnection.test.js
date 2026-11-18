@@ -70,7 +70,9 @@ describe('Player & Host Disconnect / Reconnect Resiliency', () => {
 
             const bob = game.players.find(p => p.id === 'p2');
             expect(bob.socketId).toBeNull();
+            expect(bob.isAway).toBe(true);
             expect(game.playerReconnectionTimers['p2']).toBeDefined();
+            expect(game.playerAwayTimers?.['p2']).toBeDefined();
         });
 
         it('starts host reassignment timer if the disconnecting player is the lobby host', () => {
@@ -108,6 +110,7 @@ describe('Player & Host Disconnect / Reconnect Resiliency', () => {
 
             const bob = game.players.find(p => p.id === 'p2');
             expect(bob.socketId).toBe('new-socket-bob');
+            expect(bob.isAway).toBe(false);
             expect(newBobSocket.join).toHaveBeenCalledWith('RECO');
             expect(newBobSocket.emit).toHaveBeenCalledWith(
                 'player-reconnected',
@@ -184,6 +187,17 @@ describe('Player & Host Disconnect / Reconnect Resiliency', () => {
             expect(game.players).toHaveLength(2);
             // Bob (first remaining player) should now be host
             expect(game.players.find(p => p.id === 'p2').isHost).toBe(true);
+            // Removed player answers and partial drafts should be cleaned up
+            expect(game.playerAnswers['p1']).toBeUndefined();
+        });
+
+        it('deletes the game when the last player leaves even without a hostDisplaySocketId', () => {
+            game.hostDisplaySocketId = null;
+            handleLeaveGame(mockIo, createMockSocket('socket-alice'), { gameId: 'RECO', playerId: 'p1' });
+            handleLeaveGame(mockIo, createMockSocket('socket-bob'), { gameId: 'RECO', playerId: 'p2' });
+            handleLeaveGame(mockIo, createMockSocket('socket-charlie'), { gameId: 'RECO', playerId: 'p3' });
+
+            expect(manager.getGame('RECO')).toBeUndefined();
         });
     });
 });
