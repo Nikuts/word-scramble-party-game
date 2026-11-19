@@ -49,7 +49,7 @@ export async function generateInitialThemes(io, game) {
     try {
         let generatedThemes = null;
         if (game.geminiApiErrorCount < 3) {
-            generatedThemes = await generateThemes(game.is18PlusMode, game.sillyMode, Array.from(usedThemesSet));
+            generatedThemes = await generateThemes(game.is18PlusMode, game.sillyMode, Array.from(usedThemesSet), game.language);
             if (!isStillCurrent()) return;
             if (generatedThemes) {
                 game.geminiApiErrorCount = 0;
@@ -57,7 +57,9 @@ export async function generateInitialThemes(io, game) {
         }
         
         if (!isStillCurrent()) return;
-        game.preGeneratedThemes = generatedThemes || fallbackThemes;
+        game.preGeneratedThemes = generatedThemes
+            ? { ...fallbackThemes, ...generatedThemes }
+            : fallbackThemes;
         if (!generatedThemes) {
             game.geminiApiErrorCount++;
         }

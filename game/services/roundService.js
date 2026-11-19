@@ -1,4 +1,4 @@
-import { generateRoundData, generateFinalRoundData } from '../../geminiService.js';
+import { generateRoundData, generateFinalRoundData, getBattleCountForPlayers } from '../../geminiService.js';
 import * as helpers from '../helpers.js';
 import * as manager from '../manager.js';
 import * as timerService from './timerService.js';
@@ -51,6 +51,7 @@ export function prefetchNextRoundData(game) {
         ...(game.preGeneratedBattlePrompts || []).slice(-12)
     ];
 
+    const isNextFinalRound = nextRoundIndex === QUESTIONS_PER_ROUND.length;
     const roundPromise = (async () => {
         try {
             const data = await generateRoundData(
@@ -60,7 +61,8 @@ export function prefetchNextRoundData(game) {
                 numQuestionsPerPlayer,
                 game.sillyMode,
                 game.is18PlusMode,
-                recentAvoidPrompts
+                recentAvoidPrompts,
+                isNextFinalRound ? { numBattlePrompts: 0 } : {}
             );
             if (data && (game.gameInstanceId || 1) === expectedInstanceId && game.phase !== 'lobby' && game.theme === expectedTheme) {
                 game.prefetchedRoundData = { roundIndex: nextRoundIndex, gameInstanceId: expectedInstanceId, data };
@@ -79,7 +81,7 @@ export function prefetchNextRoundData(game) {
     game.prefetchedRoundPromise = roundPromise;
 
     // If next round is final round, also prefetch final round movie battle prompts in background!
-    if (nextRoundIndex === QUESTIONS_PER_ROUND.length && !game.prefetchedFinalRoundPrompts && !game.prefetchedFinalRoundPromise) {
+    if (isNextFinalRound && !game.prefetchedFinalRoundPrompts && !game.prefetchedFinalRoundPromise) {
         const finalPromise = (async () => {
             try {
                 const { generateBattlePairings } = await import('./battleService.js');
@@ -89,7 +91,14 @@ export function prefetchNextRoundData(game) {
                     game.pairHistory || null
                 );
                 const numFinalPromptsNeeded = battleGroups.length || numPlayers;
-                const finalPrompts = await generateFinalRoundData(expectedTheme, game.language, numFinalPromptsNeeded, game.is18PlusMode);
+                const finalPrompts = await generateFinalRoundData(
+                    expectedTheme,
+                    game.language,
+                    numFinalPromptsNeeded,
+                    game.is18PlusMode,
+                    game.sillyMode,
+                    (game.usedFinalPrompts || []).slice(-12)
+                );
                 if (finalPrompts && (game.gameInstanceId || 1) === expectedInstanceId && game.phase !== 'lobby' && game.theme === expectedTheme) {
                     game.prefetchedFinalRoundPrompts = finalPrompts;
                     console.log(`[Game ${game.id}] ✅ Pre-fetch completed for Final Round Movie Prompts`);
@@ -186,6 +195,7 @@ export async function startNextRound(io, game) {
                 ...(game.usedQuestions || []).slice(-12),
                 ...(game.usedBattlePrompts || []).slice(-10)
             ];
+            const isCurrentFinalRound = game.currentRound === QUESTIONS_PER_ROUND.length;
             // generateRoundData already traverses candidate models & backoff internally
             try {
                 const data = await generateRoundData(
@@ -195,7 +205,8 @@ export async function startNextRound(io, game) {
                     numQuestionsPerPlayer,
                     game.sillyMode,
                     game.is18PlusMode,
-                    recentAvoidPrompts
+                    recentAvoidPrompts,
+                    isCurrentFinalRound ? { numBattlePrompts: 0 } : {}
                 );
                 if (data) {
                     roundData = data;
@@ -237,16 +248,20 @@ export async function startNextRound(io, game) {
     const usedQuestionsSet = new Set(game.usedQuestions);
     const usedBattlePromptsSet = new Set(game.usedBattlePrompts);
 
-    // Filter battle prompts against previously used prompts across rounds/games
+    // Filter battle prompts against previously used prompts across rounds/games (Round 3 uses Final Movie Prompts)
+    const isFinalRound = game.currentRound === QUESTIONS_PER_ROUND.length;
+    const neededBattlePrompts = isFinalRound ? 0 : getBattleCountForPlayers(game.players.length);
     const rawBattlePrompts = Array.isArray(roundData.battlePrompts) ? roundData.battlePrompts : [];
     const freshBattlePrompts = rawBattlePrompts.filter(bp => bp && !usedBattlePromptsSet.has(bp));
-    if (freshBattlePrompts.length >= game.players.length) {
+    if (isFinalRound) {
+        game.preGeneratedBattlePrompts = [];
+    } else if (freshBattlePrompts.length >= neededBattlePrompts) {
         game.preGeneratedBattlePrompts = freshBattlePrompts;
     } else {
         // Keep all on-theme generated prompts first before falling back to off-theme static packs
         const remainingThemePrompts = rawBattlePrompts.filter(bp => bp && !freshBattlePrompts.includes(bp));
         const themePool = [...freshBattlePrompts, ...remainingThemePrompts];
-        if (themePool.length >= game.players.length) {
+        if (themePool.length >= neededBattlePrompts) {
             game.preGeneratedBattlePrompts = themePool;
         } else {
             const fallbackSet = FALLBACK_CONTENT[game.language] || FALLBACK_CONTENT.en || [];

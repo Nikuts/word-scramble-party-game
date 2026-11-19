@@ -638,7 +638,14 @@ export async function prepareBattlePhase(io, game) {
             game.prefetchedFinalRoundPrompts = null;
             game.prefetchedFinalRoundPromise = null;
         } else {
-            const finalPrompts = await generateFinalRoundData(game.theme, game.language, numBattles, game.is18PlusMode);
+            const finalPrompts = await generateFinalRoundData(
+                game.theme,
+                game.language,
+                numBattles,
+                game.is18PlusMode,
+                game.sillyMode,
+                (game.usedFinalPrompts || []).slice(-12)
+            );
             if (finalPrompts) {
                 promptsForThisRound = finalPrompts.filter(
                     p => p && !usedFinalSet.has(`${p.genre || ''}:${p.premise || ''}`)
