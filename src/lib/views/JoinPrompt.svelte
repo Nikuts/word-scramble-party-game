@@ -31,7 +31,7 @@
 </script>
 
 <div class="h-screen-safe overflow-y-auto overscroll-contain flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 safe-top safe-bottom">
-    <div class="w-full max-w-md flex flex-col items-center my-auto">
+    <div class="w-full max-w-md lg:max-w-[32rem] 2xl:max-w-[38rem] flex flex-col items-center my-auto">
         <div class="w-full flex justify-start mb-3">
             <button
                 type="button"

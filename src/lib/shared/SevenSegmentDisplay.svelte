@@ -2,6 +2,7 @@
 <script>
     import { t } from '../../stores.js';
     import SevenSegmentDigit from './SevenSegmentDigit.svelte';
+    import HexBadge from './HexBadge.svelte';
 
     export let time = 0;
     export let showLabel = true;
@@ -25,9 +26,21 @@
     {#if showLabel && !hex}
         <p class="font-display text-xs sm:text-sm text-amber-300 mb-1 uppercase tracking-widest">{$t.timeRemaining || 'Time Remaining'}</p>
     {/if}
-    <div class="{hex ? 'cut-hex px-6 py-2 bg-[#070610] border-2' : 'cut-sm px-3 py-1.5 bg-[#070610] border-2 shadow-inner'} flex items-center gap-1.5 sm:gap-2 {isLow ? 'border-danger' : (hex ? 'border-amber-400/90' : 'border-[#332e59]')}">
-        <SevenSegmentDigit digit={digits[0]} {isLow} {height} />
-        <SevenSegmentDigit digit={digits[1]} {isLow} {height} />
-        <SevenSegmentDigit digit={digits[2]} {isLow} {height} />
-    </div>
+    {#if hex}
+        <HexBadge
+            bgClass="bg-[#070610]"
+            borderClass={isLow ? 'text-danger' : 'text-amber-400/90'}
+            className="px-6 sm:px-7 py-2"
+        >
+            <SevenSegmentDigit digit={digits[0]} {isLow} {height} />
+            <SevenSegmentDigit digit={digits[1]} {isLow} {height} />
+            <SevenSegmentDigit digit={digits[2]} {isLow} {height} />
+        </HexBadge>
+    {:else}
+        <div class="cut-sm px-3 py-1.5 bg-[#070610] border-2 shadow-inner flex items-center gap-1.5 sm:gap-2 {isLow ? 'border-danger' : 'border-[#332e59]'}">
+            <SevenSegmentDigit digit={digits[0]} {isLow} {height} />
+            <SevenSegmentDigit digit={digits[1]} {isLow} {height} />
+            <SevenSegmentDigit digit={digits[2]} {isLow} {height} />
+        </div>
+    {/if}
 </div>

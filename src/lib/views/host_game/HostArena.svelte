@@ -25,7 +25,7 @@
 </script>
 
 <!-- Prototype v5 Arena Sub-Header & Full-Space Player Progress Grid -->
-<div class="relative z-10 w-full cut-md bg-[#131126] border-2 border-cyan-400/70 px-4 sm:px-6 py-2 sm:py-2.5 2xl:py-3.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 flex-shrink-0">
+<div class="relative z-10 w-full cut-md host-hud-surface border-2 border-[color:rgba(var(--color-primary-rgb),0.72)] px-4 sm:px-6 py-2 sm:py-2.5 2xl:py-3.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 flex-shrink-0">
     <h1 class="font-display text-sm sm:text-lg lg:text-xl 2xl:text-2xl text-white tracking-wider uppercase m-0">
         {($t.round || 'ROUND').toUpperCase()} {$currentRound || 1} // {isQuestion
             ? ($t.questionPhase || 'ANSWERING QUESTIONS').toUpperCase()
@@ -65,7 +65,7 @@
                             : 'bg-amber-950/35 border-amber-500/70 text-amber-300')))}
 
             <div
-                class="panel-arcade {playerCount <= 6 ? 'p-3.5 sm:p-5 2xl:p-7 gap-3 2xl:gap-5 lg:min-h-[180px] 2xl:min-h-[250px]' : (playerCount <= 8 ? 'p-2.5 2xl:p-4 gap-2 2xl:gap-3' : 'p-2.5 sm:p-3.5 2xl:p-5 gap-2 2xl:gap-3 lg:min-h-[125px] xl:min-h-[145px] 2xl:min-h-[195px]')} flex flex-col justify-center transition-colors min-h-0"
+                class="panel-arcade {playerCount <= 6 ? 'p-3.5 sm:p-5 2xl:p-7 gap-3 2xl:gap-5 lg:min-h-[11.25rem] 2xl:min-h-[15.625rem]' : (playerCount <= 8 ? 'p-2.5 2xl:p-4 gap-2 2xl:gap-3' : 'p-2.5 sm:p-3.5 2xl:p-5 gap-2 2xl:gap-3 lg:min-h-[7.8rem] xl:min-h-[9rem] 2xl:min-h-[12.2rem]')} flex flex-col justify-center transition-colors min-h-0"
                 style="--neon-color: {cardNeon};"
             >
                 <!-- Header: Avatar + Name + Crown + Score + Rank -->

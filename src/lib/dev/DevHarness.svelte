@@ -43,6 +43,9 @@
     let language = urlParams.get('lang') || 'en';
     let viewport = urlParams.get('viewport') || (activeScreen.startsWith('host_') ? 'full' : 'mobile');
     let hideToolbar = urlParams.get('hideToolbar') === '1' || urlParams.get('hideToolbar') === 'true';
+    let isGeneratingThemes = urlParams.get('generatingThemes') === '1';
+    let mockColorTheme = urlParams.get('colorTheme') || 'arcade';
+    let forceCompetitors = parseInt(urlParams.get('competitors')) || 0;
 
     $: activePlayerObj = (playerCount === 3 ? MOCK_PLAYERS_3_LOW_SCORE : (playerCount === 14 ? MOCK_PLAYERS_14 : MOCK_PLAYERS_6))[playerIndex] || (playerCount === 3 ? MOCK_PLAYERS_3_LOW_SCORE[0] : MOCK_PLAYERS_6[0]);
     let tileCount = 35;
@@ -74,7 +77,9 @@
 
         currentPlayer.set(activePlayer);
 
-        const isQuadBattle = playerCount >= 10;
+        const isQuadBattle = forceCompetitors === 4 || (!forceCompetitors && playerCount >= 10);
+        const isDuoBattle = forceCompetitors === 2;
+        const mockCompetitors = isQuadBattle ? ['p1', 'p2', 'p3', 'p4'] : (isDuoBattle ? ['p1', 'p2'] : ['p1', 'p2', 'p3']);
         const singleBattle = {
             id: 'b-1-0',
             prompt: isUkrainian ? 'Що войовнича білка вимагала в обмін на ключі від вашої машини:' : 'What the militant squirrel demanded in exchange for your car keys:',
@@ -82,7 +87,7 @@
                 ? ['Що', 'войовнича', 'білка', 'вимагала', 'в', 'обмін', 'на', 'ключі', 'від', 'вашої', 'машини:'] 
                 : ['What', 'the', 'militant', 'squirrel', 'demanded', 'in', 'exchange', 'for', 'your', 'car', 'keys:']
             ).map((t, i) => ({ id: `pt-${i}`, text: t, isPrompt: true })),
-            competitors: isQuadBattle ? ['p1', 'p2', 'p3', 'p4'] : ['p1', 'p2', 'p3'],
+            competitors: mockCompetitors,
             formatConfig: { type: 'single_line' },
             answers: {
                 p1: isUkrainian ? 'лазерна картопля кричить у подушку' : 'nut ammo for his revolution',
@@ -191,7 +196,7 @@
                 : {
                     ...singleBattle,
                     ...MOCK_ACTIVE_BATTLE_REVEAL,
-                    competitors: isQuadBattle ? ['p1', 'p2', 'p3', 'p4'] : ['p1', 'p2', 'p3'],
+                    competitors: mockCompetitors,
                     answers: {
                         ...MOCK_ACTIVE_BATTLE_REVEAL.answers,
                         ...(isQuadBattle ? { p4: 'unleash turbo ducks across the universe' } : {})
@@ -237,8 +242,11 @@
         gameState.set(createMockGameState({
             phase,
             language,
+            colorTheme: mockColorTheme,
             players: selectedPlayers,
-            theme: isUkrainian ? 'Звичайні речі, епічні передісторії' : 'Everyday Objects, Epic Backstories',
+            theme: isGeneratingThemes ? '' : (isUkrainian ? 'Звичайні речі, епічні передісторії' : 'Everyday Objects, Epic Backstories'),
+            isGeneratingThemes,
+            ...(isGeneratingThemes ? { preGeneratedThemes: { en: [], uk: [] } } : {}),
             currentRound: activeScreen.includes('movie') || activeScreen.includes('podium') ? 3 : 1,
             battleSchedule: [currentBattle],
             battleHistory: [currentBattle],

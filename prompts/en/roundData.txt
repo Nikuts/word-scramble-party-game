@@ -20,6 +20,7 @@ Follow these strict rules for each key:
    - Generate EXACTLY ${numQuestionSetsToGenerate} unique arrays of questions.
    - Each inner array must contain EXACTLY ${numQuestionsPerPlayer} unique questions.
    - Questions MUST be fast, low-friction, accessible micro-scenarios (e.g. bad advice, weird excuses, embarrassing reactions, pet secrets, terrible ideas) that prompt players to write 5 to 10 word answers.
+   - Make every question structurally distinct across arrays and rounds — NEVER clone templates, swap one noun in a previous question, or lean on repetitive cliché props (ban overused defaults like cactus, pineapple, toaster, or kazoo).
    - These answers will be chopped into word tiles for other players, so questions should naturally provoke active verbs, tangible everyday objects, and funny adjectives.
    - ABSOLUTELY CRITICAL: Questions MUST NOT relate to the theme ("${theme}"). They harvest unrelated communal vocabulary.
    - ${playerQuestionInstructions}

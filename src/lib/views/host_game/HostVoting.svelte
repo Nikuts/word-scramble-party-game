@@ -1,13 +1,14 @@
 <!-- src/lib/views/host_game/HostVoting.svelte -->
 <script>
-    import { t, gameState, gamePlayers } from '../../../stores.js';
+    import { t, tvMode, gameState, gamePlayers } from '../../../stores.js';
     import { TIMEOUT_ANSWER_PLACEHOLDER } from '../../../../shared/config.js';
+    import HexBadge from '../../shared/HexBadge.svelte';
 
     const cardStyles = [
-        { border: 'border-cyan-400', badgeBorder: 'border-cyan-400 text-cyan-300', bg: 'bg-[#100e22]' },
-        { border: 'border-fuchsia-400', badgeBorder: 'border-fuchsia-400 text-fuchsia-300', bg: 'bg-[#100e22]' },
-        { border: 'border-amber-400', badgeBorder: 'border-amber-400 text-amber-300', bg: 'bg-[#100e22]' },
-        { border: 'border-emerald-400', badgeBorder: 'border-emerald-400 text-emerald-300', bg: 'bg-[#100e22]' }
+        { border: 'border-cyan-400', badgeBorder: 'border-cyan-400 text-cyan-300', bg: 'host-panel-surface' },
+        { border: 'border-fuchsia-400', badgeBorder: 'border-fuchsia-400 text-fuchsia-300', bg: 'host-panel-surface' },
+        { border: 'border-amber-400', badgeBorder: 'border-amber-400 text-amber-300', bg: 'host-panel-surface' },
+        { border: 'border-emerald-400', badgeBorder: 'border-emerald-400 text-emerald-300', bg: 'host-panel-surface' }
     ];
 
     function renderAnswer(answer) {
@@ -64,7 +65,7 @@
     {@const percentage = totalVoters > 0 ? Math.round((votedCount / totalVoters) * 100) : 0}
 
     <!-- Prototype v5 Merged Prompt & Vote Progress Box -->
-    <div class="relative z-10 w-full cut-md bg-[#131126] border-2 border-cyan-400/70 px-4 sm:px-6 py-2.5 sm:py-3 2xl:py-4 flex flex-col gap-2 flex-shrink-0">
+    <div class="relative z-10 w-full cut-md host-hud-surface border-2 border-[color:rgba(var(--color-primary-rgb),0.72)] px-4 sm:px-6 py-2.5 sm:py-3 2xl:py-4 flex flex-col gap-2 flex-shrink-0">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="min-w-0 flex-1 text-left">
                 <span class="text-xs sm:text-sm 2xl:text-base font-display text-fuchsia-300 uppercase tracking-widest block mb-0.5">
@@ -91,18 +92,19 @@
     </div>
 
     <!-- Prototype v5 Clean Centered Answer Cards -->
-    <main class="relative z-10 w-full grid grid-cols-1 {isQuad ? 'sm:grid-cols-2 lg:grid-cols-4 gap-2.5 2xl:gap-4' : (isTrio ? 'sm:grid-cols-2 lg:grid-cols-3 gap-3 2xl:gap-5' : 'sm:grid-cols-2 gap-4 2xl:gap-6')} lg:flex-1 lg:min-h-0 items-center lg:overflow-hidden py-1">
+    {@const isDuo = !isQuad && !isTrio && votingOptions.length === 2}
+    <main class="relative z-10 w-full grid grid-cols-1 {isQuad ? 'sm:grid-cols-2 lg:grid-cols-4 gap-2.5 2xl:gap-4' : (isTrio ? 'sm:grid-cols-2 lg:grid-cols-3 gap-3 2xl:gap-5' : 'sm:grid-cols-2 gap-4 sm:gap-8 2xl:gap-12')} lg:flex-1 lg:min-h-0 items-center lg:overflow-hidden py-1">
         {#each votingOptions as opt, i (opt.optionId || i)}
             {@const style = cardStyles[i] || cardStyles[0]}
             {@const answerLabel = i === 0 ? ($t.answerA || 'OPTION A') : (i === 1 ? ($t.answerB || 'OPTION B') : (i === 2 ? ($t.answerC || 'OPTION C') : ($t.answerD || 'OPTION D')))}
             {@const answer = renderAnswer(opt.answer)}
             {@const punchlineClass = getPunchlineSizeClass(answer, isQuad, isTrio, isFinal)}
-            <div data-testid="voting-option-card" class="bg-neutral-950/85 {style.bg} border-2 {style.border} cut-md {isQuad ? 'p-3 sm:p-4 2xl:p-6 min-h-[200px] lg:min-h-[260px] 2xl:min-h-[380px] lg:h-[min(100%,380px)] 2xl:h-[min(100%,580px)]' : 'p-4 sm:p-6 2xl:p-8 min-h-[240px] lg:min-h-[360px] 2xl:min-h-[500px] lg:h-[min(100%,440px)] 2xl:h-[min(100%,640px)]'} flex flex-col items-center justify-between lg:min-h-0 overflow-hidden text-center">
+            <div data-testid="voting-option-card" class="{style.bg} border-2 {style.border} cut-md {isQuad ? 'p-3 sm:p-4 2xl:p-6 min-h-[12.5rem] lg:min-h-[16.25rem] 2xl:min-h-[23.75rem] lg:h-[min(100%,23.75rem)] 2xl:h-[min(100%,36.25rem)]' : 'p-4 sm:p-6 2xl:p-8 min-h-[15rem] lg:min-h-[22.5rem] 2xl:min-h-[31.25rem] lg:h-[min(100%,27.5rem)] 2xl:h-[min(100%,40rem)]'} flex flex-col items-center justify-between gap-3 2xl:gap-5 lg:min-h-0 overflow-hidden text-center">
                 <div class="cut-sm px-4 py-1 2xl:px-6 2xl:py-2 bg-[#0a0914] border {style.badgeBorder} font-display {isQuad ? 'text-xs sm:text-sm lg:text-base 2xl:text-lg' : 'text-sm sm:text-base lg:text-lg 2xl:text-2xl'} tracking-widest uppercase flex-shrink-0">
                     {answerLabel}
                 </div>
 
-                <div class="flex-1 min-h-0 overflow-y-auto flex items-center justify-center py-3 px-2 w-full">
+                <div class="flex-1 min-h-0 overflow-y-auto flex items-center justify-center bg-[#070610] border border-[#332e59] cut-sm py-3 px-4 2xl:py-5 2xl:px-6 w-full">
                     {#if typeof opt.answer === 'object' && opt.answer !== null && (opt.answer.title || opt.answer.tagline)}
                         {@const fTitle = (opt.answer.title === TIMEOUT_ANSWER_PLACEHOLDER || !opt.answer.title) ? `(${$t.noAnswerSubmitted || 'No answer submitted'})` : opt.answer.title.trim()}
                         {@const fTagline = (opt.answer.tagline === TIMEOUT_ANSWER_PLACEHOLDER || !opt.answer.tagline?.trim()) ? '...' : opt.answer.tagline.trim()}
@@ -124,5 +126,17 @@
                 </div>
             </div>
         {/each}
+
+        {#if isDuo}
+            <div class="hidden sm:flex pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30" aria-hidden="true">
+                <HexBadge
+                    bgClass="bg-[#0e0b22]"
+                    borderClass="text-amber-400"
+                    className="px-4 py-2 lg:px-5 lg:py-2.5 2xl:px-7 2xl:py-3 {!$tvMode ? 'drop-shadow-[0_0_16px_rgba(250,204,21,0.45)]' : ''}"
+                >
+                    <span class="font-display text-base lg:text-xl 2xl:text-3xl text-amber-300 tracking-widest leading-none">VS</span>
+                </HexBadge>
+            </div>
+        {/if}
     </main>
 {/if}

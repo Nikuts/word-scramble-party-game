@@ -61,7 +61,7 @@
     </section>
 
     <!-- Right Live Standings Leaderboard (7 cols) -->
-    <section class="lg:col-span-7 min-w-0 cut-md bg-[#100e22] border-2 border-cyan-500/60 p-3 sm:p-5 flex flex-col min-h-0">
+    <section class="lg:col-span-7 min-w-0 cut-md host-panel-surface border-2 border-[color:rgba(var(--color-primary-rgb),0.65)] p-3 sm:p-5 flex flex-col min-h-0">
         <div class="flex items-center justify-between gap-2 pb-2 mb-2.5 border-b border-[#332e59] flex-shrink-0">
             <div class="inline-flex items-center gap-2 text-cyan-300 font-display text-xs sm:text-sm 2xl:text-base tracking-widest uppercase">
                 <ArcadeIcon name="trophy" className="w-4 h-4 2xl:w-5 2xl:h-5" />

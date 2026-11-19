@@ -103,7 +103,7 @@
             <!-- #2 Runner Up -->
             {#if secondPlace}
                 {@const pScore = displayedScores[secondPlace.id] ?? secondPlace.score ?? 0}
-                <div class="flex-1 min-w-0 h-[78%] min-h-[185px] lg:min-h-[210px] cut-md bg-gradient-to-b from-slate-700/70 via-[#15182d] to-[#0d0e1c] border-2 border-slate-300/80 p-2.5 sm:p-3 2xl:p-5 flex flex-col items-center justify-between text-center">
+                <div class="flex-1 min-w-0 h-[78%] min-h-[11.5rem] lg:min-h-[13.125rem] cut-md bg-gradient-to-b from-slate-700/70 via-[#15182d] to-[#0d0e1c] border-2 border-slate-300/80 p-2.5 sm:p-3 2xl:p-5 flex flex-col items-center justify-between text-center">
                     <span class="cut-sm px-2.5 py-0.5 2xl:px-3.5 2xl:py-1 bg-slate-200 text-black font-display text-[10px] sm:text-xs 2xl:text-sm tracking-wider uppercase whitespace-nowrap">
                         {$t.runnerUpBadge || '#2 · RUNNER UP'}
                     </span>
@@ -131,7 +131,7 @@
             <!-- #1 Champion (Tallest Gold Card) -->
             {#if firstPlace}
                 {@const pScore = displayedScores[firstPlace.id] ?? firstPlace.score ?? 0}
-                <div class="flex-[1.2] min-w-0 h-[96%] min-h-[225px] lg:min-h-[250px] cut-md bg-gradient-to-b from-amber-500/30 via-amber-950/35 to-[#100c14] border-2 border-amber-300 flex flex-col items-center justify-between text-center overflow-hidden">
+                <div class="flex-[1.2] min-w-0 h-[96%] min-h-[14rem] lg:min-h-[15.625rem] cut-md bg-gradient-to-b from-amber-500/30 via-amber-950/35 to-[#100c14] border-2 border-amber-300 flex flex-col items-center justify-between text-center overflow-hidden">
                     <div class="w-full bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 text-black py-1.5 2xl:py-2 px-2 flex items-center justify-center gap-1.5 font-display text-[10px] sm:text-xs 2xl:text-sm tracking-wider uppercase flex-shrink-0">
                         <ArcadeIcon name="crown" className="w-3.5 h-3.5 sm:w-4 sm:h-4 2xl:w-5 2xl:h-5 flex-shrink-0" />
                         <span class="truncate">{$t.firstPlaceChampion || '1ST PLACE · CHAMPION'}</span>
@@ -169,13 +169,13 @@
             <!-- #3 Podium -->
             {#if thirdPlace}
                 {@const pScore = displayedScores[thirdPlace.id] ?? thirdPlace.score ?? 0}
-                <div class="flex-1 min-w-0 h-[70%] min-h-[165px] lg:min-h-[185px] cut-md bg-gradient-to-b from-amber-700/45 via-[#1c1218] to-[#0e0b16] border-2 border-amber-500/80 p-2.5 sm:p-3 2xl:p-5 flex flex-col items-center justify-between text-center">
+                <div class="flex-1 min-w-0 h-[70%] min-h-[10.3rem] lg:min-h-[11.5rem] cut-md bg-gradient-to-b from-amber-700/45 via-[#1c1218] to-[#0e0b16] border-2 border-amber-500/80 p-2.5 sm:p-3 2xl:p-5 flex flex-col items-center justify-between text-center">
                     <span class="cut-sm px-2.5 py-0.5 2xl:px-3.5 2xl:py-1 bg-amber-600 text-amber-50 font-display text-[10px] sm:text-xs 2xl:text-sm tracking-wider uppercase whitespace-nowrap">
                         {$t.podiumThirdBadge || '#3 · PODIUM'}
                     </span>
 
                     <div class="flex flex-col items-center my-auto py-1">
-                        <div class="w-12 h-12 sm:w-16 sm:h-16 xl:w-[72px] xl:h-[72px] 2xl:w-24 2xl:h-24 mb-1.5 2xl:mb-2.5">
+                        <div class="w-12 h-12 sm:w-16 sm:h-16 xl:w-[4.5rem] xl:h-[4.5rem] 2xl:w-24 2xl:h-24 mb-1.5 2xl:mb-2.5">
                             <PixelAvatar avatar={thirdPlace.avatar} className="w-full h-full" />
                         </div>
                         <span class="font-display text-base sm:text-lg 2xl:text-2xl text-amber-200 truncate max-w-full block">{thirdPlace.name}</span>
@@ -199,7 +199,7 @@
         {#if restOfPlayers.length > 0}
             {@const isCompactRoster = restOfPlayers.length > 6}
             {@const isSmallRest = restOfPlayers.length <= 4}
-            <section class="lg:col-span-6 min-w-0 bg-[#100e22] border-2 border-cyan-500/45 cut-md p-3 sm:p-4 2xl:p-5 flex flex-col lg:min-h-0">
+            <section class="lg:col-span-6 min-w-0 host-panel-surface border-2 border-[color:rgba(var(--color-primary-rgb),0.55)] cut-md p-3 sm:p-4 2xl:p-5 flex flex-col lg:min-h-0">
                 <div class="flex items-center justify-between border-b border-[#332e59] pb-1.5 mb-2 2xl:pb-2 2xl:mb-3 flex-shrink-0">
                     <span class="text-xs sm:text-sm 2xl:text-base font-display uppercase tracking-widest text-cyan-300">
                         // {$t.fullStandingsPts || 'FULL STANDINGS (PTS)'}
@@ -233,7 +233,7 @@
 
     <!-- Bottom Full-Width Accolades Banner -->
     {#if sups && Object.keys(sups).length > 0}
-        <section class="w-full bg-[#100e22] border-2 border-amber-400/75 cut-md px-3 sm:px-4 2xl:px-5 py-2.5 sm:py-3 2xl:py-4 flex-shrink-0">
+        <section class="w-full host-panel-surface border-2 border-amber-400/75 cut-md px-3 sm:px-4 2xl:px-5 py-2.5 sm:py-3 2xl:py-4 flex-shrink-0">
             <h2 class="text-xs sm:text-sm 2xl:text-base font-display text-amber-300 uppercase tracking-widest text-center mb-1.5 2xl:mb-2.5 inline-flex items-center justify-center gap-2 w-full">
                 <ArcadeIcon name="trophy" className="w-3.5 h-3.5 sm:w-4 sm:h-4 2xl:w-5 2xl:h-5" />
                 <span>{$t.superlativesTitle || 'POST-GAME ACCOLADES & MATCH AWARDS'}</span>
@@ -248,7 +248,7 @@
                                     {#each winners as p (p.id)}
                                         <div class="flex items-center gap-1.5 min-w-0">
                                             <div class="w-5 h-5 sm:w-6 sm:h-6 2xl:w-8 2xl:h-8 flex-shrink-0"><PixelAvatar avatar={p.avatar} /></div>
-                                            <span class="font-display text-xs sm:text-sm 2xl:text-base text-white truncate max-w-[95px] 2xl:max-w-[130px]">{p.name}</span>
+                                            <span class="font-display text-xs sm:text-sm 2xl:text-base text-white truncate max-w-[6rem] 2xl:max-w-[8.25rem]">{p.name}</span>
                                         </div>
                                     {/each}
                                 </div>

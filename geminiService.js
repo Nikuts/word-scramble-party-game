@@ -17,6 +17,19 @@ export function clearModelCooldownsForTest() {
     modelCooldownUntil.clear();
 }
 
+export function setModelCooldown(model, durationMs, now = Date.now()) {
+    if (!model || !(durationMs > 0)) return 0;
+    const targetUntil = now + durationMs;
+    const prevUntil = modelCooldownUntil.get(model) || 0;
+    const nextUntil = Math.max(prevUntil, targetUntil);
+    modelCooldownUntil.set(model, nextUntil);
+    return nextUntil;
+}
+
+export function getModelCooldownUntilForTest(model) {
+    return modelCooldownUntil.get(model) || 0;
+}
+
 export function computeRoundRequestTimeoutMs(numPlayers = 4) {
     return Math.min(18000, GEMINI_REQUEST_TIMEOUT_MS + Math.max(0, Number(numPlayers) - 4) * 700);
 }
@@ -184,15 +197,15 @@ async function generateContentWithFallback(prompt, customConfig = {}) {
                 const errorMessage = String(error?.message || error || '');
                 const isQuota429 = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED');
                 const isUnavailable503 = errorMessage.includes('503') || errorMessage.includes('UNAVAILABLE') || errorMessage.includes('high demand');
+                const isTimeoutError = errorMessage.includes('timed out') || errorMessage.includes('AbortError');
                 const isTransientError = isUnavailable503 ||
                                          isQuota429 ||
-                                         errorMessage.includes('500') ||
-                                         errorMessage.includes('timed out') ||
-                                         errorMessage.includes('AbortError');
+                                         isTimeoutError ||
+                                         errorMessage.includes('500');
 
                 if (isQuota429) {
-                    modelCooldownUntil.set(candidateModel, Date.now() + MODEL_COOLDOWN_429_MS);
-                    console.warn(`[Gemini] Quota 429 on '${candidateModel}'; cooling down 60s and switching model.`);
+                    setModelCooldown(candidateModel, MODEL_COOLDOWN_429_MS);
+                    console.warn(`[Gemini] Quota 429 on '${candidateModel}'; cooling down ${Math.round(MODEL_COOLDOWN_429_MS / 1000)}s and switching model.`);
                     break;
                 }
 
@@ -203,8 +216,8 @@ async function generateContentWithFallback(prompt, customConfig = {}) {
                         await new Promise(r => setTimeout(r, (attempt * 400) + jitter));
                         continue;
                     } else {
-                        if (isUnavailable503) {
-                            modelCooldownUntil.set(candidateModel, Date.now() + MODEL_COOLDOWN_503_MS);
+                        if (isUnavailable503 || isTimeoutError) {
+                            setModelCooldown(candidateModel, MODEL_COOLDOWN_503_MS);
                         }
                         if (mIndex < modelsToTry.length - 1) {
                             console.warn(`[Gemini] Switching to fallback model '${modelsToTry[mIndex + 1]}'`);

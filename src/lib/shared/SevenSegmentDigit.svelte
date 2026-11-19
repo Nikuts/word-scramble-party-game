@@ -32,7 +32,7 @@
 
 <svg
     viewBox="0 0 60 102"
-    style="height: {height}px; width: {Math.round(height * 0.58)}px;"
+    style="height: {height / 16}rem; width: {(height * 0.58) / 16}rem;"
     class="select-none inline-block flex-shrink-0"
     role="img"
     aria-label={String(safeDigit)}

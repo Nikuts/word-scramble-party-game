@@ -6,6 +6,7 @@
     import { cubicOut } from 'svelte/easing';
     import LoadingSpinner from '../shared/LoadingSpinner.svelte';
     import ArcadeIcon from '../shared/ArcadeIcon.svelte';
+    import HexBadge from '../shared/HexBadge.svelte';
     import SevenSegmentDisplay from '../shared/SevenSegmentDisplay.svelte';
     import FlyingReactionsOverlay from '../shared/FlyingReactionsOverlay.svelte';
     import { sendMessage } from '../../stores.js';
@@ -124,7 +125,7 @@
     $: isLoadingPhase = $gamePhase === 'generating_round' || $gamePhase === 'preparing_battles';
 </script>
 
-<div class="h-full max-h-full lg:h-screen-safe lg:max-h-screen-safe w-full flex flex-col justify-start lg:justify-between p-2 sm:p-3 2xl:p-5 max-w-[1920px] mx-auto safe-top safe-bottom relative select-none font-sans host-game-container overflow-y-auto lg:overflow-hidden box-border gap-2 2xl:gap-3.5">
+<div class="h-full max-h-full lg:h-screen-safe lg:max-h-screen-safe w-full flex flex-col justify-start lg:justify-between p-2 sm:p-3 2xl:p-5 max-w-[min(98vw,210vh)] mx-auto safe-top safe-bottom relative select-none font-sans host-game-container overflow-y-auto lg:overflow-hidden box-border gap-2 2xl:gap-3.5">
 
     {#if showOrientationHint}
         <div class="lg:hidden w-full cut-sm bg-cyan-950/90 border border-cyan-400 text-cyan-200 px-3 py-1.5 flex items-center justify-between text-xs font-display flex-shrink-0">
@@ -164,11 +165,11 @@
     <!-- Prototype v5 Unified Top HUD Bar -->
     <header class="relative z-20 flex-shrink-0 w-full flex items-center justify-between gap-2">
         <!-- Left Wing: TV Toggle + Theme -->
-        <div class="flex-1 min-w-0 cut-sm bg-[#131126] border border-cyan-500/60 px-3 sm:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center gap-2.5 sm:gap-3.5">
+        <div class="flex-1 min-w-0 cut-sm host-hud-surface border border-[color:rgba(var(--color-primary-rgb),0.65)] px-3 sm:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center gap-2.5 sm:gap-3.5">
             <button
                 type="button"
                 on:click={toggleTvMode}
-                class="cut-sm px-2.5 sm:px-3 2xl:px-3.5 py-1 2xl:py-1.5 bg-[#0a0914] border text-xs sm:text-sm 2xl:text-base font-display transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0 {$tvMode ? 'border-primary text-primary' : 'border-[#332e59] text-slate-300 hover:text-white'}"
+                class="cut-sm px-2.5 sm:px-3 2xl:px-3.5 py-1 2xl:py-1.5 host-card-surface border text-xs sm:text-sm 2xl:text-base font-display transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0 {$tvMode ? 'border-primary text-primary' : 'border-[color:var(--color-surface-border)] text-slate-300 hover:text-white'}"
                 title={$t.tvModeDesc}
                 aria-label={$t.tvLowPowerMode || 'Toggle TV Mode'}
             >
@@ -183,15 +184,15 @@
         <!-- Center Hex Crest: Timer, AI Loading, or FINAL -->
         <div class="flex-shrink-0">
             {#if isResultsPhase}
-                <div class="cut-hex bg-[#0e0b22] border-2 border-amber-400/90 px-5 sm:px-7 2xl:px-8 py-1.5 sm:py-2 flex items-center gap-1.5 text-amber-300 font-display text-base sm:text-xl 2xl:text-2xl leading-none">
+                <HexBadge borderClass="text-amber-400/90" className="px-5 sm:px-7 2xl:px-8 py-1.5 sm:py-2 text-amber-300 font-display text-base sm:text-xl 2xl:text-2xl leading-none" contentClass="flex items-center gap-1.5">
                     <ArcadeIcon name="trophy" className="w-4 h-4 sm:w-5 sm:h-5 2xl:w-6 2xl:h-6" />
                     <span>{$t.finalTag || 'FINAL'}</span>
-                </div>
+                </HexBadge>
             {:else if isLoadingPhase}
-                <div class="cut-hex bg-[#0e0b22] border-2 border-cyan-400/90 px-5 sm:px-7 2xl:px-8 py-1.5 sm:py-2 flex items-center gap-1.5 text-cyan-300 font-display text-base sm:text-xl 2xl:text-2xl leading-none">
+                <HexBadge borderClass="text-cyan-400/90" className="px-5 sm:px-7 2xl:px-8 py-1.5 sm:py-2 text-cyan-300 font-display text-base sm:text-xl 2xl:text-2xl leading-none" contentClass="flex items-center gap-1.5">
                     <ArcadeIcon name="sparkles" className="w-4 h-4 sm:w-5 sm:h-5 2xl:w-6 2xl:h-6" />
                     <span>{$t.aiLabel || 'AI'}</span>
-                </div>
+                </HexBadge>
             {:else}
                 <SevenSegmentDisplay
                     time={$phaseTimer}
@@ -204,9 +205,9 @@
         </div>
 
         <!-- Right Wing: Round Status + End Game -->
-        <div class="flex-1 min-w-0 cut-sm bg-[#131126] border border-fuchsia-500/60 px-3 sm:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center justify-between gap-2">
+        <div class="flex-1 min-w-0 cut-sm host-hud-surface border border-[color:rgba(var(--color-secondary-rgb),0.65)] px-3 sm:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center justify-between gap-2">
             {#if isResultsPhase}
-                <span class="font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-fuchsia-300 tracking-widest uppercase truncate">
+                <span class="font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-secondary tracking-widest uppercase truncate">
                     {$t.matchComplete || 'MATCH COMPLETE'}
                 </span>
             {:else}
@@ -217,7 +218,7 @@
             <button
                 type="button"
                 on:click={handleForceEndGame}
-                class="cut-sm px-2.5 sm:px-3 2xl:px-3.5 py-1 2xl:py-1.5 bg-[#0a0914] border border-[#332e59] hover:border-danger hover:bg-rose-950/70 text-slate-300 hover:text-rose-200 text-xs sm:text-sm 2xl:text-base font-display transition-colors cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+                class="cut-sm px-2.5 sm:px-3 2xl:px-3.5 py-1 2xl:py-1.5 host-card-surface border border-[color:var(--color-surface-border)] hover:border-danger hover:bg-rose-950/70 text-slate-300 hover:text-rose-200 text-xs sm:text-sm 2xl:text-base font-display transition-colors cursor-pointer flex items-center gap-1.5 flex-shrink-0"
                 title={$t.endGame}
                 aria-label={$t.endGame || 'End Game'}
             >

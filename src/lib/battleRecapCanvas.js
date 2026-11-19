@@ -21,13 +21,14 @@ function readThemeColors() {
     if (typeof document === 'undefined') {
         return { bg: '#0a0914', surface: '#100e22', surface2: '#131126', border: '#332e59', primary: '#00e5ff', accent: '#facc15', secondary: '#ff2a85' };
     }
-    const styles = getComputedStyle(document.documentElement);
+    const target = document.body || document.documentElement;
+    const styles = getComputedStyle(target);
     const getVar = (name, fallback) => styles.getPropertyValue(name)?.trim() || fallback;
     return {
         bg: getVar('--color-bg-base', '#0a0914'),
         surface: getVar('--color-surface', '#100e22'),
         surface2: getVar('--color-surface-2', '#131126'),
-        border: '#332e59',
+        border: getVar('--color-surface-border', '#332e59'),
         primary: getVar('--color-primary', '#00e5ff'),
         accent: getVar('--color-warning', '#facc15'),
         secondary: getVar('--color-secondary', '#ff2a85')
@@ -248,7 +249,7 @@ export async function renderBattleRecapCanvas({ battle, players = [], gameId = '
     const genreBoxH = isFinalRound ? 26 : 0;
     const promptBlockH = (isFinalRound ? 22 : 12) + headerTopH + genreBoxH + promptLines.length * promptLineHeight + 20;
     const gridTotalH = rows.reduce((sum, r) => sum + r.height, 0) + Math.max(0, rows.length - 1) * colGap;
-    const footerH = 32;
+    const footerH = 26;
     const cardHeight = outerPad * 2 + promptBlockH + gridTotalH + footerH;
 
     const scale = 2;
@@ -262,17 +263,94 @@ export async function renderBattleRecapCanvas({ battle, players = [], gameId = '
     ctx.fillStyle = theme.bg;
     ctx.fillRect(0, 0, cardWidth, cardHeight);
 
-    // Main outer chamfered panel
+    // Main outer chamfered panel with retrowave dusk gradient + perspective grid + subtle scanlines
     const panelX = 10;
     const panelY = 10;
     const panelW = cardWidth - 20;
     const panelH = cardHeight - 20;
+
+    ctx.save();
     traceChamferRect(ctx, panelX, panelY, panelW, panelH, 14);
-    ctx.fillStyle = theme.surface;
-    ctx.fill();
+    ctx.clip();
+
+    // Base vertical retrowave sky -> magenta horizon -> deep void gradient
+    const bgGrad = ctx.createLinearGradient(0, panelY, 0, panelY + panelH);
+    bgGrad.addColorStop(0, theme.bg);
+    bgGrad.addColorStop(0.45, theme.surface);
+    bgGrad.addColorStop(0.68, theme.surface2);
+    bgGrad.addColorStop(1, theme.bg);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+
+    // Soft magenta & cyan horizon aurora glows
+    const horizonY = panelY + panelH * 0.62;
+    const magGlow = ctx.createRadialGradient(cardWidth * 0.5, horizonY, 10, cardWidth * 0.5, horizonY, panelW * 0.6);
+    magGlow.addColorStop(0, 'rgba(255, 42, 133, 0.22)');
+    magGlow.addColorStop(0.55, 'rgba(255, 42, 133, 0.06)');
+    magGlow.addColorStop(1, 'rgba(255, 42, 133, 0)');
+    ctx.fillStyle = magGlow;
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+
+    const cyanGlow = ctx.createRadialGradient(cardWidth * 0.5, panelY + 24, 10, cardWidth * 0.5, panelY + 24, panelW * 0.55);
+    cyanGlow.addColorStop(0, 'rgba(0, 229, 255, 0.14)');
+    cyanGlow.addColorStop(1, 'rgba(0, 229, 255, 0)');
+    ctx.fillStyle = cyanGlow;
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+
+    // Subtle synthwave perspective floor grid in the lower 38% of the card
+    ctx.save();
+    ctx.strokeStyle = theme.primary;
+    ctx.lineWidth = 1;
+    const floorTop = horizonY;
+    const floorBot = panelY + panelH;
+    const floorH = Math.max(40, floorBot - floorTop);
+    const vanishX = cardWidth / 2;
+    const vanishY = floorTop - floorH * 0.35;
+
+    // Horizontal perspective grid lines (accelerating spacing downward)
+    const hLines = 6;
+    for (let i = 1; i <= hLines; i++) {
+        const t = Math.pow(i / hLines, 1.65);
+        const yLine = floorTop + t * floorH;
+        ctx.globalAlpha = 0.06 + t * 0.14;
+        ctx.beginPath();
+        ctx.moveTo(panelX, yLine);
+        ctx.lineTo(panelX + panelW, yLine);
+        ctx.stroke();
+    }
+
+    // Radiating vertical perspective grid rays
+    const vCols = 10;
+    ctx.globalAlpha = 0.13;
+    for (let i = -vCols; i <= vCols; i++) {
+        const botX = vanishX + (i / (vCols * 0.45)) * (panelW * 0.72);
+        const ratio = (floorTop - vanishY) / (floorBot - vanishY);
+        const topX = vanishX + (botX - vanishX) * ratio;
+        ctx.beginPath();
+        ctx.moveTo(topX, floorTop);
+        ctx.lineTo(botX, floorBot);
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    // Subtle CRT scanline sheen across backdrop (before drawing high-contrast cards)
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.11)';
+    for (let sy = panelY; sy < panelY + panelH; sy += 4) {
+        ctx.fillRect(panelX, sy, panelW, 1.5);
+    }
+    ctx.restore();
+    ctx.restore();
+
+    // Crisp outer neon chamfered border with subtle bloom
+    ctx.save();
+    traceChamferRect(ctx, panelX, panelY, panelW, panelH, 14);
     ctx.lineWidth = 2;
     ctx.strokeStyle = theme.primary;
+    ctx.shadowColor = theme.primary;
+    ctx.shadowBlur = 10;
     ctx.stroke();
+    ctx.restore();
 
     let cursorY = outerPad;
 
@@ -295,7 +373,7 @@ export async function renderBattleRecapCanvas({ battle, players = [], gameId = '
         cursorY += 34;
     }
 
-    // Prompt Header Box
+    // Prompt Header Box with subtle arcade neon glow
     if (isFinalRound) {
         ctx.font = genreFont;
         ctx.fillStyle = theme.accent;
@@ -305,14 +383,18 @@ export async function renderBattleRecapCanvas({ battle, players = [], gameId = '
         cursorY += 26;
     }
 
+    ctx.save();
     ctx.font = promptFont;
     ctx.fillStyle = isFinalRound ? '#f8fafc' : theme.primary;
+    ctx.shadowColor = isFinalRound ? theme.secondary : theme.primary;
+    ctx.shadowBlur = 8;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     promptLines.forEach(line => {
         ctx.fillText(line, cardWidth / 2, cursorY + promptLineHeight / 2);
         cursorY += promptLineHeight;
     });
+    ctx.restore();
     cursorY += 16;
 
     // Competitor Cards
@@ -400,7 +482,8 @@ export async function renderBattleRecapCanvas({ battle, players = [], gameId = '
             ctx.font = answerFont;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
-            const textStartY = ansY + 12 + answerLineHeight / 2;
+            const textBlockH = item.lines.length * answerLineHeight;
+            const textStartY = ansY + Math.max(10, (ansH - textBlockH) / 2) + answerLineHeight / 2;
             item.lines.forEach((lineRuns, lineIdx) => {
                 let runX = ansX + 10;
                 const lineY = textStartY + lineIdx * answerLineHeight;
@@ -432,12 +515,12 @@ export async function renderBattleRecapCanvas({ battle, players = [], gameId = '
 
     // Subtle Bottom Game Attribution
     ctx.font = `700 11px ${sansFontFamily}`;
-    ctx.fillStyle = '#64748b';
+    ctx.fillStyle = '#94a3b8';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const appTag = String(dict.appName || 'WORD SCRAMBLE PARTY GAME').toUpperCase();
     const roomTag = gameId ? `${appTag} // #${gameId}` : appTag;
-    ctx.fillText(roomTag, cardWidth / 2, cardHeight - 24);
+    ctx.fillText(roomTag, cardWidth / 2, cardHeight - 20);
 
     return new Promise((resolve, reject) => {
         if (canvas.toBlob) {

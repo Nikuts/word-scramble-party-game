@@ -370,17 +370,17 @@
                             </span>
                         </div>
                         <div class="grid grid-cols-3 gap-1 pt-1.5 border-t border-[#332e59]">
-                            <div class="cut-sm px-1.5 py-1 border flex items-center justify-center gap-1 text-center min-w-0 {game?.sillyMode ? 'bg-purple-900/80 border-purple-400 text-purple-200' : 'bg-[#0a0914] border-[#332e59] text-slate-400'}">
-                                <span class="font-display text-[9px] sm:text-[10px] uppercase leading-tight truncate">{$t.sillyMode}</span>
-                                <span class="font-mono text-[9px] font-extrabold leading-none flex-shrink-0 {game?.sillyMode ? 'text-purple-300' : 'text-slate-500'}">{game?.sillyMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
+                            <div class="cut-sm px-1 py-1 border flex flex-col items-center justify-center text-center min-w-0 {game?.sillyMode ? 'bg-purple-900/80 border-purple-400 text-purple-200' : 'bg-[#0a0914] border-[#332e59] text-slate-400'}">
+                                <span class="font-display text-[9px] sm:text-[10px] uppercase leading-tight break-words w-full">{$t.sillyMode}</span>
+                                <span class="font-mono text-[9px] font-extrabold mt-0.5 leading-none {game?.sillyMode ? 'text-purple-300' : 'text-slate-500'}">{game?.sillyMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
                             </div>
-                            <div class="cut-sm px-1.5 py-1 border flex items-center justify-center gap-1 text-center min-w-0 {game?.is18PlusMode ? 'bg-rose-900/80 border-danger text-rose-200' : 'bg-[#0a0914] border-[#332e59] text-slate-400'}">
-                                <span class="font-display text-[9px] sm:text-[10px] uppercase leading-tight truncate">{$t.is18PlusMode}</span>
-                                <span class="font-mono text-[9px] font-extrabold leading-none flex-shrink-0 {game?.is18PlusMode ? 'text-rose-300' : 'text-slate-500'}">{game?.is18PlusMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
+                            <div class="cut-sm px-1 py-1 border flex flex-col items-center justify-center text-center min-w-0 {game?.is18PlusMode ? 'bg-rose-900/80 border-danger text-rose-200' : 'bg-[#0a0914] border-[#332e59] text-slate-400'}">
+                                <span class="font-display text-[9px] sm:text-[10px] uppercase leading-tight break-words w-full">{$t.is18PlusMode}</span>
+                                <span class="font-mono text-[9px] font-extrabold mt-0.5 leading-none {game?.is18PlusMode ? 'text-rose-300' : 'text-slate-500'}">{game?.is18PlusMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
                             </div>
-                            <div class="cut-sm px-1.5 py-1 border flex items-center justify-center gap-1 text-center min-w-0 {game?.slowpokeMode ? 'bg-teal-900/80 border-teal-400 text-teal-200' : 'bg-[#0a0914] border-[#332e59] text-slate-400'}">
-                                <span class="font-display text-[9px] sm:text-[10px] uppercase leading-tight truncate">{$t.slowpokeMode}</span>
-                                <span class="font-mono text-[9px] font-extrabold leading-none flex-shrink-0 {game?.slowpokeMode ? 'text-teal-300' : 'text-slate-500'}">{game?.slowpokeMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
+                            <div class="cut-sm px-1 py-1 border flex flex-col items-center justify-center text-center min-w-0 {game?.slowpokeMode ? 'bg-teal-900/80 border-teal-400 text-teal-200' : 'bg-[#0a0914] border-[#332e59] text-slate-400'}">
+                                <span class="font-display text-[9px] sm:text-[10px] uppercase leading-tight break-words w-full">{$t.slowpokeMode}</span>
+                                <span class="font-mono text-[9px] font-extrabold mt-0.5 leading-none {game?.slowpokeMode ? 'text-teal-300' : 'text-slate-500'}">{game?.slowpokeMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}</span>
                             </div>
                         </div>
                     </div>

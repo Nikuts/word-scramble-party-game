@@ -17,6 +17,9 @@ import {
     ROUND_DATA_RESPONSE_SCHEMA,
     FINAL_ROUND_RESPONSE_SCHEMA,
     GEMINI_REQUEST_TIMEOUT_MS,
+    setModelCooldown,
+    clearModelCooldownsForTest,
+    getModelCooldownUntilForTest,
 } from '../geminiService.js';
 import { UI_TEXT } from '../src/ui_text.js';
 import { handleVote } from '../game/handlers/gameplayHandlers.js';
@@ -159,6 +162,32 @@ describe('Step 4: UX Quick Wins, Gemini Structured Output & Shared Config', () =
             expect(allVotesEvent.payload).toEqual({ battleId: 'b_0' });
 
             deleteGame(gameId);
+        });
+    });
+
+    describe('Gemini Model Cooldown & Localization Guards', () => {
+        beforeEach(() => {
+            clearModelCooldownsForTest();
+        });
+
+        it('never downgrades a long 429 quota cooldown when a shorter 503 cooldown is recorded', () => {
+            const baseNow = 1_700_000_000_000;
+            const until429 = setModelCooldown('gemini-3.8-flash', 600_000, baseNow);
+            expect(until429).toBe(baseNow + 600_000);
+
+            const untilAfter503 = setModelCooldown('gemini-3.8-flash', 25_000, baseNow + 1000);
+            expect(untilAfter503).toBe(baseNow + 600_000);
+            expect(getModelCooldownUntilForTest('gemini-3.8-flash')).toBe(baseNow + 600_000);
+        });
+
+        it('localizes slowTimerDesc, finalScore, topThreeStandings, and normalized allBattles cleanly in EN and UA', () => {
+            expect(UI_TEXT.en.slowTimerDesc).toBe('More Time');
+            expect(UI_TEXT.ua.slowTimerDesc).toBe('Більше часу');
+            expect(UI_TEXT.en.finalScore).toBe('Final Score');
+            expect(UI_TEXT.ua.finalScore).toBeTruthy();
+            expect(UI_TEXT.en.topThreeStandings).toBe('TOP 3 STANDINGS');
+            expect(UI_TEXT.ua.topThreeStandings).toBe('ТОП-3 ГРАВЦІВ');
+            expect(UI_TEXT.ua.allBattles).toBe('Усі битви');
         });
     });
 });

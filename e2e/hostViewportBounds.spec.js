@@ -6,6 +6,10 @@ const VIEWPORTS = [
     { name: 'Laptop Windows 125% Scaled (1228x691)', width: 1228, height: 691, isLandscape: true },
     { name: 'iPad Landscape (1024x768)', width: 1024, height: 768, isLandscape: true },
     { name: 'Full HD TV/Monitor (1920x1080)', width: 1920, height: 1080, isLandscape: true },
+    { name: '2K QHD Wide Monitor (2560x1440)', width: 2560, height: 1440, isLandscape: true },
+    { name: 'Ultrawide 21:9 Monitor (2560x1080)', width: 2560, height: 1080, isLandscape: true },
+    { name: 'WQHD Ultrawide Monitor (3440x1440)', width: 3440, height: 1440, isLandscape: true },
+    { name: '4K UHD TV/Monitor (3840x2160)', width: 3840, height: 2160, isLandscape: true },
     { name: 'iPad Portrait (768x1024)', width: 768, height: 1024, isLandscape: false },
     { name: 'iPad Air Portrait (820x1180)', width: 820, height: 1180, isLandscape: false },
     { name: 'Phone Portrait (390x844)', width: 390, height: 844, isLandscape: false }
@@ -83,14 +87,14 @@ test.describe('Host Screen Viewport Bounds & Tablet/Mobile Usability Audit', () 
                             const fontSize = await qrTile.evaluate(el => parseFloat(window.getComputedStyle(el).fontSize));
                             expect(fontSize).toBeGreaterThanOrEqual(20);
 
-                            // Assert theme selection/custom input never collides with mode toggle cards on any viewport
-                            const themeInput = page.locator('main section').nth(1).locator('input[type="text"]');
+                            // Assert read-only theme showcase cards never collide with mode indicator cards
+                            const lastThemeCard = page.locator('main section').nth(1).locator('[aria-live="polite"] > div').last();
                             const modeGrid = page.locator('main section').nth(1).locator('.grid-cols-3');
-                            if (await themeInput.isVisible() && await modeGrid.isVisible()) {
-                                const inputBox = await themeInput.boundingBox();
+                            if (await lastThemeCard.isVisible() && await modeGrid.isVisible()) {
+                                const cardBox = await lastThemeCard.boundingBox();
                                 const modesBox = await modeGrid.boundingBox();
-                                if (inputBox && modesBox) {
-                                    expect(inputBox.y + inputBox.height, `Theme input overlapped mode toggle cards on ${vp.name}`).toBeLessThanOrEqual(modesBox.y + 2);
+                                if (cardBox && modesBox) {
+                                    expect(cardBox.y + cardBox.height, `Theme card overlapped mode indicator cards on ${vp.name}`).toBeLessThanOrEqual(modesBox.y + 2);
                                 }
                             }
 
@@ -114,7 +118,7 @@ test.describe('Host Screen Viewport Bounds & Tablet/Mobile Usability Audit', () 
                         }
 
                         if (screen.id === 'host_voting') {
-                            const optionCards = page.locator('main .bg-neutral-950\\/85');
+                            const optionCards = page.locator('[data-testid="voting-option-card"]');
                             const cardCount = await optionCards.count();
                             expect(cardCount).toBeGreaterThanOrEqual(2);
                         }
@@ -136,5 +140,62 @@ test.describe('Host Screen Viewport Bounds & Tablet/Mobile Usability Audit', () 
 
         const retryButton = page.locator('button:has-text("Tap to Reconnect")');
         await expect(retryButton).not.toBeVisible();
+    });
+
+    test('MainMenu scales up cleanly for 2K & Ultrawide monitors without overflow and HexBadge renders full SVG hex polygon', async ({ page }) => {
+        // 1. Compare MainMenu button width between Laptop (1366x768) and 2K QHD (2560x1440) + Ultrawide (3440x1440)
+        await page.setViewportSize({ width: 1366, height: 768 });
+        await page.goto('/');
+        await page.waitForSelector('button:has-text("ENGLISH")');
+        await page.click('button:has-text("ENGLISH")');
+        await page.waitForSelector('button:has-text("CREATE & HOST")');
+        // Verify centered 1-tap EN | УКР instant language switcher below menu
+        await page.click('button[aria-label="Українська"]');
+        await expect(page.locator('button:has-text("СТВОРИТИ ТА ХОСТИТИ")')).toBeVisible();
+        await page.click('button[aria-label="English"]');
+        await expect(page.locator('button:has-text("CREATE & HOST")')).toBeVisible();
+        const laptopBox = await page.locator('button:has-text("CREATE & HOST")').boundingBox();
+
+        for (const wideVp of [
+            { width: 2560, height: 1440, name: '2K QHD' },
+            { width: 2560, height: 1080, name: 'Ultrawide 21:9' },
+            { width: 3440, height: 1440, name: 'WQHD Ultrawide' },
+            { width: 3840, height: 2160, name: '4K UHD' },
+        ]) {
+            await page.setViewportSize({ width: wideVp.width, height: wideVp.height });
+            await page.waitForTimeout(150);
+            const overflow = await page.evaluate(() => ({
+                x: document.documentElement.scrollWidth - window.innerWidth,
+                y: document.documentElement.scrollHeight - window.innerHeight,
+            }));
+            expect(overflow.x, `MainMenu horizontal overflow on ${wideVp.name}`).toBeLessThanOrEqual(2);
+            expect(overflow.y, `MainMenu vertical overflow on ${wideVp.name}`).toBeLessThanOrEqual(2);
+
+            const wideBox = await page.locator('button:has-text("CREATE & HOST")').boundingBox();
+            expect(wideBox.width, `MainMenu button should scale wider on ${wideVp.name} than 1366x768`).toBeGreaterThan(laptopBox.width);
+        }
+
+        // 2. Verify HexBadge renders a full 6-sided SVG polygon border and HostLobby fills >=90% of 4K 16:9 width
+        await page.setViewportSize({ width: 3840, height: 2160 });
+        await page.goto('/?debug=host_lobby&players=6&viewport=full&hideToolbar=1');
+        await page.waitForSelector('header svg polygon');
+        const polyPoints = await page.locator('header svg polygon').first().getAttribute('points');
+        expect(polyPoints).toBeTruthy();
+        expect(polyPoints.split(/\s+/).length).toBe(6);
+
+        const mainBox4k = await page.locator('main').first().boundingBox();
+        expect(mainBox4k.width, 'HostLobby on 4K 16:9 should fill >= 90% of 3840px width like TV/laptop').toBeGreaterThanOrEqual(3840 * 0.9);
+        // HostLobby main body is strictly read-only (no theme buttons or custom text inputs on TV)
+        await expect(page.locator('main button, main input')).toHaveCount(0);
+
+        // 3. Verify HostLobby theme loading skeleton keeps all 4 cards equal height (no giant custom-theme box)
+        await page.setViewportSize({ width: 2560, height: 1440 });
+        await page.goto('/?debug=host_lobby&players=6&viewport=full&hideToolbar=1&generatingThemes=1');
+        await page.waitForSelector('[aria-live="polite"]');
+        const themeCards = page.locator('[aria-live="polite"] > div');
+        await expect(themeCards).toHaveCount(4);
+        const firstBox = await themeCards.nth(0).boundingBox();
+        const customBox = await themeCards.nth(3).boundingBox();
+        expect(Math.abs(firstBox.height - customBox.height), 'Loading skeleton cards should match custom-theme row height').toBeLessThanOrEqual(8);
     });
 });

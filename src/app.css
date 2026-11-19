@@ -51,13 +51,49 @@
     --color-surface-border: #522354;
   }
 
-  html,
-  body {
+  html {
     background-color: var(--color-bg-base);
     color: var(--color-text-base);
     font-family: 'JetBrains Mono', system-ui, -apple-system, sans-serif;
     overflow-x: clip;
     -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: transparent;
+    color: var(--color-text-base);
+    font-family: 'JetBrains Mono', system-ui, -apple-system, sans-serif;
+    overflow-x: clip;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Subtle CRT Arcade Cabinet Scanlines (disabled automatically in TV Low-Power Mode) */
+  body:not([data-tv-mode="true"])::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.14) 2px,
+      rgba(0, 0, 0, 0.14) 4px
+    );
+    opacity: 0.35;
+  }
+
+  /* Scale root rem proportionally on >1080p displays (2K/4K TV/Monitors match 1080p TV proportions) */
+  @media (min-width: 1921px) and (min-height: 1081px) {
+    html {
+      font-size: clamp(16px, min(0.83333vw, 1.48148vh), 36px);
+    }
   }
 
   /* Guarantee mobile keyboard focus and text entry across all devices */
@@ -120,18 +156,51 @@
     text-transform: uppercase;
   }
 
+  .arcade-title {
+    background: linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #ecfeff 46%,
+      color-mix(in srgb, var(--color-primary) 72%, #ffffff) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter:
+      drop-shadow(0 0 14px rgba(var(--color-primary-rgb), 0.42))
+      drop-shadow(0 3px 0 rgba(var(--color-secondary-rgb), 0.58));
+  }
+
+  .host-panel-surface {
+    background-color: color-mix(in srgb, var(--color-surface) 64%, transparent);
+  }
+
+  .host-hud-surface {
+    background-color: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  }
+
+  .host-card-surface {
+    background-color: color-mix(in srgb, var(--color-bg-base) 90%, transparent);
+  }
+
   .btn-arcade {
     @apply relative inline-flex items-center justify-center gap-2 px-5 py-3 font-display text-base sm:text-lg font-normal uppercase tracking-wider text-white transition-all duration-150 ease-out select-none cursor-pointer;
-    background-color: var(--color-surface-2);
+    background-color: color-mix(in srgb, var(--color-surface-2) 92%, transparent);
     border: 2px solid var(--btn-color, var(--color-accent));
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    box-shadow:
+      inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 0 14px color-mix(in srgb, var(--btn-color, var(--color-accent)) 18%, transparent);
   }
   @media (hover: hover) and (pointer: fine) {
     .btn-arcade:hover:not(:disabled) {
-      background-color: color-mix(in srgb, var(--btn-color, var(--color-accent)) 22%, var(--color-surface-2));
+      background-color: color-mix(in srgb, var(--btn-color, var(--color-accent)) 24%, var(--color-surface-2));
       color: #ffffff;
-      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.45), 0 0 12px color-mix(in srgb, var(--btn-color, var(--color-accent)) 35%, transparent);
+      box-shadow:
+        inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+        inset 0 0 18px color-mix(in srgb, var(--btn-color, var(--color-accent)) 28%, transparent),
+        0 0 16px color-mix(in srgb, var(--btn-color, var(--color-accent)) 42%, transparent);
       transform: translateY(-1px);
     }
   }
@@ -170,10 +239,12 @@
 
   .panel-arcade {
     @apply p-4 sm:p-5 border-2;
-    background-color: var(--color-surface);
+    background-color: color-mix(in srgb, var(--color-surface) 72%, transparent);
     border-color: var(--neon-color, var(--color-primary));
     clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 0 24px color-mix(in srgb, var(--neon-color, var(--color-primary)) 12%, transparent);
     contain: layout style;
   }
 
@@ -314,39 +385,64 @@
 
 /* Synthwave Background */
 .synthwave-grid-background {
-  @apply fixed top-0 left-0 right-0 bottom-0 -z-10 overflow-hidden;
+  @apply fixed top-0 left-0 right-0 bottom-0 z-0 overflow-hidden pointer-events-none;
   background-color: var(--color-bg-base);
-  perspective: 400px;
+  perspective: 460px;
   isolation: isolate;
   transform: translateZ(0);
 }
 .synthwave-grid-background::before {
   content: '';
-  @apply absolute top-1/2 left-1/2 w-[200%] h-[200%];
+  @apply absolute left-1/2 w-[320%] h-[165%];
+  top: 38%;
   transform-style: preserve-3d;
-  transform: translate(-50%, -50%) rotateX(60deg);
+  transform: translate(-50%, 0) rotateX(60deg);
   background-image:
-    linear-gradient(to right, rgba(var(--color-primary-rgb), 0.16) 2px, transparent 2px),
-    linear-gradient(to bottom, rgba(var(--color-primary-rgb), 0.16) 2px, transparent 2px);
-  background-size: 52px 52px;
+    linear-gradient(
+      to right,
+      transparent 0px,
+      rgba(var(--color-primary-rgb), 0.12) 1px,
+      rgba(var(--color-primary-rgb), 0.3) 2px,
+      rgba(var(--color-primary-rgb), 0.3) 5px,
+      rgba(var(--color-primary-rgb), 0.12) 6px,
+      transparent 7px
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0px,
+      rgba(var(--color-secondary-rgb), 0.1) 1px,
+      rgba(var(--color-secondary-rgb), 0.26) 2px,
+      rgba(var(--color-secondary-rgb), 0.26) 5px,
+      rgba(var(--color-secondary-rgb), 0.1) 6px,
+      transparent 7px
+    );
+  background-size: 5rem 5rem;
   animation: scroll-grid 6s linear infinite;
+  will-change: transform;
   backface-visibility: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.45) 22%, rgba(0, 0, 0, 0.92) 48%, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.45) 22%, rgba(0, 0, 0, 0.92) 48%, black 100%);
 }
 .synthwave-grid-background::after {
   content: '';
   @apply absolute inset-0;
   background:
-    radial-gradient(circle at 18% 12%, rgba(var(--color-primary-rgb), 0.12), transparent 42%),
-    radial-gradient(circle at 82% 18%, rgba(var(--color-secondary-rgb), 0.12), transparent 44%),
-    linear-gradient(to top, transparent 22%, var(--color-bg-base) 76%),
-    radial-gradient(ellipse at 50% 145%, rgba(var(--color-secondary-rgb), 0.24), transparent 68%);
-}
-body[data-tv-mode="true"] .synthwave-grid-background::after {
-  background: linear-gradient(to top, transparent 25%, var(--color-bg-base) 78%);
+    linear-gradient(
+      to bottom,
+      var(--color-bg-base) 0%,
+      color-mix(in srgb, var(--color-bg-base) 90%, var(--color-secondary)) 32%,
+      rgba(var(--color-secondary-rgb), 0.16) 48%,
+      rgba(var(--color-primary-rgb), 0.08) 64%,
+      transparent 82%
+    ),
+    radial-gradient(ellipse 75% 38% at 50% 48%, rgba(var(--color-secondary-rgb), 0.2), transparent 72%),
+    radial-gradient(circle at 18% 16%, rgba(var(--color-primary-rgb), 0.14), transparent 46%),
+    radial-gradient(circle at 82% 20%, rgba(var(--color-secondary-rgb), 0.14), transparent 48%),
+    radial-gradient(ellipse at 50% 125%, rgba(var(--color-primary-rgb), 0.16), transparent 68%);
 }
 @keyframes scroll-grid {
-  from { transform: translate(-50%, -50%) rotateX(60deg) translateY(0px); }
-  to { transform: translate(-50%, -50%) rotateX(60deg) translateY(-52px); }
+  from { transform: translate(-50%, 0) rotateX(60deg) translateY(0rem); }
+  to { transform: translate(-50%, 0) rotateX(60deg) translateY(-5rem); }
 }
 
 /* Neon Spinner */
@@ -363,20 +459,12 @@ body[data-tv-mode="true"] .synthwave-grid-background::after {
 
 /* ==========================================================================
    Smart TV & Low Power Display Optimization Overrides (Samsung Tizen / WebOS)
-   Zero flicker, zero 3D tilt tearing, steady digits & crisp chamfered panels.
+   Freezes background motion, removes scanlines/glows/blurs, keeps retrowave look.
    ========================================================================== */
 body[data-tv-mode="true"] {
-  .synthwave-grid-background {
-    perspective: none !important;
-    transform: none !important;
-  }
-
   .synthwave-grid-background::before {
     animation: none !important;
-    transform: translate(-50%, -50%) !important;
-    transform-style: flat !important;
     will-change: auto !important;
-    opacity: 0.45;
   }
 
   * {
@@ -406,8 +494,13 @@ body[data-tv-mode="true"] {
     animation: fly-across 2.6s linear forwards !important;
   }
 
+  .arcade-title {
+    background: none !important;
+    color: #ffffff !important;
+    filter: none !important;
+  }
+
   .panel-arcade {
-    background-color: var(--color-surface) !important;
     border-width: 2px !important;
   }
 
@@ -418,17 +511,19 @@ body[data-tv-mode="true"] {
 }
 
 @media (display-mode: tv) {
-  .synthwave-grid-background {
-    perspective: none !important;
-    transform: none !important;
+  body::after {
+    display: none !important;
+  }
+
+  .arcade-title {
+    background: none !important;
+    color: #ffffff !important;
+    filter: none !important;
   }
 
   .synthwave-grid-background::before {
     animation: none !important;
-    transform: translate(-50%, -50%) !important;
-    transform-style: flat !important;
     will-change: auto !important;
-    opacity: 0.45;
   }
 
   * {

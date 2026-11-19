@@ -95,7 +95,7 @@
 
                 <div class="mt-1 flex-shrink-0">
                     <span class="text-[11px] font-display uppercase tracking-widest text-slate-400 block mb-0.5">
-                        {$t.finalScores || 'FINAL SCORE'}
+                        {$t.finalScore || 'FINAL SCORE'}
                     </span>
                     <div class="flex items-baseline justify-center gap-2">
                         <span class="text-3xl sm:text-5xl font-display {currentRankStyle.scoreColor} leading-none">
@@ -144,7 +144,7 @@
             {#if sortedPlayers.length > 0}
                 <div class="pt-2.5 border-t border-[#332e59] flex-shrink-0">
                     <span class="text-[10px] font-display uppercase tracking-widest text-cyan-300 block text-center mb-1.5">
-                        {$t.fullStandingsPts || $t.finalScores || 'TOP STANDINGS'}
+                        {sortedPlayers.length > 3 ? ($t.topThreeStandings || 'TOP 3 STANDINGS') : ($t.fullStandingsPts || 'FULL STANDINGS (PTS)')}
                     </span>
                     <div class="space-y-1.5">
                         {#each sortedPlayers.slice(0, 3) as p, idx (p.id)}
@@ -166,50 +166,50 @@
                     </div>
                 </div>
             {/if}
-
-            <!-- Action Buttons -->
-            <div class="space-y-2 pt-2 border-t border-[#332e59] flex-shrink-0">
-                {#if game?.battleHistory && game.battleHistory.length > 0}
-                    <button
-                        type="button"
-                        on:click={() => showBattleHistory.set(true)}
-                        class="btn-arcade w-full py-2.5 px-4 text-xs sm:text-sm"
-                        style="--btn-color: var(--color-primary);"
-                    >
-                        <ArcadeIcon name="history" className="w-4 h-4" />
-                        <span>{$t.viewBattleHistory || 'VIEW BATTLE HISTORY'}</span>
-                    </button>
-                {/if}
-
-                {#if isHost}
-                    <div class="flex gap-2">
-                        <button
-                            type="button"
-                            on:click={() => sendMessage('play-again', { gameId: game.id, loading: true })}
-                            class="btn-arcade flex-1 py-2.5 px-4 text-xs sm:text-sm"
-                            style="--btn-color: var(--color-warning);"
-                        >
-                            <ArcadeIcon name="refresh" className="w-4 h-4" />
-                            <span>{$t.playAgain || 'PLAY AGAIN'}</span>
-                        </button>
-                        <button
-                            type="button"
-                            on:click={resetToMenu}
-                            class="btn-arcade btn-neutral px-4 py-2.5 text-xs sm:text-sm"
-                        >
-                            <ArcadeIcon name="home" className="w-4 h-4" />
-                            <span>{$t.mainMenu || 'MENU'}</span>
-                        </button>
-                    </div>
-                {:else}
-                    <div class="p-2 cut-sm bg-[#0a0914] border border-[#332e59] text-center flex items-center justify-center gap-2">
-                        <span class="text-xs font-sans text-slate-300 font-medium">
-                            {$t.waitingForHostToRestart || 'Waiting for host to start a new game...'}
-                        </span>
-                    </div>
-                {/if}
-            </div>
         </div>
+    </div>
+
+    <!-- Action Buttons (Always visible above footer, never buried in scroll) -->
+    <div class="space-y-2 pt-2 border-t border-[#332e59] flex-shrink-0 mb-1.5">
+        {#if game?.battleHistory && game.battleHistory.length > 0}
+            <button
+                type="button"
+                on:click={() => showBattleHistory.set(true)}
+                class="btn-arcade w-full py-2.5 px-4 text-xs sm:text-sm"
+                style="--btn-color: var(--color-primary);"
+            >
+                <ArcadeIcon name="history" className="w-4 h-4" />
+                <span>{$t.viewBattleHistory || 'VIEW BATTLE HISTORY'}</span>
+            </button>
+        {/if}
+
+        {#if isHost}
+            <div class="flex gap-2">
+                <button
+                    type="button"
+                    on:click={() => sendMessage('play-again', { gameId: game.id, loading: true })}
+                    class="btn-arcade flex-1 py-2.5 px-4 text-xs sm:text-sm"
+                    style="--btn-color: var(--color-warning);"
+                >
+                    <ArcadeIcon name="refresh" className="w-4 h-4" />
+                    <span>{$t.playAgain || 'PLAY AGAIN'}</span>
+                </button>
+                <button
+                    type="button"
+                    on:click={resetToMenu}
+                    class="btn-arcade btn-neutral px-4 py-2.5 text-xs sm:text-sm"
+                >
+                    <ArcadeIcon name="home" className="w-4 h-4" />
+                    <span>{$t.mainMenu || 'MENU'}</span>
+                </button>
+            </div>
+        {:else}
+            <div class="p-2 cut-sm bg-[#0a0914] border border-[#332e59] text-center flex items-center justify-center gap-2">
+                <span class="text-xs font-sans text-slate-300 font-medium">
+                    {$t.waitingForHostToRestart || 'Waiting for host to start a new game...'}
+                </span>
+            </div>
+        {/if}
     </div>
 
     <!-- 4 SVG Arcade Reactions Footer (NO Avatars) -->

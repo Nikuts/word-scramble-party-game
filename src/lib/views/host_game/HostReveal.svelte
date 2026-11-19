@@ -1,10 +1,11 @@
 <!-- src/lib/views/host_game/HostReveal.svelte -->
 <script>
     import { onDestroy } from 'svelte';
-    import { t, language, gameState, gamePlayers } from '../../../stores.js';
+    import { t, tvMode, language, gameState, gamePlayers } from '../../../stores.js';
     import { formatVotesLabel } from '../../../ui_text.js';
     import PixelAvatar from '../../shared/PixelAvatar.svelte';
     import ArcadeIcon from '../../shared/ArcadeIcon.svelte';
+    import HexBadge from '../../shared/HexBadge.svelte';
     import { TIMEOUT_ANSWER_PLACEHOLDER } from '../../../../shared/config.js';
 
     export let animatedScores = {};
@@ -104,7 +105,7 @@
     {@const aggregatedRoyalties = getAggregatedRoyalties(battle.royalties)}
 
     <!-- Prompt Header with Inline Royalties Summary (Prototype v5) -->
-    <div class="relative z-10 w-full cut-md bg-[#131126] border-2 border-cyan-400/70 px-4 sm:px-6 py-2.5 sm:py-3 2xl:py-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3 flex-shrink-0">
+    <div class="relative z-10 w-full cut-md host-hud-surface border-2 border-[color:rgba(var(--color-primary-rgb),0.72)] px-4 sm:px-6 py-2.5 sm:py-3 2xl:py-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3 flex-shrink-0">
         <div class="min-w-0 flex-1 text-left">
             <span class="text-xs sm:text-sm 2xl:text-base font-display text-fuchsia-300 uppercase tracking-widest block mb-0.5">
                 {($t.results || 'REVEAL').toUpperCase()} // {formatLabel}
@@ -132,7 +133,8 @@
         {/if}
     </div>
 
-    <main class="relative z-10 w-full reveal-cards-grid grid-cols-1 {isQuad ? 'sm:grid-cols-2 lg:grid-cols-4' : (isTrio ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2')} 2xl:!gap-5 pt-5 pb-1 lg:flex-1 lg:min-h-0 items-stretch content-center lg:overflow-visible my-auto">
+    {@const isDuo = !isQuad && !isTrio && battle.competitors?.length === 2}
+    <main class="relative z-10 w-full reveal-cards-grid grid-cols-1 {isQuad ? 'sm:grid-cols-2 lg:grid-cols-4' : (isTrio ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 sm:!gap-8 2xl:!gap-12')} {isDuo ? '' : '2xl:!gap-5'} pt-5 pb-1 lg:flex-1 lg:min-h-0 items-stretch content-center lg:overflow-visible my-auto">
         {#each battle.competitors as c_id (c_id)}
             {@const p = $gamePlayers.find(x => x.id === c_id)}
             {@const isWinner = battle.winnerId === c_id}
@@ -149,7 +151,7 @@
             {@const visibleVoters = cardVoters.slice(0, maxNamedVoters)}
             {@const hiddenVoterCount = Math.max(0, cardVoters.length - visibleVoters.length)}
 
-            <div class="relative flex flex-col lg:min-h-0 h-full lg:max-h-[520px] 2xl:max-h-[700px]">
+            <div class="relative flex flex-col lg:min-h-0 h-full lg:max-h-[32.5rem] 2xl:max-h-[43.75rem]">
                 {#if showWinnerUI}
                     <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20 fighter-crest bg-emerald-400 text-black text-[10px] sm:text-xs 2xl:text-sm border-2 border-emerald-200 whitespace-nowrap py-0.5 2xl:py-1 shadow-md">
                         <ArcadeIcon name="crown" className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
@@ -161,7 +163,7 @@
                     </div>
                 {/if}
 
-                <div class="reveal-card flex-1 bg-[#100e22] border-2 {showWinnerUI ? 'border-emerald-400 ring-1 ring-amber-400/50' : (showTieUI ? 'border-amber-400/80' : 'border-[#332e59]')} cut-md {isQuad ? 'p-2.5 sm:p-3 2xl:p-5 pt-4 2xl:pt-6' : 'p-3 sm:p-4 2xl:p-6 pt-4 2xl:pt-6'} transition-colors gap-2 2xl:gap-3.5">
+                <div class="reveal-card flex-1 host-panel-surface border-2 {showWinnerUI ? 'border-emerald-400 ring-1 ring-amber-400/50' : (showTieUI ? 'border-amber-400/80' : 'border-[#332e59]')} cut-md {isQuad ? 'p-2.5 sm:p-3 2xl:p-5 pt-4 2xl:pt-6' : 'p-3 sm:p-4 2xl:p-6 pt-4 2xl:pt-6'} transition-colors gap-2 2xl:gap-3.5">
 
                 <!-- Row 1: Competitor Header -->
                 <div class="flex items-center justify-between gap-2 pb-1.5 2xl:pb-2.5 border-b border-[#332e59]">
@@ -177,7 +179,7 @@
                 </div>
 
                 <!-- Row 2: Nested Dark Answer Box (Rainbow Word Attribution Preserved) -->
-                <div class="reveal-card-answer bg-[#070610] border border-[#332e59] cut-sm {isQuad ? 'p-2.5 2xl:p-4' : 'p-3 sm:p-4 2xl:p-6'} {isQuad ? 'min-h-[88px] lg:min-h-[110px] 2xl:min-h-[160px]' : 'min-h-[110px] lg:min-h-[180px] 2xl:min-h-[260px]'} max-h-[250px] xl:max-h-[300px] 2xl:max-h-[380px] {punchlineClass} font-sans font-bold text-center leading-snug overflow-y-auto w-full flex items-center justify-center">
+                <div class="reveal-card-answer bg-[#070610] border border-[#332e59] cut-sm {isQuad ? 'p-2.5 2xl:p-4' : 'p-3 sm:p-4 2xl:p-6'} {isQuad ? 'min-h-[5.5rem] lg:min-h-[6.875rem] 2xl:min-h-[10rem]' : 'min-h-[6.875rem] lg:min-h-[11.25rem] 2xl:min-h-[16.25rem]'} max-h-[15.625rem] xl:max-h-[18.75rem] 2xl:max-h-[23.75rem] {punchlineClass} font-sans font-bold text-center leading-snug overflow-y-auto w-full flex items-center justify-center">
                     {#if battle.annotatedAnswers?.[c_id]}
                         {@const annotated = battle.annotatedAnswers[c_id]}
                         {#if annotated.isFinal}
@@ -278,5 +280,17 @@
                 </div>
             </div>
         {/each}
+
+        {#if isDuo}
+            <div class="hidden sm:flex pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30" aria-hidden="true">
+                <HexBadge
+                    bgClass="bg-[#0e0b22]"
+                    borderClass="text-amber-400"
+                    className="px-4 py-2 lg:px-5 lg:py-2.5 2xl:px-7 2xl:py-3 {!$tvMode ? 'drop-shadow-[0_0_16px_rgba(250,204,21,0.45)]' : ''}"
+                >
+                    <span class="font-display text-base lg:text-xl 2xl:text-3xl text-amber-300 tracking-widest leading-none">VS</span>
+                </HexBadge>
+            </div>
+        {/if}
     </main>
 {/if}

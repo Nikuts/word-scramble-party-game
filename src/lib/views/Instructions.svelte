@@ -13,7 +13,7 @@
 </script>
 
 <div class="h-screen-safe max-h-screen-safe overflow-y-auto overscroll-contain flex flex-col items-center p-3 sm:p-6 lg:p-8 py-4 justify-start sm:justify-center select-none font-sans safe-top safe-bottom">
-    <div class="w-full max-w-2xl panel-arcade overflow-y-auto max-h-full p-4 sm:p-6 my-auto" style="--neon-color: var(--color-accent);">
+    <div class="w-full max-w-2xl 2xl:max-w-[48rem] panel-arcade overflow-y-auto max-h-full p-4 sm:p-6 my-auto" style="--neon-color: var(--color-accent);">
         
         <header class="text-center mb-4">
             <h1 class="text-2xl sm:text-3xl lg:text-4xl font-display text-amber-300 tracking-wider flex items-center justify-center gap-2.5">

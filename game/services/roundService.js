@@ -51,7 +51,7 @@ export function prefetchNextRoundData(game) {
         ...(game.preGeneratedBattlePrompts || []).slice(-12)
     ];
 
-    game.prefetchedRoundPromise = (async () => {
+    const roundPromise = (async () => {
         try {
             const data = await generateRoundData(
                 expectedTheme,
@@ -69,13 +69,18 @@ export function prefetchNextRoundData(game) {
             }
         } catch (err) {
             console.warn(`[Game ${game.id}] Background prefetch failed for Round ${nextRoundIndex}:`, err);
+        } finally {
+            if (game.prefetchedRoundPromise === roundPromise) {
+                game.prefetchedRoundPromise = null;
+            }
         }
         return null;
     })();
+    game.prefetchedRoundPromise = roundPromise;
 
     // If next round is final round, also prefetch final round movie battle prompts in background!
     if (nextRoundIndex === QUESTIONS_PER_ROUND.length && !game.prefetchedFinalRoundPrompts && !game.prefetchedFinalRoundPromise) {
-        game.prefetchedFinalRoundPromise = (async () => {
+        const finalPromise = (async () => {
             try {
                 const { generateBattlePairings } = await import('./battleService.js');
                 const battleGroups = generateBattlePairings(
@@ -92,9 +97,14 @@ export function prefetchNextRoundData(game) {
                 }
             } catch (err) {
                 console.warn(`[Game ${game.id}] Background prefetch for Final Round Movie Prompts failed:`, err);
+            } finally {
+                if (game.prefetchedFinalRoundPromise === finalPromise) {
+                    game.prefetchedFinalRoundPromise = null;
+                }
             }
             return null;
         })();
+        game.prefetchedFinalRoundPromise = finalPromise;
     }
 }
 
@@ -233,10 +243,17 @@ export async function startNextRound(io, game) {
     if (freshBattlePrompts.length >= game.players.length) {
         game.preGeneratedBattlePrompts = freshBattlePrompts;
     } else {
-        const fallbackSet = FALLBACK_CONTENT[game.language] || FALLBACK_CONTENT.en || [];
-        const sparePrompts = helpers.shuffleArray(fallbackSet.flatMap(p => p.battlePrompts || []))
-            .filter(bp => bp && !usedBattlePromptsSet.has(bp) && !freshBattlePrompts.includes(bp));
-        game.preGeneratedBattlePrompts = [...freshBattlePrompts, ...sparePrompts, ...rawBattlePrompts];
+        // Keep all on-theme generated prompts first before falling back to off-theme static packs
+        const remainingThemePrompts = rawBattlePrompts.filter(bp => bp && !freshBattlePrompts.includes(bp));
+        const themePool = [...freshBattlePrompts, ...remainingThemePrompts];
+        if (themePool.length >= game.players.length) {
+            game.preGeneratedBattlePrompts = themePool;
+        } else {
+            const fallbackSet = FALLBACK_CONTENT[game.language] || FALLBACK_CONTENT.en || [];
+            const sparePrompts = helpers.shuffleArray(fallbackSet.flatMap(p => p.battlePrompts || []))
+                .filter(bp => bp && !usedBattlePromptsSet.has(bp) && !themePool.includes(bp));
+            game.preGeneratedBattlePrompts = [...themePool, ...sparePrompts];
+        }
     }
 
     game.preGeneratedFallbackWords = roundData.fallbackWords || [];
