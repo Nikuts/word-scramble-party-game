@@ -76,7 +76,7 @@ export async function generateInitialThemes(io, game) {
     }
 }
 
-export async function handleCreateGame(io, socket, { language, tvMode = false }) {
+export async function handleCreateGame(io, socket, { language, tvMode = false, musicMuted = false }) {
     const capacity = manager.checkServerCapacity();
     if (!capacity.allowed) {
         return socket.emit('error-message', {
@@ -117,6 +117,7 @@ export async function handleCreateGame(io, socket, { language, tvMode = false })
         is18PlusMode: false,
         slowpokeMode: false,
         tvMode: Boolean(tvMode),
+        musicMuted: Boolean(musicMuted),
         soundsOnHostOnly: SOUNDS_ON_HOST_ONLY,
         isGeneratingThemes: false,
         answerHistory: [],
@@ -295,6 +296,14 @@ export function handleSetTvMode(io, socket, { gameId, tvMode }) {
     const game = manager.getGame(gameId);
     if (game && helpers.isHostOrHostDisplay(game, socket)) {
         game.tvMode = Boolean(tvMode);
+        helpers.broadcastGameState(io, gameId);
+    }
+}
+
+export function handleSetMusicMuted(io, socket, { gameId, musicMuted }) {
+    const game = manager.getGame(gameId);
+    if (game && helpers.isHostOrHostDisplay(game, socket)) {
+        game.musicMuted = Boolean(musicMuted);
         helpers.broadcastGameState(io, gameId);
     }
 }

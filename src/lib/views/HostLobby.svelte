@@ -1,6 +1,6 @@
 <!-- src/lib/views/HostLobby.svelte -->
 <script>
-    import { t, language, sendMessage, gameState, tvMode, toggleTvMode } from '../../stores.js';
+    import { t, language, sendMessage, gameState, tvMode, toggleTvMode, musicMuted, toggleMusicMuted } from '../../stores.js';
     import { selectPluralForm } from '../../ui_text.js';
     import qrcode from 'qrcode-generator';
     import PixelAvatar from '../shared/PixelAvatar.svelte';
@@ -92,18 +92,11 @@
 
     <!-- Prototype v5 Unified Top HUD Bar -->
     <header class="flex-shrink-0 w-full flex items-center justify-between gap-2">
-        <div class="flex-1 min-w-0 cut-sm host-hud-surface border border-[color:rgba(var(--color-primary-rgb),0.65)] px-3 sm:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center justify-between gap-2">
-            <button
-                type="button"
-                on:click={toggleTvMode}
-                class="cut-sm px-2.5 sm:px-3 2xl:px-3.5 py-1 2xl:py-1.5 host-card-surface border text-xs sm:text-sm 2xl:text-base font-display transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0 {$tvMode ? 'border-primary text-primary' : 'border-[color:var(--color-surface-border)] text-slate-300 hover:text-white'}"
-                title={$t.tvModeDesc}
-                aria-label={$t.tvLowPowerMode || 'Toggle TV Mode'}
-            >
-                <ArcadeIcon name="tv" className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
-                <span>{$tvMode ? ($t.tvOn || 'TV ON') : ($t.tvOff || 'TV OFF')}</span>
-            </button>
-            <span class="hidden lg:inline font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-slate-200 tracking-widest uppercase truncate">
+        <div class="flex-1 min-w-0 min-h-[38px] sm:min-h-[42px] 2xl:min-h-[48px] cut-sm host-hud-surface border border-[color:rgba(var(--color-primary-rgb),0.65)] px-2.5 sm:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center justify-between gap-2">
+            <span class="sm:hidden font-display text-xs text-emerald-400 tracking-widest uppercase truncate">
+                {$t.lobbyTag || 'LOBBY'}
+            </span>
+            <span class="hidden sm:inline font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-slate-200 tracking-widest uppercase truncate">
                 {$t.appName || 'WORD SCRAMBLE'}
             </span>
         </div>
@@ -117,20 +110,43 @@
             </span>
         </HexBadge>
 
-        <div class="flex-1 min-w-0 cut-sm host-hud-surface border border-[color:rgba(var(--color-secondary-rgb),0.65)] px-3 sm:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center justify-between gap-2">
-            <span class="font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-emerald-400 tracking-widest uppercase truncate">
+        <div class="flex-1 min-w-0 min-h-[38px] sm:min-h-[42px] 2xl:min-h-[48px] cut-sm host-hud-surface border border-[color:rgba(var(--color-secondary-rgb),0.65)] px-1.5 sm:px-3 lg:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center justify-between gap-1 sm:gap-2">
+            <span class="hidden sm:inline font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-emerald-400 tracking-widest uppercase truncate">
                 {$t.lobbyTag || 'LOBBY'}
             </span>
-            <button
-                type="button"
-                on:click={handleCloseLobby}
-                class="cut-sm px-2.5 sm:px-3 2xl:px-3.5 py-1 2xl:py-1.5 bg-rose-950/35 border border-rose-500/45 hover:border-danger hover:bg-rose-950/80 text-rose-200 text-xs sm:text-sm 2xl:text-base font-display transition-colors cursor-pointer flex items-center gap-1.5 flex-shrink-0"
-                title={$t.closeLobby}
-                aria-label={$t.closeLobby || 'Close Lobby'}
-            >
-                <ArcadeIcon name="close" className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
-                <span class="hidden sm:inline">{$t.closeTag || 'CLOSE'}</span>
-            </button>
+            <div class="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ml-auto">
+                <button
+                    type="button"
+                    on:click={toggleTvMode}
+                    class="cut-sm p-1.5 sm:px-2.5 sm:py-1 lg:px-3 2xl:px-3.5 2xl:py-1.5 host-card-surface border text-xs sm:text-sm 2xl:text-base font-display transition-colors flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0 {$tvMode ? 'border-primary text-primary' : 'border-[color:var(--color-surface-border)] text-slate-300 hover:text-white'}"
+                    title={$t.tvModeDesc}
+                    aria-label={$t.tvLowPowerMode || 'Toggle TV Mode'}
+                >
+                    <ArcadeIcon name="tv" className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
+                    <span class="hidden sm:inline">{$tvMode ? ($t.tvOn || 'TV ON') : ($t.tvOff || 'TV OFF')}</span>
+                </button>
+                <button
+                    type="button"
+                    on:click={toggleMusicMuted}
+                    class="cut-sm p-1.5 sm:px-2.5 sm:py-1.5 2xl:px-3 2xl:py-1.5 host-card-surface border transition-colors flex items-center justify-center cursor-pointer flex-shrink-0 {$musicMuted ? 'border-[color:var(--color-surface-border)] text-slate-400 hover:text-white' : 'border-emerald-400/70 text-emerald-300 hover:text-emerald-200'}"
+                    title={$musicMuted ? ($t.musicOff || 'Music Off') : ($t.musicOn || 'Music On')}
+                    aria-label={$t.toggleMusic || 'Toggle music'}
+                    aria-pressed={!$musicMuted}
+                    data-testid="music-toggle-btn"
+                >
+                    <ArcadeIcon name={$musicMuted ? 'music-off' : 'music'} className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
+                </button>
+                <button
+                    type="button"
+                    on:click={handleCloseLobby}
+                    class="cut-sm p-1.5 lg:px-3 lg:py-1 2xl:px-3.5 2xl:py-1.5 bg-rose-950/35 border border-rose-500/45 hover:border-danger hover:bg-rose-950/80 text-rose-200 text-xs sm:text-sm 2xl:text-base font-display transition-colors cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0"
+                    title={$t.closeLobby}
+                    aria-label={$t.closeLobby || 'Close Lobby'}
+                >
+                    <ArcadeIcon name="close" className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
+                    <span class="hidden lg:inline">{$t.closeTag || 'CLOSE'}</span>
+                </button>
+            </div>
         </div>
     </header>
 

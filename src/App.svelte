@@ -15,6 +15,8 @@
   import ErrorDisplay from './lib/shared/ErrorDisplay.svelte';
   import ArcadeIcon from './lib/shared/ArcadeIcon.svelte';
   import DevHarness from './lib/dev/DevHarness.svelte';
+  import SoundTestView from './lib/dev/SoundTestView.svelte';
+  import { musicManager } from './lib/audio/musicManager.js';
   import { get } from 'svelte/store';
 
   const initialUrlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
@@ -96,8 +98,10 @@
       if (typeof document !== 'undefined') {
         if (document.visibilityState === 'hidden') {
           document.body.setAttribute('data-app-hidden', 'true');
+          musicManager.pauseForHidden();
         } else {
           document.body.removeAttribute('data-app-hidden');
+          musicManager.resumeFromVisible();
         }
       }
     };
@@ -120,6 +124,10 @@
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('debug') || urlParams.has('dev') || urlParams.has('harness')) {
         isDevHarness = true;
+        return;
+    }
+    if (import.meta.env.DEV && (urlParams.has('music') || urlParams.has('soundTest'))) {
+        view.set('soundTest');
         return;
     }
 
@@ -155,6 +163,7 @@
     hostDisplay: HostDisplay,
     playerGame: PlayerGame,
     instructions: Instructions,
+    soundTest: SoundTestView,
     devHarness: DevHarness,
   };
 </script>

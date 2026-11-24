@@ -1,5 +1,5 @@
 <script>
-    import { t, showBattleHistory, gamePhase, phaseTimer, currentRound, myPlayerQuestions, myBattlesToAnswer, currentVotingBattle, currentPlayerDetails, gameState, activeAllVotesInNotice } from '../../../stores.js';
+    import { t, showBattleHistory, gamePhase, phaseTimer, currentRound, myPlayerQuestions, myBattlesToAnswer, currentVotingBattle, currentPlayerDetails, gameState, activeAllVotesInNotice, musicMuted, toggleMusicMuted } from '../../../stores.js';
     import { tweened } from 'svelte/motion';
     import { cubicOut } from 'svelte/easing';
     import LoadingSpinner from '../../shared/LoadingSpinner.svelte';
@@ -61,9 +61,26 @@
                         </div>
                     </div>
                 </div>
-                <div class="text-right flex-shrink-0">
-                    <span class="font-bold text-lg sm:text-xl text-primary font-mono">{Math.round($animatedScore).toLocaleString()}</span>
-                    <span class="text-xs text-slate-400 font-display"> {$t.pts || $t.score || 'PTS'}</span>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    {#if $currentPlayerDetails.isHost}
+                        <button
+                            type="button"
+                            on:click={toggleMusicMuted}
+                            data-testid="player-music-toggle-btn"
+                            aria-label={$t.toggleMusic || 'Toggle music'}
+                            aria-pressed={!$musicMuted}
+                            title={$musicMuted ? ($t.musicOff || 'Music Off') : ($t.musicOn || 'Music On')}
+                            class="cut-sm p-1.5 border transition-colors flex items-center justify-center cursor-pointer {$musicMuted
+                                ? 'bg-[#0a0914] border-[#332e59] text-slate-400 hover:text-white'
+                                : 'bg-emerald-950/60 border-emerald-400/75 text-emerald-300 hover:text-emerald-200'}"
+                        >
+                            <ArcadeIcon name={$musicMuted ? 'music-off' : 'music'} className="w-4 h-4" />
+                        </button>
+                    {/if}
+                    <div class="text-right flex-shrink-0">
+                        <span class="font-bold text-lg sm:text-xl text-primary font-mono">{Math.round($animatedScore).toLocaleString()}</span>
+                        <span class="text-xs text-slate-400 font-display"> {$t.pts || $t.score || 'PTS'}</span>
+                    </div>
                 </div>
             </div>
         </header>

@@ -1,7 +1,7 @@
 <!-- src/lib/views/HostGameView.svelte -->
 <script>
     import { onDestroy } from 'svelte';
-    import { t, gameState, gamePhase, gamePlayers, phaseTimer, tvMode, toggleTvMode, activeTimeBoostNotice, activeAllVotesInNotice, currentRound } from '../../stores.js';
+    import { t, gameState, gamePhase, gamePlayers, phaseTimer, tvMode, toggleTvMode, musicMuted, toggleMusicMuted, activeTimeBoostNotice, activeAllVotesInNotice, currentRound } from '../../stores.js';
     import { tweened } from 'svelte/motion';
     import { cubicOut } from 'svelte/easing';
     import LoadingSpinner from '../shared/LoadingSpinner.svelte';
@@ -164,19 +164,12 @@
 
     <!-- Prototype v5 Unified Top HUD Bar -->
     <header class="relative z-20 flex-shrink-0 w-full flex items-center justify-between gap-2">
-        <!-- Left Wing: TV Toggle + Theme -->
-        <div class="flex-1 min-w-0 cut-sm host-hud-surface border border-[color:rgba(var(--color-primary-rgb),0.65)] px-3 sm:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center gap-2.5 sm:gap-3.5">
-            <button
-                type="button"
-                on:click={toggleTvMode}
-                class="cut-sm px-2.5 sm:px-3 2xl:px-3.5 py-1 2xl:py-1.5 host-card-surface border text-xs sm:text-sm 2xl:text-base font-display transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0 {$tvMode ? 'border-primary text-primary' : 'border-[color:var(--color-surface-border)] text-slate-300 hover:text-white'}"
-                title={$t.tvModeDesc}
-                aria-label={$t.tvLowPowerMode || 'Toggle TV Mode'}
+        <!-- Left Wing: Dedicated Full-Width Topic / Theme -->
+        <div class="flex-1 min-w-0 min-h-[38px] sm:min-h-[42px] 2xl:min-h-[48px] cut-sm host-hud-surface border border-[color:rgba(var(--color-primary-rgb),0.65)] px-3 sm:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center">
+            <span
+                class="font-display text-xs sm:text-base lg:text-lg 2xl:text-xl text-slate-100 tracking-wide truncate block w-full"
+                title={$gameState.theme || ''}
             >
-                <ArcadeIcon name="tv" className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
-                <span>{$tvMode ? ($t.tvOn || 'TV ON') : ($t.tvOff || 'TV OFF')}</span>
-            </button>
-            <span class="font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-slate-100 tracking-wide truncate block">
                 {$gameState.theme || '...'}
             </span>
         </div>
@@ -204,27 +197,50 @@
             {/if}
         </div>
 
-        <!-- Right Wing: Round Status + End Game -->
-        <div class="flex-1 min-w-0 cut-sm host-hud-surface border border-[color:rgba(var(--color-secondary-rgb),0.65)] px-3 sm:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center justify-between gap-2">
+        <!-- Right Wing: Round Status + Unified Host Utility Cluster (TV Mode, Music, End) -->
+        <div class="flex-1 min-w-0 min-h-[38px] sm:min-h-[42px] 2xl:min-h-[48px] cut-sm host-hud-surface border border-[color:rgba(var(--color-secondary-rgb),0.65)] px-1.5 sm:px-3 lg:px-4 2xl:px-5 py-1.5 sm:py-2 2xl:py-2.5 flex items-center justify-between gap-1 sm:gap-2">
             {#if isResultsPhase}
-                <span class="font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-secondary tracking-widest uppercase truncate">
+                <span class="hidden sm:inline font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-secondary tracking-widest uppercase truncate">
                     {$t.matchComplete || 'MATCH COMPLETE'}
                 </span>
             {:else}
-                <span class="font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-emerald-400 tracking-widest uppercase truncate">
+                <span class="hidden sm:inline font-display text-xs sm:text-sm lg:text-base 2xl:text-lg text-emerald-400 tracking-widest uppercase truncate">
                     {$t.round ? `${$t.round} ${$currentRound || 1} / 3` : `ROUND ${$currentRound || 1} / 3`}
                 </span>
             {/if}
-            <button
-                type="button"
-                on:click={handleForceEndGame}
-                class="cut-sm px-2.5 sm:px-3 2xl:px-3.5 py-1 2xl:py-1.5 host-card-surface border border-[color:var(--color-surface-border)] hover:border-danger hover:bg-rose-950/70 text-slate-300 hover:text-rose-200 text-xs sm:text-sm 2xl:text-base font-display transition-colors cursor-pointer flex items-center gap-1.5 flex-shrink-0"
-                title={$t.endGame}
-                aria-label={$t.endGame || 'End Game'}
-            >
-                <ArcadeIcon name="close" className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
-                <span class="hidden sm:inline">{$t.endTag || 'END'}</span>
-            </button>
+            <div class="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ml-auto">
+                <button
+                    type="button"
+                    on:click={toggleTvMode}
+                    class="cut-sm p-1.5 sm:px-2.5 sm:py-1 lg:px-3 2xl:px-3.5 2xl:py-1.5 host-card-surface border text-xs sm:text-sm 2xl:text-base font-display transition-colors flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0 {$tvMode ? 'border-primary text-primary' : 'border-[color:var(--color-surface-border)] text-slate-300 hover:text-white'}"
+                    title={$t.tvModeDesc}
+                    aria-label={$t.tvLowPowerMode || 'Toggle TV Mode'}
+                >
+                    <ArcadeIcon name="tv" className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
+                    <span class="hidden sm:inline">{$tvMode ? ($t.tvOn || 'TV ON') : ($t.tvOff || 'TV OFF')}</span>
+                </button>
+                <button
+                    type="button"
+                    on:click={toggleMusicMuted}
+                    class="cut-sm p-1.5 sm:px-2.5 sm:py-1.5 2xl:px-3 2xl:py-1.5 host-card-surface border transition-colors flex items-center justify-center cursor-pointer flex-shrink-0 {$musicMuted ? 'border-[color:var(--color-surface-border)] text-slate-400 hover:text-white' : 'border-emerald-400/70 text-emerald-300 hover:text-emerald-200'}"
+                    title={$musicMuted ? ($t.musicOff || 'Music Off') : ($t.musicOn || 'Music On')}
+                    aria-label={$t.toggleMusic || 'Toggle music'}
+                    aria-pressed={!$musicMuted}
+                    data-testid="music-toggle-btn"
+                >
+                    <ArcadeIcon name={$musicMuted ? 'music-off' : 'music'} className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
+                </button>
+                <button
+                    type="button"
+                    on:click={handleForceEndGame}
+                    class="cut-sm p-1.5 lg:px-3 lg:py-1 2xl:px-3.5 2xl:py-1.5 host-card-surface border border-[color:var(--color-surface-border)] hover:border-danger hover:bg-rose-950/70 text-slate-300 hover:text-rose-200 text-xs sm:text-sm 2xl:text-base font-display transition-colors cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0"
+                    title={$t.endGame}
+                    aria-label={$t.endGame || 'End Game'}
+                >
+                    <ArcadeIcon name="close" className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
+                    <span class="hidden lg:inline">{$t.endTag || 'END'}</span>
+                </button>
+            </div>
         </div>
     </header>
 

@@ -104,6 +104,9 @@
                     <ArcadeIcon name="trophy" className="w-4 h-4" />
                     <span>{$t.instructionsGoal}</span>
                 </p>
+                <p class="mt-2 text-[11px] font-mono text-slate-400">
+                    {$t.musicCreditText}
+                </p>
             </div>
         </div>
     </div>

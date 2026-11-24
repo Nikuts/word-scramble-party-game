@@ -1,24 +1,34 @@
 <script>
-    import { t, language, setLanguage, sendMessage, changeView, error, tvMode } from '../../stores.js';
+    import { t, language, setLanguage, sendMessage, changeView, error, tvMode, musicMuted } from '../../stores.js';
     import ArcadeIcon from '../shared/ArcadeIcon.svelte';
 
     $: isUkrainian = $language === 'uk' || $language === 'ua';
 
     function createHost() {
         localStorage.removeItem('wordScrambleHostSession');
-        sendMessage('create-game', { language: $language, tvMode: $tvMode, loading: true });
+        sendMessage('create-game', { language: $language, tvMode: $tvMode, musicMuted: $musicMuted, loading: true });
     }
 </script>
 
 <div class="h-screen-safe min-h-0 w-full flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 2xl:p-10 relative box-border overflow-y-auto select-none">
     {#if import.meta.env.DEV}
-        <a
-            href="/?debug=1"
-            class="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 cut-sm px-2.5 py-1.5 lg:px-4 lg:py-2 bg-fuchsia-950/80 border border-fuchsia-500/60 text-[11px] sm:text-xs lg:text-sm font-display text-fuchsia-300 hover:bg-fuchsia-800 hover:text-white transition-all flex items-center gap-1.5"
-            title="Open UI Component Dev Harness"
-        >
-            <span>UI Dev Harness</span>
-        </a>
+        <div class="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 flex items-center gap-2">
+            <button
+                type="button"
+                on:click={() => changeView('soundTest')}
+                class="cut-sm px-2.5 py-1.5 lg:px-4 lg:py-2 bg-amber-950/80 border border-amber-400/70 text-[11px] sm:text-xs lg:text-sm font-display text-amber-200 hover:bg-amber-700 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Open Interactive Music & Sound Lab"
+            >
+                <span>🎵 Music & Sound Lab</span>
+            </button>
+            <a
+                href="/?debug=1"
+                class="cut-sm px-2.5 py-1.5 lg:px-4 lg:py-2 bg-fuchsia-950/80 border border-fuchsia-500/60 text-[11px] sm:text-xs lg:text-sm font-display text-fuchsia-300 hover:bg-fuchsia-800 hover:text-white transition-all flex items-center gap-1.5"
+                title="Open UI Component Dev Harness"
+            >
+                <span>UI Dev Harness</span>
+            </a>
+        </div>
     {/if}
 
     <div class="relative z-10 flex flex-col items-center justify-center my-auto w-full py-4 max-w-md sm:max-w-lg lg:max-w-[38rem] 2xl:max-w-[46rem]">

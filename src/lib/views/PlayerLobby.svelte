@@ -1,7 +1,7 @@
 <!-- src/lib/views/PlayerLobby.svelte -->
 <script>
     import { createEventDispatcher, onDestroy } from 'svelte';
-    import { t, language, sendMessage, gameState, error, currentPlayerDetails, tvMode, toggleTvMode, sendReaction } from '../../stores.js';
+    import { t, language, sendMessage, gameState, error, currentPlayerDetails, tvMode, toggleTvMode, musicMuted, toggleMusicMuted, sendReaction } from '../../stores.js';
     import { MIN_PLAYERS, MAX_PLAYERS } from '../config.js';
     import PixelAvatar from '../shared/PixelAvatar.svelte';
     import ArcadeIcon from '../shared/ArcadeIcon.svelte';
@@ -320,25 +320,50 @@
                                 </button>
                             </div>
 
-                            <!-- Synced TV Low-Power Control -->
-                            <button
-                                type="button"
-                                on:click={toggleTvMode}
-                                class="cut-sm w-full px-3 py-2 border-2 transition-colors flex items-center justify-between cursor-pointer {
-                                    $tvMode
-                                    ? 'bg-cyan-950/70 border-primary text-primary'
-                                    : 'bg-[#0a0914] border-[#332e59] text-slate-300 hover:border-slate-500'
-                                }"
-                                title={$t.tvModeDesc}
-                            >
-                                <span class="font-display text-xs uppercase inline-flex items-center gap-1.5">
-                                    <ArcadeIcon name="tv" className="w-4 h-4" />
-                                    <span>{$t.tvLowPowerMode || $t.tvMode || 'TV Low-Power Mode'}</span>
-                                </span>
-                                <span class="font-mono text-xs font-extrabold px-2 py-0.5 cut-sm {$tvMode ? 'bg-primary text-black' : 'bg-neutral-800 text-slate-400'}">
-                                    {$tvMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}
-                                </span>
-                            </button>
+                            <!-- Synced TV Low-Power & Music Remote Toggles -->
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <button
+                                    type="button"
+                                    on:click={toggleTvMode}
+                                    class="cut-sm w-full px-2 sm:px-3 py-2 border-2 transition-colors flex items-center justify-between gap-1 cursor-pointer min-w-0 {
+                                        $tvMode
+                                        ? 'bg-cyan-950/70 border-primary text-primary'
+                                        : 'bg-[#0a0914] border-[#332e59] text-slate-300 hover:border-slate-500'
+                                    }"
+                                    title={$t.tvModeDesc}
+                                    aria-label={$t.tvLowPowerMode || 'Toggle TV Mode'}
+                                >
+                                    <span class="font-display text-[11px] sm:text-xs uppercase inline-flex items-center gap-1 min-w-0 truncate">
+                                        <ArcadeIcon name="tv" className="w-3.5 h-3.5 flex-shrink-0" />
+                                        <span class="truncate">{$t.tvModeShort || 'TV Mode'}</span>
+                                    </span>
+                                    <span class="font-mono text-[10px] sm:text-xs font-extrabold px-1.5 sm:px-2 py-0.5 cut-sm flex-shrink-0 {$tvMode ? 'bg-primary text-black' : 'bg-neutral-800 text-slate-400'}">
+                                        {$tvMode ? ($t.modeOn || 'ON') : ($t.modeOff || 'OFF')}
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    on:click={toggleMusicMuted}
+                                    data-testid="player-music-toggle-btn"
+                                    aria-label={$t.toggleMusic || 'Toggle music'}
+                                    aria-pressed={!$musicMuted}
+                                    title={$musicMuted ? ($t.musicOff || 'Music Off') : ($t.musicOn || 'Music On')}
+                                    class="cut-sm w-full px-2 sm:px-3 py-2 border-2 transition-colors flex items-center justify-between gap-1 cursor-pointer min-w-0 {
+                                        $musicMuted
+                                        ? 'bg-[#0a0914] border-[#332e59] text-slate-400 hover:border-slate-500 hover:text-slate-200'
+                                        : 'bg-emerald-950/60 border-emerald-400 text-emerald-300'
+                                    }"
+                                >
+                                    <span class="font-display text-[11px] sm:text-xs uppercase inline-flex items-center gap-1 min-w-0 truncate">
+                                        <ArcadeIcon name={$musicMuted ? 'music-off' : 'music'} className="w-3.5 h-3.5 flex-shrink-0" />
+                                        <span class="truncate">{$t.musicLabel || 'Music'}</span>
+                                    </span>
+                                    <span class="font-mono text-[10px] sm:text-xs font-extrabold px-1.5 sm:px-2 py-0.5 cut-sm flex-shrink-0 {$musicMuted ? 'bg-neutral-800 text-slate-400' : 'bg-emerald-400 text-black'}">
+                                        {$musicMuted ? ($t.modeOff || 'OFF') : ($t.modeOn || 'ON')}
+                                    </span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Start Game Button -->

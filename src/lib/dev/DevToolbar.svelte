@@ -1,7 +1,6 @@
 <!-- src/lib/dev/DevToolbar.svelte -->
 <script>
     import { createEventDispatcher } from 'svelte';
-    import confetti from 'canvas-confetti';
 
     export let activeScreen = undefined;
     export let language = undefined;
@@ -10,7 +9,7 @@
     export let playerCount = undefined;
     export let playerIndex = 0;
     export let isTvMode = false;
-    export let colorTheme = 'default';
+    export let colorTheme = 'arcade';
     export let hideToolbar = false;
 
     const dispatch = createEventDispatcher();
@@ -36,11 +35,7 @@
     ];
 
     function triggerConfetti() {
-        confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 }
-        });
+        dispatch('triggerConfetti');
     }
 
     function toggleCollapse() {
@@ -85,11 +80,6 @@
                     on:change={() => dispatch('changeScreen', activeScreen)}
                     class="w-full bg-gray-900 border border-fuchsia-600/50 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none focus:border-fuchsia-400"
                 >
-                    <optgroup label="✨ Phase 3B Mobile Prototypes">
-                        {#each screens.filter(s => s.category === 'Phase 3B') as s}
-                            <option value={s.id}>{s.label}</option>
-                        {/each}
-                    </optgroup>
                     <optgroup label="📱 Mobile Player Screens">
                         {#each screens.filter(s => s.category === 'Player') as s}
                             <option value={s.id}>{s.label}</option>
@@ -121,7 +111,7 @@
                             EN
                         </button>
                         <button
-                            class="flex-1 py-1 text-center font-bold {language === 'ua' ? 'bg-fuchsia-600 text-white' : 'text-gray-400 hover:text-white'}"
+                            class="flex-1 py-1 text-center font-bold {language === 'ua' || language === 'uk' ? 'bg-fuchsia-600 text-white' : 'text-gray-400 hover:text-white'}"
                             on:click={() => { language = 'ua'; dispatch('changeLang', 'ua'); }}
                         >
                             UA
@@ -136,7 +126,7 @@
                         <button
                             class="flex-1 py-1 text-center {viewport === 'mobile' ? 'bg-cyan-600 text-white font-bold' : 'text-gray-400 hover:text-white'}"
                             on:click={() => { viewport = 'mobile'; dispatch('changeViewport', 'mobile'); }}
-                            title="Mobile Phone (375x667)"
+                            title="Mobile Phone (390x844)"
                         >
                             📱
                         </button>
@@ -229,9 +219,9 @@
                         on:change={() => dispatch('changeTheme', colorTheme)}
                         class="w-full bg-gray-900 border border-gray-800 rounded px-1.5 py-1 text-white text-[11px]"
                     >
-                        <option value="default">Default</option>
-                        <option value="silly">Silly</option>
-                        <option value="nsfw">18+ Mode</option>
+                        <option value="arcade">Arcade</option>
+                        <option value="vaporwave">Vaporwave</option>
+                        <option value="outrun">Outrun</option>
                     </select>
                 </div>
                 <div>

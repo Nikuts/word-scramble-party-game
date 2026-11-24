@@ -44,6 +44,7 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
     - **Sleek Custom Arcade Scrollbars:** Replaces OS default scrollbars with custom translucent neon pill scrollbars across desktop and mobile viewports.
     - **Intuitive Word Scramble Answering:** Fast tap-to-add, tap-to-return, and drag-and-drop word tile reordering with safe-area spacing for notches and dynamic islands.
 - **Immersive Audio & Visuals:** 
+    - **Curated Retro-Arcade Soundtrack (Host TV):** Automatically scores every match phase (`lobby`, `question`, `battle`, `voting`, `podium`) with 15 loudness-normalized Kevin MacLeod (CC-BY 4.0) synth & arcade tracks, featuring non-repeating multi-stage shuffle, smooth crossfades, automatic ducking during `vo_*` announcer voiceovers, tab-visibility pause/resume, a unified top-right Host TV utility bar (`TV Mode`, speaker icon, `Close/End`) leaving full width for long topics, and a Socket.IO-synced remote Music toggle on the Host Player's phone (Lobby paired row + mid-game header).
     - **Smooth Screen Transitions:** View changes are handled with a clean and simple fade effect, ensuring a smooth user experience.
     - **Dynamic Synthwave Background:** The entire game is set against an animated, retro-futuristic grid that scrolls towards the viewer, enhancing the "Neon Arcade" theme.
     - **Segmented Timer Display:** The countdown timer is rendered as a retro 7-segment display, which flashes red when time is low, adding to the arcade-style tension.
@@ -433,6 +434,7 @@ Fast backend tests verifying game algorithms, scheduling, validation schemas, an
 19. **Player Reactions (`test/playerReactions.test.js`):** Reaction socket validation, rate limiting, and host broadcast throttling.
 20. **Time Boost & Lobby Enhancements (`test/timeBoostAndLobbyEnhancements.test.js`):** +30s Time Boost clamping rules, one-time usage per game, and lobby configuration toggles.
 21. **UI Localization & Plurals (`test/uiTextAndPlurals.test.js`):** EN/UK dictionary completeness, Cyrillic typography checks, and Slavic singular/paucal/genitive pluralization rules.
+22. **Background Music & Audio Engine (`test/musicAudio.test.js`):** Normalized 15-track Kevin MacLeod asset presence, server phase mapping, multi-stage zero-repeat track selection, voiceover ducking timers, mute/volume clamping, and legacy procedural synth frequency integrity.
 
 ---
 

@@ -1,6 +1,7 @@
 import { writable, get, derived } from 'svelte/store';
 import { io } from 'socket.io-client';
 import { playSound, playMusic, stopMusic, soundEngine } from './lib/utils.js';
+import { musicManager } from './lib/audio/musicManager.js';
 import { UI_TEXT } from './ui_text.js';
 import { TV_MAX_CONCURRENT_REACTIONS } from './lib/config.js';
 
@@ -38,6 +39,32 @@ function detectInitialTvMode() {
 }
 
 export const tvMode = writable(detectInitialTvMode());
+export const musicMuted = writable(musicManager.isMuted);
+
+export function toggleMusicMuted() {
+    let nextMuted = false;
+    musicMuted.update(val => {
+        nextMuted = !val;
+        return nextMuted;
+    });
+    const currentGame = get(gameState);
+    const cp = get(currentPlayer);
+    if (get(isHostDisplay) || !currentGame?.id) {
+        musicManager.setMuted(nextMuted);
+        if (!nextMuted && get(isHostDisplay) && get(view) === 'hostDisplay' && currentGame?.phase) {
+            playMusic(currentGame.phase, { round: currentGame.currentRound });
+        }
+    }
+    const canSyncMusic = Boolean(socket?.connected && currentGame?.id && (get(isHostDisplay) || cp?.isHost));
+    if (canSyncMusic) {
+        socket.emit('set-music-muted', { gameId: currentGame.id, musicMuted: nextMuted });
+    }
+}
+
+function syncHostDisplayMusic(state) {
+    if (!get(isHostDisplay) || get(view) !== 'hostDisplay' || !state?.phase) return;
+    playMusic(state.phase, { round: state.currentRound });
+}
 
 // Sync data-tv-mode attribute and localStorage whenever tvMode changes
 if (typeof window !== 'undefined') {
@@ -339,8 +366,15 @@ export function initializeSocket() {
         if (get(isHostDisplay) && typeof newGameState.tvMode === 'boolean' && get(tvMode) !== newGameState.tvMode) {
             tvMode.set(newGameState.tvMode);
         }
+        if (typeof newGameState.musicMuted === 'boolean' && get(musicMuted) !== newGameState.musicMuted) {
+            musicMuted.set(newGameState.musicMuted);
+            if (get(isHostDisplay)) {
+                musicManager.setMuted(newGameState.musicMuted);
+            }
+        }
         gameState.set(newGameState);
         currentPlayer.set(updatedPlayer);
+        syncHostDisplayMusic(newGameState);
 
         // Synchronize client UI language with the room's language
         if (newGameState.language) {
@@ -404,6 +438,9 @@ export function initializeSocket() {
         isLoading.set(false);
         view.set('playerGame');
         currentPlayer.set({ id: playerId, isHost, token: playerToken });
+        if (typeof initialGameState?.musicMuted === 'boolean') {
+            musicMuted.set(initialGameState.musicMuted);
+        }
         gameState.set(initialGameState);
         error.set({ ...initialErrorState });
         joinForm.set({ gameId: '', playerName: '', avatar: '' }); // Reset form
@@ -434,10 +471,19 @@ export function initializeSocket() {
         if (typeof newGameState.tvMode === 'boolean' && get(tvMode) !== newGameState.tvMode) {
             tvMode.set(newGameState.tvMode);
         }
+        if (typeof newGameState.musicMuted === 'boolean' && get(musicMuted) !== newGameState.musicMuted) {
+            musicMuted.set(newGameState.musicMuted);
+            if (_isHostDisplay) {
+                musicManager.setMuted(newGameState.musicMuted);
+            }
+        }
         view.set(newView);
         gameState.set(newGameState);
         currentPlayer.set(newCurrentPlayer);
         partialAnswers = serverPartialAnswers || {};
+        if (_isHostDisplay) {
+            syncHostDisplayMusic(newGameState);
+        }
 
         // Important: Clear loading/error state *after* all other state has been updated
         // to ensure the UI transitions smoothly away from the loading screen.
@@ -583,6 +629,9 @@ export function changeView(newView) {
     error.set({ ...initialErrorState });
     if (newView !== 'joinPrompt') {
         joinForm.set({ gameId: '', playerName: '', avatar: '' });
+    }
+    if (newView !== 'hostDisplay') {
+        stopMusic();
     }
 }
 

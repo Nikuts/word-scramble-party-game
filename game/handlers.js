@@ -12,6 +12,7 @@ import {
     handleSetSlowpokeMode,
     handleSet18PlusMode,
     handleSetTvMode,
+    handleSetMusicMuted,
     handleStartGame,
     handleSendLobbyEmoji,
     handleReloadThemes
@@ -57,6 +58,7 @@ export function registerEventHandlers(io, socket) {
     socket.on('set-slowpoke-mode', withValidation(schemas.setBooleanOptionSchema('slowpokeMode'), handleSetSlowpokeMode.bind(socket)));
     socket.on('set-18plus-mode', withValidation(schemas.setBooleanOptionSchema('is18PlusMode'), handleSet18PlusMode.bind(socket)));
     socket.on('set-tv-mode', withValidation(schemas.setBooleanOptionSchema('tvMode'), handleSetTvMode.bind(socket)));
+    socket.on('set-music-muted', withValidation(schemas.setBooleanOptionSchema('musicMuted'), handleSetMusicMuted.bind(socket)));
     socket.on('reload-themes', withValidation(schemas.gameIdSchema, handleReloadThemes.bind(socket)));
     socket.on('start-game', withValidation(schemas.gameIdSchema, handleStartGame.bind(socket)));
     

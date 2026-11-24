@@ -361,6 +361,7 @@ export function getSanitizedGameState(game, viewer = { role: 'hostDisplay' }, pr
         is18PlusMode: game.is18PlusMode,
         slowpokeMode: game.slowpokeMode,
         tvMode: Boolean(game.tvMode),
+        musicMuted: Boolean(game.musicMuted),
         soundsOnHostOnly: game.soundsOnHostOnly,
         isGeneratingThemes: game.isGeneratingThemes,
         geminiApiErrorCount: game.geminiApiErrorCount, // For host player UI

@@ -1,6 +1,7 @@
 // src/lib/utils.js
 import confetti from 'canvas-confetti';
 import { AVATAR_MAP, SOUNDS_ON_HOST_ONLY } from './config.js';
+import { musicManager } from './audio/musicManager.js';
 
 const SOUND_ASSETS = {
     'sfx_timer_tick': '/sounds/sfx_timer_tick.mp3',
@@ -72,6 +73,9 @@ class WebAudioSoundEngine {
         if (ctx) {
             if (ctx.state === 'suspended') {
                 await ctx.resume().catch(() => {});
+            }
+            if (ctx.state !== 'running') {
+                return;
             }
             this.isUnlocked = true;
             // Pre-decode all audio assets in parallel into memory (host display only when SOUNDS_ON_HOST_ONLY is true)
@@ -156,25 +160,30 @@ if (typeof window !== 'undefined') {
     window.__soundEngine = soundEngine;
 }
 
-let isAudioUnlocked = false;
-
 /**
- * Unlocks audio playback for browsers on first user interaction.
+ * Unlocks Web Audio SFX and retries any browser-blocked background soundtrack playback.
  */
 export function unlockAudio() {
-    if (isAudioUnlocked) return;
-    soundEngine.unlock();
-    isAudioUnlocked = true;
+    musicManager.resumePendingPlayback();
+    if (!soundEngine.isUnlocked) {
+        soundEngine.unlock();
+    }
 }
 
-// Auto-register user gesture listeners for seamless audio playback
+/**
+ * Handles user interaction events and retries unlocking audio while SFX or soundtrack remains blocked.
+ */
+export function handleUserAudioGesture() {
+    if (soundEngine.isUnlocked && !musicManager.needsUserGestureUnlock) {
+        return;
+    }
+    unlockAudio();
+}
+
+// Keep gesture listeners attached so TV remote clicks/OK presses recover blocked autoplay after D-pad keys, reloads, or tab visibility resumes
 if (typeof window !== 'undefined') {
     const unlockEvents = ['pointerdown', 'touchstart', 'click', 'keydown'];
-    const onFirstUserGesture = () => {
-        unlockAudio();
-        unlockEvents.forEach(evt => window.removeEventListener(evt, onFirstUserGesture, { capture: true }));
-    };
-    unlockEvents.forEach(evt => window.addEventListener(evt, onFirstUserGesture, { capture: true, once: true }));
+    unlockEvents.forEach(evt => window.addEventListener(evt, handleUserAudioGesture, { capture: true, passive: true }));
 }
 
 export function escapeHTML(str) {
@@ -183,15 +192,18 @@ export function escapeHTML(str) {
 }
 
 export function playSound(soundId, options = {}) {
+    if (typeof soundId === 'string' && soundId.startsWith('vo_')) {
+        musicManager.duck(3200);
+    }
     soundEngine.play(soundId, options);
 }
 
-export function playMusic(_trackId) {
-    // Background music hook (safe no-op if no BGM asset is loaded)
+export function playMusic(stageOrPhase, options = {}) {
+    return musicManager.syncGamePhase(stageOrPhase, options);
 }
 
-export function stopMusic() {
-    // Stop background music hook (safe no-op)
+export function stopMusic(fadeDuration = 0.3) {
+    musicManager.stop(fadeDuration);
 }
 
 export function triggerConfetti(options = {}) {

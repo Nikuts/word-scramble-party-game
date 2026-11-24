@@ -16,7 +16,8 @@ export const playerAndGameIdSchema = z.object({
 
 export const createGameSchema = z.object({
     language: z.enum(['en', 'ua', 'uk']),
-    tvMode: z.boolean().optional()
+    tvMode: z.boolean().optional(),
+    musicMuted: z.boolean().optional()
 });
 
 export const joinGameSchema = z.object({
