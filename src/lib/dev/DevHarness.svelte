@@ -30,6 +30,7 @@
     import HostGameView from '../views/HostGameView.svelte';
     import AvatarGalleryView from './AvatarGalleryView.svelte';
     import Instructions from '../views/Instructions.svelte';
+    import ArcadeToastContainer from '../shared/ArcadeToastContainer.svelte';
 
     // URL Query Params parser
     const KNOWN_SCREENS = new Set([
@@ -521,4 +522,7 @@
         on:triggerConfetti={handleTriggerConfetti}
         on:resetState={handleResetState}
     />
+    {#if !useIframe}
+        <ArcadeToastContainer />
+    {/if}
 </div>

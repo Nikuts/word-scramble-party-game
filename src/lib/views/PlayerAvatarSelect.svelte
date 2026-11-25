@@ -141,7 +141,7 @@
                 localNameError = '';
                 if ($error.message && !$error.fatal) error.set({ message: '', fatal: false });
             }}
-            class="w-full bg-[#070610] border-2 border-cyan-400 cut-sm text-white font-display text-sm sm:text-base px-3 py-2 focus:outline-none focus:border-primary select-text"
+            class="w-full bg-[#070610] border-2 border-cyan-400 cut-sm text-white font-display text-base px-3 py-2 focus:outline-none focus:border-primary select-text"
             maxlength="25"
         />
     </div>

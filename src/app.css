@@ -55,6 +55,7 @@
     background-color: var(--color-bg-base);
     color: var(--color-text-base);
     font-family: 'JetBrains Mono', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
     overflow-x: clip;
     -webkit-font-smoothing: antialiased;
   }
@@ -63,6 +64,7 @@
     background-color: transparent;
     color: var(--color-text-base);
     font-family: 'JetBrains Mono', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
     overflow-x: clip;
     -webkit-font-smoothing: antialiased;
   }
@@ -161,6 +163,12 @@
       180deg,
       #ffffff 0%,
       #ecfeff 46%,
+      #67e8f9 100%
+    );
+    background: linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #ecfeff 46%,
       color-mix(in srgb, var(--color-primary) 72%, #ffffff) 100%
     );
     -webkit-background-clip: text;
@@ -172,22 +180,29 @@
   }
 
   .host-panel-surface {
+    background-color: rgba(19, 17, 38, 0.76);
     background-color: color-mix(in srgb, var(--color-surface) 64%, transparent);
   }
 
   .host-hud-surface {
+    background-color: rgba(19, 17, 38, 0.85);
     background-color: color-mix(in srgb, var(--color-surface) 78%, transparent);
   }
 
   .host-card-surface {
+    background-color: rgba(10, 9, 20, 0.92);
     background-color: color-mix(in srgb, var(--color-bg-base) 90%, transparent);
   }
 
   .btn-arcade {
     @apply relative inline-flex items-center justify-center gap-2 px-5 py-3 font-display text-base sm:text-lg font-normal uppercase tracking-wider text-white transition-all duration-150 ease-out select-none cursor-pointer;
+    background-color: rgba(28, 25, 54, 0.92);
     background-color: color-mix(in srgb, var(--color-surface-2) 92%, transparent);
     border: 2px solid var(--btn-color, var(--color-accent));
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    box-shadow:
+      inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
     box-shadow:
       inset 0 -3px 0 rgba(0, 0, 0, 0.45),
       inset 0 1px 0 rgba(255, 255, 255, 0.16),
@@ -195,8 +210,12 @@
   }
   @media (hover: hover) and (pointer: fine) {
     .btn-arcade:hover:not(:disabled) {
+      background-color: rgba(var(--color-accent-rgb), 0.22);
       background-color: color-mix(in srgb, var(--btn-color, var(--color-accent)) 24%, var(--color-surface-2));
       color: #ffffff;
+      box-shadow:
+        inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+        0 0 16px rgba(var(--color-primary-rgb), 0.35);
       box-shadow:
         inset 0 -3px 0 rgba(0, 0, 0, 0.45),
         inset 0 0 18px color-mix(in srgb, var(--btn-color, var(--color-accent)) 28%, transparent),
@@ -218,6 +237,7 @@
   }
   @media (hover: hover) and (pointer: fine) {
     .btn-arcade.btn-neutral:hover:not(:disabled) {
+      background-color: rgba(71, 85, 105, 0.45);
       background-color: color-mix(in srgb, #475569 38%, var(--color-surface-2));
       color: #ffffff;
     }
@@ -239,9 +259,13 @@
 
   .panel-arcade {
     @apply p-4 sm:p-5 border-2;
+    background-color: rgba(19, 17, 38, 0.8);
     background-color: color-mix(in srgb, var(--color-surface) 72%, transparent);
     border-color: var(--neon-color, var(--color-primary));
     clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 0 24px rgba(var(--color-primary-rgb), 0.12);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
       inset 0 0 24px color-mix(in srgb, var(--neon-color, var(--color-primary)) 12%, transparent);
@@ -430,6 +454,19 @@
     linear-gradient(
       to bottom,
       var(--color-bg-base) 0%,
+      rgba(var(--color-secondary-rgb), 0.1) 32%,
+      rgba(var(--color-secondary-rgb), 0.16) 48%,
+      rgba(var(--color-primary-rgb), 0.08) 64%,
+      transparent 82%
+    ),
+    radial-gradient(ellipse 75% 38% at 50% 48%, rgba(var(--color-secondary-rgb), 0.2), transparent 72%),
+    radial-gradient(circle at 18% 16%, rgba(var(--color-primary-rgb), 0.14), transparent 46%),
+    radial-gradient(circle at 82% 20%, rgba(var(--color-secondary-rgb), 0.14), transparent 48%),
+    radial-gradient(ellipse at 50% 125%, rgba(var(--color-primary-rgb), 0.16), transparent 68%);
+  background:
+    linear-gradient(
+      to bottom,
+      var(--color-bg-base) 0%,
       color-mix(in srgb, var(--color-bg-base) 90%, var(--color-secondary)) 32%,
       rgba(var(--color-secondary-rgb), 0.16) 48%,
       rgba(var(--color-primary-rgb), 0.08) 64%,
@@ -459,55 +496,59 @@
 
 /* ==========================================================================
    Smart TV & Low Power Display Optimization Overrides (Samsung Tizen / WebOS)
+   Flattened rules (no native CSS nesting) for Chromium 76-108 compatibility.
    Freezes background motion, removes scanlines/glows/blurs, keeps retrowave look.
    ========================================================================== */
-body[data-tv-mode="true"] {
-  .synthwave-grid-background::before {
-    animation: none !important;
-    will-change: auto !important;
-  }
+body[data-tv-mode="true"] .synthwave-grid-background::before {
+  animation: none !important;
+  will-change: auto !important;
+}
 
-  * {
-    text-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
+body[data-tv-mode="true"] * {
+  text-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
 
-  h1, h2, h3, p, span, svg {
-    filter: none !important;
-  }
+body[data-tv-mode="true"] h1,
+body[data-tv-mode="true"] h2,
+body[data-tv-mode="true"] h3,
+body[data-tv-mode="true"] p,
+body[data-tv-mode="true"] span,
+body[data-tv-mode="true"] svg {
+  filter: none !important;
+}
 
-  .animate-pulse,
-  .animate-bounce,
-  .view-in,
-  .view-out {
-    animation: none !important;
-  }
+body[data-tv-mode="true"] .animate-pulse,
+body[data-tv-mode="true"] .animate-bounce,
+body[data-tv-mode="true"] .view-in,
+body[data-tv-mode="true"] .view-out {
+  animation: none !important;
+}
 
-  .btn-arcade,
-  .panel-arcade,
-  .input-arcade {
-    box-shadow: none !important;
-  }
+body[data-tv-mode="true"] .btn-arcade,
+body[data-tv-mode="true"] .panel-arcade,
+body[data-tv-mode="true"] .input-arcade {
+  box-shadow: none !important;
+}
 
-  .flying-emoji {
-    animation: fly-across 2.6s linear forwards !important;
-  }
+body[data-tv-mode="true"] .flying-emoji {
+  animation: fly-across 2.6s linear forwards !important;
+}
 
-  .arcade-title {
-    background: none !important;
-    color: #ffffff !important;
-    filter: none !important;
-  }
+body[data-tv-mode="true"] .arcade-title {
+  background: none !important;
+  color: #ffffff !important;
+  filter: none !important;
+}
 
-  .panel-arcade {
-    border-width: 2px !important;
-  }
+body[data-tv-mode="true"] .panel-arcade {
+  border-width: 2px !important;
+}
 
-  .host-game-container,
-  .host-lobby-container {
-    contain: layout paint;
-  }
+body[data-tv-mode="true"] .host-game-container,
+body[data-tv-mode="true"] .host-lobby-container {
+  contain: layout paint;
 }
 
 @media (display-mode: tv) {
@@ -612,4 +653,69 @@ body[data-app-hidden="true"] * {
 }
 .text-fluid-player {
   font-size: clamp(0.9rem, min(1.35vw, 2vh), 1.35rem);
+}
+
+/* Native Top-Layer Arcade Confirmation Dialog */
+dialog.arcade-modal {
+  background: transparent;
+  border: none;
+  padding: 1rem;
+  margin: auto;
+  max-width: 100vw;
+  max-height: 100dvh;
+  overflow: visible;
+  color: inherit;
+}
+dialog.arcade-modal[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+dialog.arcade-modal:modal {
+  overscroll-behavior: contain;
+}
+dialog.arcade-modal::backdrop {
+  background: rgba(5, 4, 12, 0.82);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.arcade-modal-card {
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+}
+
+/* Persistent Top-Layer Toast Stack */
+.arcade-toast-stack {
+  position: fixed;
+  inset: auto 0 1rem 0;
+  margin: 0 auto;
+  width: min(calc(100vw - 1.5rem), 28rem);
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  z-index: 60;
+  overflow: visible;
+  pointer-events: none;
+}
+.arcade-toast-stack[popover]:not(:popover-open) {
+  display: none;
+}
+.arcade-toast-item {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition-behavior: allow-discrete;
+}
+.arcade-toast-item + .arcade-toast-item {
+  margin-top: 0.5rem;
+}
+body[data-tv-mode="true"] .arcade-toast-item {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .arcade-toast-item {
+    transition: none;
+  }
 }

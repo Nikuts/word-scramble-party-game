@@ -45,7 +45,7 @@ export const reconnectPlayerSchema = z.object({
 
 export const setThemeSchema = z.object({
     gameId: gameIdSchemaBase,
-    theme: z.string().trim().max(250)
+    theme: z.string().trim().max(100)
 });
 
 export const setColorThemeSchema = z.object({

@@ -48,22 +48,15 @@ if ! command -v npm &> /dev/null; then
 fi
 print_success "Node.js and npm are installed."
 
-# 2. Check for .env file
-print_info "Checking for .env file with API_KEY..."
+# 2. Check for .env file (optional; built-in fallback packs work without an API key)
+print_info "Checking for .env file with GEMINI_API_KEY or API_KEY..."
 if [ ! -f .env ]; then
-    print_error "The .env file was not found in the project root."
-    print_warning "Please create a file named '.env' and add your API key like this:"
-    echo -e "${C_YELLOW}API_KEY=\"YOUR_GEMINI_API_KEY\"${C_NC}"
-    exit 1
+    print_warning "The .env file was not found in the project root. Built-in fallback packs will be used unless you add GEMINI_API_KEY."
+elif ! grep -qE "GEMINI_API_KEY|API_KEY" .env; then
+    print_warning "The .env file does not contain GEMINI_API_KEY or API_KEY. Built-in fallback packs will be used."
+else
+    print_success ".env file with Gemini API key found."
 fi
-# Check if API_KEY is actually set inside the file
-if ! grep -q "API_KEY" .env; then
-    print_error "The .env file exists, but it does not contain the 'API_KEY' variable."
-    print_warning "Please add your API key to the .env file like this:"
-    echo -e "${C_YELLOW}API_KEY=\"YOUR_GEMINI_API_KEY\"${C_NC}"
-    exit 1
-fi
-print_success ".env file with API_KEY found."
 
 
 # 3. Check for node_modules and install if necessary
@@ -85,7 +78,7 @@ print_info "Launching the game server and frontend..."
 print_info "Your browser should open automatically."
 print_info "To stop the server, press Ctrl+C in this terminal window."
 
-npm run start:dev
+npm run dev
 
 # Exit with the status of the last command
 exit $?

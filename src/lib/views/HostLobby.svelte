@@ -7,11 +7,13 @@
     import ArcadeIcon from '../shared/ArcadeIcon.svelte';
     import HexBadge from '../shared/HexBadge.svelte';
     import FlyingReactionsOverlay from '../shared/FlyingReactionsOverlay.svelte';
+    import ArcadeConfirmModal from '../shared/ArcadeConfirmModal.svelte';
     import { MAX_PLAYERS, MIN_PLAYERS } from '../config.js';
 
     let qrElement;
     let connectURL = '';
     let showOrientationHint = true;
+    let showCloseLobbyModal = false;
 
     $: gameLang = $gameState?.language || ($language === 'ua' || $language === 'uk' ? 'uk' : 'en');
     $: availableThemes = $gameState?.preGeneratedThemes?.[gameLang]
@@ -60,7 +62,12 @@
     }
 
     function handleCloseLobby() {
-        if (confirm($t.confirmCloseLobby)) {
+        showCloseLobbyModal = true;
+    }
+
+    function confirmCloseLobbyAction() {
+        showCloseLobbyModal = false;
+        if ($gameState?.id) {
             sendMessage('force-end-game', { gameId: $gameState.id });
         }
     }
@@ -342,4 +349,14 @@
     </main>
 
     <FlyingReactionsOverlay />
+
+    <ArcadeConfirmModal
+        bind:open={showCloseLobbyModal}
+        title={$t.closeLobby || 'Close Lobby'}
+        message={$t.confirmCloseLobby}
+        confirmLabel={$t.closeLobby || 'Close Lobby'}
+        cancelLabel={$t.cancel || 'Cancel'}
+        variant="danger"
+        on:confirm={confirmCloseLobbyAction}
+    />
 </div>

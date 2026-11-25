@@ -4,17 +4,48 @@ import crypto from 'crypto';
 import { getGame } from './manager.js';
 
 // --- Network Helpers ---
-export function getLocalIpAddress() {
-    const interfaces = os.networkInterfaces();
+const PREFERRED_IFACE_REGEX = /^(wi-?fi|wlan|en0|eth0|ethernet)/i;
+const VIRTUAL_IFACE_REGEX = /(vethernet|wsl|hyper-v|docker|vbox|vmware|virtual|tailscale|wireguard|zerotier|hamachi|tun|tap|utun|wg\d|br-|bridge|nordlynx)/i;
+
+function isPrivate172(ip) {
+    const parts = ip.split('.');
+    if (parts[0] !== '172') return false;
+    const second = Number(parts[1]);
+    return second >= 16 && second <= 31;
+}
+
+export function selectBestLocalIpAddress(interfaces) {
+    if (!interfaces || typeof interfaces !== 'object') return 'localhost';
+    let bestIp = null;
+    let bestScore = -Infinity;
+
     for (const name of Object.keys(interfaces)) {
-        for (const iface of interfaces[name]) {
-            // Skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
-            if (iface.family === 'IPv4' && !iface.internal) {
-                return iface.address;
+        const list = interfaces[name];
+        if (!Array.isArray(list)) continue;
+        for (const iface of list) {
+            if (!iface || (iface.family !== 'IPv4' && iface.family !== 4) || iface.internal || !iface.address) {
+                continue;
+            }
+            const ip = iface.address;
+            let score = 5;
+            if (ip.startsWith('192.168.')) score = 30;
+            else if (ip.startsWith('10.')) score = 20;
+            else if (isPrivate172(ip)) score = 10;
+
+            if (PREFERRED_IFACE_REGEX.test(name)) score += 25;
+            if (VIRTUAL_IFACE_REGEX.test(name)) score -= 50;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestIp = ip;
             }
         }
     }
-    return 'localhost'; // Fallback for environments where detection fails
+    return bestIp || 'localhost';
+}
+
+export function getLocalIpAddress() {
+    return selectBestLocalIpAddress(os.networkInterfaces());
 }
 
 /**
@@ -494,6 +525,39 @@ export function formatAnswerText(text) {
         .trim();
 }
 
+const BALANCED_SPLIT_BOUNDARY_WORDS = new Set([
+    'in', 'on', 'at', 'to', 'for', 'with', 'from', 'into', 'about', 'that', 'who', 'without',
+    'в', 'у', 'на', 'до', 'від', 'з', 'із', 'за', 'про', 'під', 'над', 'через', 'без', 'що', 'який', 'де', 'як'
+]);
+
+function splitLongClauseBalanced(words) {
+    if (words.length <= 8) {
+        return [words.join(' ')];
+    }
+    const mid = Math.ceil(words.length / 2);
+    const minSplit = Math.max(3, mid - 2);
+    const maxSplit = Math.min(words.length - 3, mid + 2);
+    let splitIdx = mid;
+
+    for (let offset = 0; offset <= 2; offset++) {
+        const candidates = offset === 0 ? [mid] : [mid - offset, mid + offset];
+        const match = candidates.find(idx => {
+            if (idx < minSplit || idx > maxSplit) return false;
+            const cleanWord = words[idx].replace(/^[.,!?;:—–"()\[\]{}-]+|[.,!?;:—–"()\[\]{}-]+$/gu, '').toLowerCase();
+            return BALANCED_SPLIT_BOUNDARY_WORDS.has(cleanWord);
+        });
+        if (match !== undefined) {
+            splitIdx = match;
+            break;
+        }
+    }
+
+    return [
+        ...splitLongClauseBalanced(words.slice(0, splitIdx)),
+        ...splitLongClauseBalanced(words.slice(splitIdx))
+    ];
+}
+
 /** Helper function to split text into sentence and clause-like chunks. */
 export function getChunksFromText(text) {
     if (!text) return [];
@@ -532,13 +596,11 @@ export function getChunksFromText(text) {
 
             const words = cleanChunk.split(/\s+/).filter(w => w.length > 0);
             if (words.length > 8) {
-                const CHUNK_SIZE = 5;
-                for (let i = 0; i < words.length; i += CHUNK_SIZE) {
-                    const subChunk = words.slice(i, i + CHUNK_SIZE).join(' ');
+                splitLongClauseBalanced(words).forEach(subChunk => {
                     if (subChunk.trim().length > 0) {
                         finalChunks.push(subChunk.trim());
                     }
-                }
+                });
             } else {
                 finalChunks.push(cleanChunk);
             }

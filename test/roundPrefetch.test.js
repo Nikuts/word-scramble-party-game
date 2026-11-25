@@ -114,4 +114,50 @@ describe('Round Pre-fetching System', () => {
             'Cyberpunk Bakery slogan #2:'
         ]);
     });
+
+    it('leaves preGeneratedBattlePrompts empty on Round 3 (Final Round) instead of backfilling off-theme static prompts', async () => {
+        const gameId = 'FINAL_ROUND_NO_PAD';
+        const mockGame = {
+            id: gameId,
+            gameInstanceId: 1,
+            currentRound: QUESTIONS_PER_ROUND.length - 1, // Next round is Round 3 (Final Round)
+            phase: 'battle_reveal',
+            language: 'en',
+            theme: 'Underwater Library',
+            sillyMode: false,
+            is18PlusMode: false,
+            slowpokeMode: false,
+            geminiApiErrorCount: 0,
+            usedBattlePrompts: [],
+            usedQuestions: [],
+            players: [
+                { id: 'p1', name: 'Alice', socketId: 's1', score: 0 },
+                { id: 'p2', name: 'Bob', socketId: 's2', score: 0 },
+                { id: 'p3', name: 'Charlie', socketId: 's3', score: 0 }
+            ],
+            prefetchedRoundData: {
+                roundIndex: QUESTIONS_PER_ROUND.length,
+                gameInstanceId: 1,
+                data: {
+                    playerQuestions: [
+                        ['Final Q1 for Alice', 'Final Q2 for Alice'],
+                        ['Final Q1 for Bob', 'Final Q2 for Bob'],
+                        ['Final Q1 for Charlie', 'Final Q2 for Charlie']
+                    ],
+                    battlePrompts: [],
+                    fallbackWords: ['soggy bookmark', 'whispering octopus']
+                }
+            }
+        };
+
+        addGame(gameId, mockGame);
+        const mockIo = { to: vi.fn(() => ({ emit: vi.fn() })) };
+        await startNextRound(mockIo, mockGame);
+        timerService.clearPhaseTimer(mockGame);
+        deleteGame(gameId);
+
+        expect(mockGame.currentRound).toBe(QUESTIONS_PER_ROUND.length);
+        expect(mockGame.preGeneratedBattlePrompts).toEqual([]);
+        expect(mockGame.preGeneratedFallbackWords).toEqual(['soggy bookmark', 'whispering octopus']);
+    });
 });

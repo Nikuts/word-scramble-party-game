@@ -259,9 +259,6 @@ export async function handleSetSillyMode(io, socket, { gameId, sillyMode }) {
     if (game?.phase === 'lobby' && helpers.isHostOrHostDisplay(game, socket)) {
         const modeChanged = game.sillyMode !== sillyMode;
         game.sillyMode = sillyMode;
-        if (sillyMode) {
-            game.is18PlusMode = false;
-        }
         
         if (modeChanged) {
             game.theme = '';
@@ -313,9 +310,6 @@ export async function handleSet18PlusMode(io, socket, { gameId, is18PlusMode }) 
     if (game?.phase === 'lobby' && helpers.isHostOrHostDisplay(game, socket)) {
         const modeChanged = game.is18PlusMode !== is18PlusMode;
         game.is18PlusMode = is18PlusMode;
-        if (is18PlusMode) {
-            game.sillyMode = false;
-        }
         
         if (modeChanged) {
             game.theme = '';

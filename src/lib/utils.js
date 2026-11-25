@@ -267,3 +267,48 @@ export function formatAnswerText(text) {
         .replace(/\s+(["'”’)\],.:;!?…])(\s|$|[.,!?:;…])/gu, '$1$2')
         .trim();
 }
+
+let activeWakeLock = null;
+let wakeLockPending = false;
+
+/**
+ * Requests a Screen Wake Lock on supported browsers so phones and TVs stay awake during matches.
+ */
+export async function requestScreenWakeLock() {
+    if (typeof navigator === 'undefined' || !navigator.wakeLock || typeof navigator.wakeLock.request !== 'function') {
+        return false;
+    }
+    if (activeWakeLock || wakeLockPending) return true;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return false;
+    }
+    wakeLockPending = true;
+    try {
+        const sentinel = await navigator.wakeLock.request('screen');
+        activeWakeLock = sentinel;
+        sentinel.addEventListener?.('release', () => {
+            if (activeWakeLock === sentinel) {
+                activeWakeLock = null;
+            }
+        });
+        return true;
+    } catch {
+        return false;
+    } finally {
+        wakeLockPending = false;
+    }
+}
+
+/**
+ * Releases any active Screen Wake Lock cleanly.
+ */
+export async function releaseScreenWakeLock() {
+    if (!activeWakeLock) return;
+    const sentinel = activeWakeLock;
+    activeWakeLock = null;
+    try {
+        await sentinel.release();
+    } catch {
+        // Ignore release errors when document is already hidden
+    }
+}

@@ -124,9 +124,10 @@ export function handleVote(io, socket, { gameId, playerId, battleId, voteForPlay
     const player = helpers.getAuthenticatedPlayer(game, socket, playerId);
     if (!player) return;
 
-    const battle = game.battleSchedule.find(b => b.id === battleId);
-    // Idempotency and validity checks
-    if (!battle || battle.competitors.includes(player.id) || battle.votes[player.id]) return;
+    const activeIdx = game.currentVotingBattleIndex ?? 0;
+    const battle = game.battleSchedule?.[activeIdx];
+    // Idempotency and active-battle validity checks
+    if (!battle || String(battle.id) !== String(battleId) || battle.competitors.includes(player.id) || battle.votes[player.id]) return;
 
     const rawTarget = optionId || voteForPlayerId;
     let resolvedTargetId = null;

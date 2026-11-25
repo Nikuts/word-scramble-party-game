@@ -1,5 +1,13 @@
 // e2e/hostViewportBounds.spec.js
 import { test, expect } from '@playwright/test';
+import path from 'path';
+import os from 'os';
+import fs from 'fs';
+
+const ARTIFACT_DIR = process.env.PLAYWRIGHT_SCREENSHOT_DIR || path.join(os.tmpdir(), 'word-scramble-screenshots');
+if (!fs.existsSync(ARTIFACT_DIR)) {
+    fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+}
 
 const VIEWPORTS = [
     { name: 'Laptop Standard (1366x768)', width: 1366, height: 768, isLandscape: true },
@@ -197,5 +205,188 @@ test.describe('Host Screen Viewport Bounds & Tablet/Mobile Usability Audit', () 
         const firstBox = await themeCards.nth(0).boundingBox();
         const customBox = await themeCards.nth(3).boundingBox();
         expect(Math.abs(firstBox.height - customBox.height), 'Loading skeleton cards should match custom-theme row height').toBeLessThanOrEqual(8);
+    });
+
+    test('Synthwave grid stays unburied above html base and freezes cleanly in TV Mode', async ({ page }) => {
+        await page.setViewportSize({ width: 1920, height: 1080 });
+        await page.goto('/?debug=host_lobby&players=6&viewport=full&hideToolbar=1');
+        await page.waitForSelector('.synthwave-grid-background');
+
+        const normalStyles = await page.evaluate(() => {
+            const bodyBg = getComputedStyle(document.body).backgroundColor;
+            const grid = document.querySelector('.synthwave-grid-background');
+            const gridStyle = grid ? getComputedStyle(grid) : null;
+            const beforeStyle = grid ? getComputedStyle(grid, '::before') : null;
+            return {
+                bodyBg,
+                gridDisplay: gridStyle?.display,
+                gridZIndex: Number(gridStyle?.zIndex || 0),
+                beforeAnimationName: beforeStyle?.animationName
+            };
+        });
+
+        expect(normalStyles.bodyBg, 'body must stay transparent so synthwave grid is not buried').toBe('rgba(0, 0, 0, 0)');
+        expect(normalStyles.gridDisplay).not.toBe('none');
+        expect(normalStyles.gridZIndex).toBeGreaterThanOrEqual(0);
+        expect(normalStyles.beforeAnimationName).toBe('scroll-grid');
+
+        // Toggle TV Mode ON via top header control and verify grid freezes instead of disappearing
+        const tvToggle = page.locator('button:has-text("TV OFF"), button:has-text("TV MODE"), button:has-text("ТБ ВИМК")').first();
+        await tvToggle.click();
+        await page.waitForTimeout(150);
+
+        const tvStyles = await page.evaluate(() => {
+            const grid = document.querySelector('.synthwave-grid-background');
+            return {
+                tvAttr: document.body.getAttribute('data-tv-mode'),
+                gridDisplay: grid ? getComputedStyle(grid).display : null,
+                beforeAnimationName: grid ? getComputedStyle(grid, '::before').animationName : null
+            };
+        });
+
+        expect(tvStyles.tvAttr).toBe('true');
+        expect(tvStyles.gridDisplay).not.toBe('none');
+        expect(tvStyles.beforeAnimationName).toBe('none');
+    });
+
+    test('1-on-1 Showdowns render centered VS HexBadge without card overlap and hide it on 3-Way Brawls', async ({ page }) => {
+        await page.setViewportSize({ width: 1920, height: 1080 });
+
+        for (const screen of ['host_voting', 'host_reveal']) {
+            await page.goto(`/?debug=${screen}&players=6&competitors=2&viewport=full&hideToolbar=1`);
+            await page.waitForTimeout(screen === 'host_reveal' ? 900 : 350);
+
+            const vsBadge = page.locator('main span:text-is("VS")').first();
+            await expect(vsBadge, `VS crest should be visible on 1-on-1 ${screen}`).toBeVisible();
+            const vsBox = await vsBadge.boundingBox();
+            expect(vsBox).toBeTruthy();
+
+            const cardSelector = screen === 'host_voting' ? '[data-testid="voting-option-card"]' : 'main .host-panel-surface';
+            const cards = page.locator(cardSelector);
+            expect(await cards.count()).toBe(2);
+
+            const leftCard = await cards.nth(0).boundingBox();
+            const rightCard = await cards.nth(1).boundingBox();
+            expect(vsBox.x + vsBox.width / 2).toBeGreaterThan(leftCard.x + leftCard.width - 12);
+            expect(vsBox.x + vsBox.width / 2).toBeLessThan(rightCard.x + 12);
+        }
+
+        // 3-Way Brawl must NOT display the 1-on-1 VS crest
+        await page.goto('/?debug=host_voting&players=6&viewport=full&hideToolbar=1');
+        await page.waitForTimeout(300);
+        await expect(page.locator('main span:text-is("VS")')).toHaveCount(0);
+    });
+
+    test('Retrowave Canvas Battle Recap exports valid non-empty landscape and vertical PNGs under custom colorTheme', async ({ page }) => {
+        const fs = await import('fs');
+        await page.setViewportSize({ width: 1280, height: 900 });
+        await page.goto('/?debug=player_history&players=6&lang=en&colorTheme=outrun&viewport=mobile&hideToolbar=1');
+        await page.waitForSelector('.save-btn-container button');
+
+        const buttons = page.locator('.save-btn-container button');
+        for (const idx of [0, 1]) {
+            const downloadPromise = page.waitForEvent('download');
+            await buttons.nth(idx).click();
+            const download = await downloadPromise;
+            const filePath = await download.path();
+            expect(filePath).toBeTruthy();
+            const buf = fs.readFileSync(filePath);
+            expect(buf.length, `Exported PNG (btn ${idx}) should be > 20KB`).toBeGreaterThan(20_000);
+            // Verify PNG magic signature: 89 50 4E 47
+            expect(buf[0]).toBe(0x89);
+            expect(buf[1]).toBe(0x50);
+            expect(buf[2]).toBe(0x4E);
+            expect(buf[3]).toBe(0x47);
+        }
+    });
+
+    test('14-Player Host Arena fits 1228x691 (125% Laptop DPI) cleanly in EN and UA without card overflow', async ({ page }) => {
+        for (const lang of ['en', 'ua']) {
+            await page.setViewportSize({ width: 1228, height: 691 });
+            await page.goto(`/?debug=host_question&players=14&lang=${lang}&viewport=full&hideToolbar=1`);
+            await page.waitForSelector('.panel-arcade');
+            await page.waitForTimeout(300);
+
+            const metrics = await page.evaluate(() => {
+                const doc = document.documentElement;
+                const cards = Array.from(document.querySelectorAll('.panel-arcade'));
+                const clippedCards = cards
+                    .map((card, i) => ({
+                        index: i,
+                        overflowX: card.scrollWidth - card.clientWidth,
+                        overflowY: card.scrollHeight - card.clientHeight,
+                        bottomOver: Math.round(card.getBoundingClientRect().bottom - window.innerHeight),
+                    }))
+                    .filter((c) => c.overflowX > 2 || c.overflowY > 2 || c.bottomOver > 2);
+                return {
+                    cardCount: cards.length,
+                    overflowX: doc.scrollWidth - window.innerWidth,
+                    overflowY: doc.scrollHeight - window.innerHeight,
+                    clippedCards,
+                };
+            });
+
+            expect(metrics.cardCount).toBe(14);
+            expect(metrics.overflowX, `14P HostArena overflowX (${lang})`).toBeLessThanOrEqual(2);
+            expect(metrics.overflowY, `14P HostArena overflowY (${lang})`).toBeLessThanOrEqual(2);
+            expect(metrics.clippedCards, `14P HostArena card clipping (${lang})`).toEqual([]);
+
+            await page.screenshot({
+                path: path.join(ARTIFACT_DIR, `qa_host_arena_14p_${lang}_691.png`),
+                fullPage: false,
+            });
+        }
+    });
+
+    test('Chamfered Arcade Confirm Modal replaces native confirm() on HostLobby and HostGameView', async ({ page }) => {
+        let nativeDialogFired = false;
+        page.on('dialog', async (d) => {
+            nativeDialogFired = true;
+            await d.dismiss();
+        });
+
+        await page.setViewportSize({ width: 1228, height: 691 });
+
+        // 1. Test Close Lobby modal in EN & UA + Escape & Cancel dismissal
+        for (const lang of ['en', 'ua']) {
+            await page.goto(`/?debug=host_lobby&players=6&lang=${lang}&viewport=full&hideToolbar=1`);
+            const closeBtn = page.locator('header button[aria-label*="Close Lobby"], header button[aria-label*="Закрити лобі"], header button:has-text("CLOSE"), header button:has-text("ЗАКРИТИ")').first();
+            await closeBtn.click();
+
+            const modal = page.locator('[data-testid="arcade-confirm-modal"]');
+            await expect(modal).toBeVisible();
+            await expect(modal).toHaveAttribute('open', '');
+
+            const cancelBtn = modal.locator('[data-testid="arcade-confirm-cancel"]');
+            await expect(cancelBtn).toBeFocused();
+
+            await page.screenshot({
+                path: path.join(ARTIFACT_DIR, `qa_arcade_modal_lobby_${lang}.png`),
+                fullPage: false,
+            });
+
+            await cancelBtn.click();
+            await expect(modal).not.toBeVisible();
+        }
+
+        // 2. Test End Game modal in live Host session (confirm closes room cleanly)
+        await page.goto('/');
+        await page.click('button:has-text("ENGLISH")');
+        await page.click('button:has-text("Create & Host Display")');
+        await page.waitForSelector('[data-testid="game-id"]');
+
+        const liveCloseBtn = page.locator('header button[title*="Close Lobby"], header button:has-text("CLOSE")').first();
+        await liveCloseBtn.click();
+
+        const liveModal = page.locator('[data-testid="arcade-confirm-modal"]');
+        await expect(liveModal).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(liveModal).not.toBeVisible();
+
+        await liveCloseBtn.click();
+        await expect(liveModal).toBeVisible();
+        await liveModal.locator('[data-testid="arcade-confirm-accept"]').click();
+        await expect(page.locator('button:has-text("Create & Host Display")')).toBeVisible({ timeout: 10000 });
+        expect(nativeDialogFired).toBe(false);
     });
 });

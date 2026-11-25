@@ -5,7 +5,6 @@
     import { MIN_PLAYERS, MAX_PLAYERS } from '../config.js';
     import PixelAvatar from '../shared/PixelAvatar.svelte';
     import ArcadeIcon from '../shared/ArcadeIcon.svelte';
-    import FlyingReactionsOverlay from '../shared/FlyingReactionsOverlay.svelte';
 
     const dispatch = createEventDispatcher();
 
@@ -41,7 +40,8 @@
     $: connectedPlayers = (game?.players || []).filter(p => p.socketId);
     $: connectedPlayerCount = connectedPlayers.length;
     $: isApiDisabled = game ? game.geminiApiErrorCount >= 3 : false;
-    $: canStart = connectedPlayerCount >= MIN_PLAYERS && connectedPlayerCount <= MAX_PLAYERS && (game?.theme || isApiDisabled);
+    $: effectiveTheme = (customTheme || '').trim() || game?.theme || '';
+    $: canStart = connectedPlayerCount >= MIN_PLAYERS && connectedPlayerCount <= MAX_PLAYERS && (effectiveTheme || isApiDisabled);
 
     let playerCountMessage = '';
     $: {
@@ -63,6 +63,7 @@
     }
 
     let themeDebounceTimer = null;
+    let pendingThemeSync = false;
     onDestroy(() => {
         if (themeDebounceTimer) clearTimeout(themeDebounceTimer);
     });
@@ -72,15 +73,22 @@
         const gameId = game.id;
         customTheme = e.target.value;
         if (themeDebounceTimer) clearTimeout(themeDebounceTimer);
+        pendingThemeSync = true;
         const trimmed = customTheme.trim();
         themeDebounceTimer = setTimeout(() => {
+            themeDebounceTimer = null;
+            pendingThemeSync = false;
             sendMessage('set-theme', { gameId, theme: trimmed });
         }, 250);
     }
 
     function handleThemeClick(theme) {
         if (!game) return;
-        if (themeDebounceTimer) clearTimeout(themeDebounceTimer);
+        if (themeDebounceTimer) {
+            clearTimeout(themeDebounceTimer);
+            themeDebounceTimer = null;
+        }
+        pendingThemeSync = false;
         customTheme = '';
         sendMessage('set-theme', { gameId: game.id, theme: theme });
     }
@@ -113,6 +121,17 @@
 
     function handleStartGame() {
         if (canStart && game) {
+            if (themeDebounceTimer || pendingThemeSync) {
+                if (themeDebounceTimer) {
+                    clearTimeout(themeDebounceTimer);
+                    themeDebounceTimer = null;
+                }
+                pendingThemeSync = false;
+                const trimmedCustom = customTheme.trim();
+                if (trimmedCustom !== (game.theme || '')) {
+                    sendMessage('set-theme', { gameId: game.id, theme: trimmedCustom });
+                }
+            }
             sendMessage('start-game', { gameId: game.id, loading: true });
         }
     }
@@ -251,13 +270,18 @@
                                     on:focus={() => isInputFocused = true}
                                     on:blur={() => isInputFocused = false}
                                     placeholder={$t.customTheme || 'Custom Theme...'}
-                                    class="w-full cut-sm bg-[#070610] border-2 border-[#332e59] focus:border-amber-400 text-white font-sans text-xs sm:text-sm px-3 py-2 focus:outline-none select-text"
-                                    maxlength="50"
+                                    class="w-full cut-sm bg-[#070610] border-2 border-[#332e59] focus:border-amber-400 text-white font-sans text-base pl-3 pr-8 py-2 focus:outline-none select-text"
+                                    maxlength="100"
                                 />
                                 {#if customTheme}
                                     <button
                                         type="button"
                                         on:click={() => {
+                                            if (themeDebounceTimer) {
+                                                clearTimeout(themeDebounceTimer);
+                                                themeDebounceTimer = null;
+                                            }
+                                            pendingThemeSync = false;
                                             customTheme = '';
                                             sendMessage('set-theme', { gameId: game.id, theme: '' });
                                         }}
@@ -488,5 +512,3 @@
         </button>
     </footer>
 </div>
-
-<FlyingReactionsOverlay />

@@ -19,7 +19,7 @@ export function getWordAuthorHex(authorIndex) {
 
 function readThemeColors() {
     if (typeof document === 'undefined') {
-        return { bg: '#0a0914', surface: '#100e22', surface2: '#131126', border: '#332e59', primary: '#00e5ff', accent: '#facc15', secondary: '#ff2a85' };
+        return { bg: '#0a0914', surface: '#100e22', surface2: '#131126', border: '#332e59', primary: '#00e5ff', primaryRgb: '0, 229, 255', accent: '#facc15', secondary: '#ff2a85', secondaryRgb: '255, 42, 133' };
     }
     const target = document.body || document.documentElement;
     const styles = getComputedStyle(target);
@@ -30,8 +30,10 @@ function readThemeColors() {
         surface2: getVar('--color-surface-2', '#131126'),
         border: getVar('--color-surface-border', '#332e59'),
         primary: getVar('--color-primary', '#00e5ff'),
+        primaryRgb: getVar('--color-primary-rgb', '0, 229, 255'),
         accent: getVar('--color-warning', '#facc15'),
-        secondary: getVar('--color-secondary', '#ff2a85')
+        secondary: getVar('--color-secondary', '#ff2a85'),
+        secondaryRgb: getVar('--color-secondary-rgb', '255, 42, 133')
     };
 }
 
@@ -282,18 +284,18 @@ export async function renderBattleRecapCanvas({ battle, players = [], gameId = '
     ctx.fillStyle = bgGrad;
     ctx.fillRect(panelX, panelY, panelW, panelH);
 
-    // Soft magenta & cyan horizon aurora glows
+    // Soft secondary & primary horizon aurora glows (theme-aware)
     const horizonY = panelY + panelH * 0.62;
     const magGlow = ctx.createRadialGradient(cardWidth * 0.5, horizonY, 10, cardWidth * 0.5, horizonY, panelW * 0.6);
-    magGlow.addColorStop(0, 'rgba(255, 42, 133, 0.22)');
-    magGlow.addColorStop(0.55, 'rgba(255, 42, 133, 0.06)');
-    magGlow.addColorStop(1, 'rgba(255, 42, 133, 0)');
+    magGlow.addColorStop(0, `rgba(${theme.secondaryRgb}, 0.22)`);
+    magGlow.addColorStop(0.55, `rgba(${theme.secondaryRgb}, 0.06)`);
+    magGlow.addColorStop(1, `rgba(${theme.secondaryRgb}, 0)`);
     ctx.fillStyle = magGlow;
     ctx.fillRect(panelX, panelY, panelW, panelH);
 
     const cyanGlow = ctx.createRadialGradient(cardWidth * 0.5, panelY + 24, 10, cardWidth * 0.5, panelY + 24, panelW * 0.55);
-    cyanGlow.addColorStop(0, 'rgba(0, 229, 255, 0.14)');
-    cyanGlow.addColorStop(1, 'rgba(0, 229, 255, 0)');
+    cyanGlow.addColorStop(0, `rgba(${theme.primaryRgb}, 0.14)`);
+    cyanGlow.addColorStop(1, `rgba(${theme.primaryRgb}, 0)`);
     ctx.fillStyle = cyanGlow;
     ctx.fillRect(panelX, panelY, panelW, panelH);
 

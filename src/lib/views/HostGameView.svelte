@@ -9,6 +9,7 @@
     import HexBadge from '../shared/HexBadge.svelte';
     import SevenSegmentDisplay from '../shared/SevenSegmentDisplay.svelte';
     import FlyingReactionsOverlay from '../shared/FlyingReactionsOverlay.svelte';
+    import ArcadeConfirmModal from '../shared/ArcadeConfirmModal.svelte';
     import { sendMessage } from '../../stores.js';
     import { triggerConfetti } from '../utils.js';
     import HostGetReady from './host_game/HostGetReady.svelte';
@@ -20,6 +21,7 @@
     let loadingMessage = '';
     let lastRevealedBattleId = null;
     let showOrientationHint = true;
+    let showEndGameModal = false;
 
     const animatedScores = tweened({}, {
         duration: 500,
@@ -115,7 +117,12 @@
     }
 
     function handleForceEndGame() {
-        if (confirm($t.confirmEndGame)) {
+        showEndGameModal = true;
+    }
+
+    function confirmForceEndGame() {
+        showEndGameModal = false;
+        if ($gameState?.id) {
             sendMessage('force-end-game', { gameId: $gameState.id });
         }
     }
@@ -272,4 +279,14 @@
     {/if}
 
     <FlyingReactionsOverlay />
+
+    <ArcadeConfirmModal
+        bind:open={showEndGameModal}
+        title={$t.endGame || 'End Game'}
+        message={$t.confirmEndGame}
+        confirmLabel={$t.endGame || 'End Game'}
+        cancelLabel={$t.cancel || 'Cancel'}
+        variant="danger"
+        on:confirm={confirmForceEndGame}
+    />
 </div>

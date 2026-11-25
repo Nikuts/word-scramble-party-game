@@ -367,7 +367,7 @@
         if (form.isFinal) {
             const titleWords = form.titleWords.filter(Boolean);
             const taglineWords = form.taglineWords.filter(Boolean);
-            if (titleWords.length === 0 && taglineWords.length === 0) return;
+            if (countVocabularyWords(titleWords) === 0 || countVocabularyWords(taglineWords) === 0) return;
             tileIds = {
                 title: titleWords.map(w => w.tileId).filter(Boolean),
                 tagline: taglineWords.map(w => w.tileId).filter(Boolean),
@@ -378,7 +378,7 @@
             };
         } else {
             const answerWords = form.answerWords.filter(Boolean);
-            if (answerWords.length === 0) return;
+            if (countVocabularyWords(answerWords) === 0) return;
             tileIds = answerWords.map(w => w.tileId).filter(Boolean);
             answer = formatWordTokens(answerWords);
         }
@@ -410,7 +410,7 @@
     {#if battlesToAnswer && battlesToAnswer.length > 0 && battleForms[battlesToAnswer[0].id]}
         {@const battle = battlesToAnswer[0]}
         {@const battleForm = battleForms[battle.id]}
-        {@const hasAnswerWords = battleForm ? (battleForm.isFinal ? (battleForm.titleWords.length > 0 || battleForm.taglineWords.length > 0) : battleForm.answerWords.length > 0) : false}
+        {@const hasAnswerWords = battleForm ? (battleForm.isFinal ? (countVocabularyWords(battleForm.titleWords) > 0 && countVocabularyWords(battleForm.taglineWords) > 0) : countVocabularyWords(battleForm.answerWords) > 0) : false}
 
         <header class="flex flex-row items-center justify-between gap-2 flex-shrink-0 pt-0.5 mb-2.5">
             <div class="fighter-crest bg-pink-950/90 border border-pink-400 text-pink-200 text-xs sm:text-sm">

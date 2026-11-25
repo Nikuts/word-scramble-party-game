@@ -26,7 +26,7 @@ ECHO Packages are ready.
 ECHO.
 
 REM Step 2: Start the Node.js server.
-ECHO [STEP 3] Starting the game server...
+ECHO [STEP 2] Starting the game server...
 ECHO You can close this window to stop the server.
 ECHO.
-npm run start:dev
+call npm run dev

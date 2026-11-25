@@ -15,7 +15,6 @@
     import PlayerBattleHistoryView from './PlayerBattleHistoryView.svelte';
     import PixelAvatar from '../../shared/PixelAvatar.svelte';
     import ArcadeIcon from '../../shared/ArcadeIcon.svelte';
-    import FlyingReactionsOverlay from '../../shared/FlyingReactionsOverlay.svelte';
 
     let loadingMessage = '';
 
@@ -114,6 +113,4 @@
             <PlayerResultsView game={$gameState} player={$currentPlayerDetails} />
         {/if}
     </main>
-
-    <FlyingReactionsOverlay />
 </div>

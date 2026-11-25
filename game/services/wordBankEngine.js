@@ -331,8 +331,14 @@ export function generateWordBanksDirectly({
             inRoundSeenTextsByPlayer.get(slot.playerId).add(chunk.chunkText.trim().toLowerCase());
         }
         const contentWords = new Set();
-        chunk.words.forEach(w => {
+        chunk.words.forEach((w, idx) => {
             const lower = w.toLowerCase();
+            const normalizedText = (
+                idx === 0 &&
+                w !== 'I' &&
+                /^\p{Lu}\p{Ll}+$/u.test(w) &&
+                isStopwordOrConnector(w, language)
+            ) ? lower : w;
             slot.distinctWords.add(lower);
             if (!isStopwordOrConnector(lower, language)) {
                 contentWords.add(lower);
@@ -344,7 +350,7 @@ export function generateWordBanksDirectly({
                 inRoundSeenContentWordsByPlayer.get(slot.playerId).add(lower);
             }
             slot.tokens.push({
-                text: w,
+                text: normalizedText,
                 authorId: chunk.authorId,
                 source: 'answer',
                 tier,
@@ -548,9 +554,9 @@ export function generateWordBanksDirectly({
                 .map(w => w.toLowerCase())
                 .filter(w => !isStopwordOrConnector(w, language));
 
-            // If any content word in this phrase was already used in a past battle, skip the whole phrase
-            if (nonStopPhraseWords.some(w => globallyUsedWords.has(w))) continue;
-            if (strictGlobalFresh && nonStopPhraseWords.some(w => globallyShownFallbackWords.has(w))) continue;
+            // Only skip a phrase if ALL of its content words are already exhausted, so fresh sibling words stay available
+            if (nonStopPhraseWords.length > 0 && nonStopPhraseWords.every(w => globallyUsedWords.has(w))) continue;
+            if (strictGlobalFresh && nonStopPhraseWords.length > 0 && nonStopPhraseWords.every(w => globallyShownFallbackWords.has(w))) continue;
 
             const targetSlot = deficitSlots.find(slot =>
                 phraseWords.some(w => isFallbackWordEligibleForSlot(slot, w.toLowerCase(), strictGlobalFresh))
@@ -620,13 +626,31 @@ export function generateWordBanksDirectly({
                 }
             });
         }
-        // Pass 2: absolute floor guarantee if vocabulary still below softTarget
+        // Pass 2: absolute floor guarantee if vocabulary still below softTarget (excluding globally used words)
         for (const phrase of combinedPool) {
             if (slot.distinctWords.size >= softTarget) break;
             const phraseWords = extractCleanWords(phrase);
             phraseWords.forEach(w => {
                 const lower = w.toLowerCase();
                 if (!slot.distinctWords.has(lower) && !globallyUsedWords.has(lower)) {
+                    slot.distinctWords.add(lower);
+                    slot.tokens.push({
+                        text: w,
+                        authorId: null,
+                        source: 'fallback',
+                        tier: 4,
+                        bundleId: null
+                    });
+                }
+            });
+        }
+        // Pass 3: last-resort floor guarantee for massive 14P Round 3 lobbies if pool is exhausted
+        for (const phrase of combinedPool) {
+            if (slot.distinctWords.size >= softTarget) break;
+            const phraseWords = extractCleanWords(phrase);
+            phraseWords.forEach(w => {
+                const lower = w.toLowerCase();
+                if (!slot.distinctWords.has(lower)) {
                     slot.distinctWords.add(lower);
                     slot.tokens.push({
                         text: w,

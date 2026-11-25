@@ -20,6 +20,20 @@ export const flyingEmojis = writable([]);
 export const activeTimeBoostNotice = writable(null);
 export const activeAllVotesInNotice = writable(false);
 export const hasConfirmedAvatar = writable(false);
+export const toasts = writable([]);
+
+let nextToastId = 1;
+export function showToast(message, { variant = 'danger', duration = 6000 } = {}) {
+    const cleanMsg = String(message || '').trim();
+    if (!cleanMsg) return null;
+    const id = nextToastId++;
+    toasts.update((list) => [...list.slice(-3), { id, message: cleanMsg, variant, duration }]);
+    return id;
+}
+
+export function dismissToast(id) {
+    toasts.update((list) => list.filter((item) => item.id !== id));
+}
 
 isHostDisplay.subscribe((isHost) => {
     if (isHost) {
@@ -107,6 +121,15 @@ export const t = derived(language, $language => {
     const lang = ($language === 'ua' || $language === 'uk') ? 'uk' : 'en';
     return UI_TEXT[lang] || UI_TEXT.en;
 });
+
+if (typeof document !== 'undefined') {
+    language.subscribe(($language) => {
+        const htmlLang = ($language === 'ua' || $language === 'uk') ? 'uk' : 'en';
+        if (document.documentElement && document.documentElement.lang !== htmlLang) {
+            document.documentElement.lang = htmlLang;
+        }
+    });
+}
 
 // --- Performance-Optimized Derived Stores ---
 export const gamePhase = derived(gameState, $g => $g?.phase);
@@ -356,7 +379,7 @@ export function initializeSocket() {
             clearConsumedPartialAnswers();
         }
 
-        if (previousPhase && newGameState.phase !== previousPhase && !['battle_voting', 'battle_reveal', 'results'].includes(newGameState.phase)) {
+        if (previousPhase && newGameState.phase !== previousPhase && !['battle_voting', 'battle_result_reveal', 'results'].includes(newGameState.phase)) {
             flyingEmojis.set([]);
         }
 
@@ -672,6 +695,7 @@ export function resetToMenu() {
      error.set({ ...initialErrorState });
      isHostDisplay.set(false);
      showBattleHistory.set(false);
+     toasts.set([]);
      stopMusic();
 }
 

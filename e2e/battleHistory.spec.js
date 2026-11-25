@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
+import os from 'os';
+import fs from 'fs';
 import { 
     createHostSession, 
     joinPlayerSession, 
@@ -7,6 +10,11 @@ import {
     completeAllBattlesVoting,
     createMobilePlayerContext
 } from './helpers/gameTestHelper.js';
+
+const ARTIFACT_DIR = process.env.PLAYWRIGHT_SCREENSHOT_DIR || path.join(os.tmpdir(), 'word-scramble-screenshots');
+if (!fs.existsSync(ARTIFACT_DIR)) {
+    fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+}
 
 test.describe('Battle History & Multi-Competitor Recap View', () => {
     test('verifies battle history navigation, multi-competitor layout, and image export triggers', async ({ browser }) => {
@@ -128,9 +136,8 @@ test.describe('Battle History & Multi-Competitor Recap View', () => {
         ]);
         expect(dlVert.suggestedFilename()).toMatch(/^battle-recap-.*-vertical\.png$/);
         const vertPath = await dlVert.path();
-        const fs = await import('fs');
         expect(fs.statSync(vertPath).size).toBeGreaterThan(10000);
-        fs.copyFileSync(vertPath, 'C:/Users/nikku/.gemini/antigravity/brain/0ba4d08c-fc46-46a2-8c3d-d610f6006523/verified_canvas_vertical.png');
+        fs.copyFileSync(vertPath, path.join(ARTIFACT_DIR, 'verified_canvas_vertical.png'));
 
         const [dlLand] = await Promise.all([
             p1Page.waitForEvent('download', { timeout: 15000 }),
@@ -139,7 +146,7 @@ test.describe('Battle History & Multi-Competitor Recap View', () => {
         expect(dlLand.suggestedFilename()).toMatch(/^battle-recap-.*-landscape\.png$/);
         const landPath = await dlLand.path();
         expect(fs.statSync(landPath).size).toBeGreaterThan(10000);
-        fs.copyFileSync(landPath, 'C:/Users/nikku/.gemini/antigravity/brain/0ba4d08c-fc46-46a2-8c3d-d610f6006523/verified_canvas_landscape.png');
+        fs.copyFileSync(landPath, path.join(ARTIFACT_DIR, 'verified_canvas_landscape.png'));
 
         // Click Back to Scores and ensure navigation back to final scores
         await backBtn.click();

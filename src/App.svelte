@@ -14,15 +14,37 @@
   import LoadingSpinner from './lib/shared/LoadingSpinner.svelte';
   import ErrorDisplay from './lib/shared/ErrorDisplay.svelte';
   import ArcadeIcon from './lib/shared/ArcadeIcon.svelte';
-  import DevHarness from './lib/dev/DevHarness.svelte';
-  import SoundTestView from './lib/dev/SoundTestView.svelte';
+  import ArcadeToastContainer from './lib/shared/ArcadeToastContainer.svelte';
   import { musicManager } from './lib/audio/musicManager.js';
+  import { requestScreenWakeLock, releaseScreenWakeLock } from './lib/utils.js';
   import { get } from 'svelte/store';
 
   const initialUrlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   let isDevHarness = initialUrlParams ? (initialUrlParams.has('debug') || initialUrlParams.has('dev') || initialUrlParams.has('harness')) : false;
+  let LazyDevHarness = null;
+  let LazySoundTestView = null;
+
+  $: if (isDevHarness && !LazyDevHarness) {
+      import('./lib/dev/DevHarness.svelte').then((mod) => {
+          LazyDevHarness = mod.default;
+      });
+  }
 
   let currentView = $view;
+  $: if (currentView === 'soundTest' && !LazySoundTestView) {
+      import('./lib/dev/SoundTestView.svelte').then((mod) => {
+          LazySoundTestView = mod.default;
+      });
+  }
+
+  const WAKE_LOCK_VIEWS = new Set(['hostDisplay', 'playerGame']);
+  $: if (typeof window !== 'undefined') {
+      if (WAKE_LOCK_VIEWS.has(currentView)) {
+          requestScreenWakeLock();
+      } else {
+          releaseScreenWakeLock();
+      }
+  }
   let mainContentElement;
   let isTransitioning = false;
   let transitionFallbackTimer = null;
@@ -102,6 +124,9 @@
         } else {
           document.body.removeAttribute('data-app-hidden');
           musicManager.resumeFromVisible();
+          if (WAKE_LOCK_VIEWS.has(currentView)) {
+            requestScreenWakeLock();
+          }
         }
       }
     };
@@ -147,6 +172,7 @@
     }
 
     return () => {
+      releaseScreenWakeLock();
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       }
@@ -163,13 +189,15 @@
     hostDisplay: HostDisplay,
     playerGame: PlayerGame,
     instructions: Instructions,
-    soundTest: SoundTestView,
-    devHarness: DevHarness,
   };
 </script>
 
 {#if isDevHarness}
-    <DevHarness />
+    {#if LazyDevHarness}
+        <svelte:component this={LazyDevHarness} />
+    {:else}
+        <LoadingSpinner message={$t.pleaseWait} />
+    {/if}
 {:else}
     <main class="h-screen-safe max-h-screen-safe w-full overflow-hidden flex flex-col relative z-10" style="transform: translateZ(0);">
         {#if $isReconnecting}
@@ -186,9 +214,16 @@
                 <LoadingSpinner message={$error.message || $t.pleaseWait} />
             {:else if $error.fatal}
                 <ErrorDisplay message={$error.message} on:reset={resetToMenu} />
+            {:else if currentView === 'soundTest'}
+                {#if LazySoundTestView}
+                    <svelte:component this={LazySoundTestView} />
+                {:else}
+                    <LoadingSpinner message={$t.pleaseWait} />
+                {/if}
             {:else}
                 <svelte:component this={views[currentView] || MainMenu} />
             {/if}
         </div>
+        <ArcadeToastContainer />
     </main>
 {/if}

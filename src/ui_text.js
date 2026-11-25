@@ -247,6 +247,9 @@ export const UI_TEXT = {
     battleGetReadySubtitle: "Word Banks Ready!",
     votingGetReadySubtitle: "Cast Your Votes!",
     getReadyDesc: "Check your device for your prompts.",
+    notificationsLabel: "Notifications",
+    dismiss: "Dismiss",
+    ok: "OK",
     generatingRoundMessages: [
       "Reticulating splines...",
       "Teaching the AI about sarcasm...",
@@ -631,6 +634,9 @@ export const UI_TEXT = {
     battleGetReadySubtitle: "Банки слів готові!",
     votingGetReadySubtitle: "Час голосувати!",
     getReadyDesc: "Дивіться на свої пристрої, там уже чекають завдання.",
+    notificationsLabel: "Сповіщення",
+    dismiss: "Закрити",
+    ok: "ОК",
     generatingRoundMessages: [
         "Ретранслюємо сплайни...",
         "Навчаємо ШІ сарказму...",

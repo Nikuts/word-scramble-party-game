@@ -48,11 +48,16 @@ describe('Time Boost & Lobby Enhancements', () => {
     });
 
     describe('Lobby Topic Reload & Silly Mode', () => {
-        it('allows reloading lobby topics when not already generating', async () => {
-            game.preGeneratedThemes = { en: ['Old 1', 'Old 2'], uk: ['Стара 1', 'Стара 2'] };
+        it('allows reloading lobby topics when not already generating and keeps all language keys populated', async () => {
+            game.language = 'uk';
+            game.preGeneratedThemes = { en: ['Old 1', 'Old 2'], uk: ['Стара 1', 'Стара 2'], ua: ['Стара 1', 'Стара 2'] };
             await lobbyHandlers.handleReloadThemes(io, socket, { gameId: 'TEST' });
 
             expect(game.preGeneratedThemes).toBeDefined();
+            expect(Array.isArray(game.preGeneratedThemes.en)).toBe(true);
+            expect(Array.isArray(game.preGeneratedThemes.uk)).toBe(true);
+            expect(Array.isArray(game.preGeneratedThemes.ua)).toBe(true);
+            expect(game.preGeneratedThemes.uk.length).toBeGreaterThanOrEqual(3);
             expect(game.isGeneratingThemes).toBe(false);
         });
 

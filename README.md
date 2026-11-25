@@ -41,7 +41,8 @@ A real-time, local multiplayer word game for 3 to 14 players. The game leverages
 - **Mobile-First UI & Touch Ergonomics:** 
     - **Single-Column Vertical Voting Stack:** 1-on-1, 3-way, and 4-way battle choices are stacked in full-width cards with dedicated `[ 🗳️ VOTE FOR THIS ANSWER ]` button targets to eliminate accidental taps while scrolling on phones.
     - **De-Cluttered Host Mobile Lobby:** Color themes, single-line outlined topic reload, custom theme inputs, and compact 3-pill game mode switches (`🤡 Silly`, `🌶️ 18+`, `🐌 Slowpoke`) are prioritized at the top of the screen with a direct `🚀 Start Game` button.
-    - **Sleek Custom Arcade Scrollbars:** Replaces OS default scrollbars with custom translucent neon pill scrollbars across desktop and mobile viewports.
+    - **Sleek Custom Arcade Scrollbars & 16px Mobile Inputs:** Replaces OS default scrollbars with custom translucent neon pill scrollbars across desktop and mobile viewports, and enforces `16px` (`text-base`) mobile form inputs so iOS Safari never auto-zooms on focus.
+    - **Smart TV–Safe Arcade Modals & Top-Layer Toasts:** Replaces blocking native `confirm()` / `alert()` dialogs with top-layer `<dialog>` Chamfered Arcade confirmation modals (`Close Lobby`, `End Game`) and `popover="manual"` error toasts that support Escape, focus return, and TV D-pad navigation.
     - **Intuitive Word Scramble Answering:** Fast tap-to-add, tap-to-return, and drag-and-drop word tile reordering with safe-area spacing for notches and dynamic islands.
 - **Immersive Audio & Visuals:** 
     - **Curated Retro-Arcade Soundtrack (Host TV):** Automatically scores every match phase (`lobby`, `question`, `battle`, `voting`, `podium`) with 15 loudness-normalized Kevin MacLeod (CC-BY 4.0) synth & arcade tracks, featuring non-repeating multi-stage shuffle, smooth crossfades, automatic ducking during `vo_*` announcer voiceovers, tab-visibility pause/resume, a unified top-right Host TV utility bar (`TV Mode`, speaker icon, `Close/End`) leaving full width for long topics, and a Socket.IO-synced remote Music toggle on the Host Player's phone (Lobby paired row + mid-game header).
@@ -194,7 +195,7 @@ To add tactical depth and party chaos, players have access to **powerups** and *
 - **👑 Author Royalties (+50 / +75 / +100 PTS per answer):**
   - Whenever an opponent uses non-stopword words that you authored into a valid battle answer (`>= 3` vocabulary words when receiving `0` votes, or any voted / auto-won answer), you passively earn a flat royalty (**+50 in Round 1, +75 in Round 2, +100 in Round 3**) per answer.
 - **🌈 Variety Rainbow Bonus (+100 / +200 / +400 PTS):**
-  - Awarded to any player whose valid battle answer (`>= 3` vocabulary words when receiving `0` votes, or any voted / auto-won answer) successfully weaves together non-stopword words authored by **3 or more distinct players** (**2 or more distinct other players** in 3-player games).
+  - Awarded to any player whose voted or auto-won battle answer (`>= 1` vote) successfully weaves together non-stopword words authored by **3 or more distinct players** (**2 or more distinct other players** in 3-player games).
 
 ### 5. Game End & Post-Game (Phase 3C Final Results)
 - **Split-Stage Host TV Presentation:**
@@ -243,20 +244,20 @@ To add tactical depth and party chaos, players have access to **powerups** and *
     A convenient script is provided to handle all steps for you.
     1.  Make the script executable (you only need to do this once):
         ```bash
-        chmod +x ./start-macos.sh
+        chmod +x ./start-server-macos.sh
         ```
     2.  Run the script:
         ```bash
-        ./start-macos.sh
+        ./start-server-macos.sh
         ```
         This script will automatically check for prerequisites, install dependencies, and start the game server.
 
     ### For All Other Systems (Manual Steps):
     Run the development server using the following command:
     ```bash
-    npm run start:dev
+    npm run dev
     ```
-    This command concurrently starts the Node.js server and the Vite frontend dev server. The `start:dev` script uses `concurrently` with a `--kill-others` (`-k`) flag. This ensures that if either the frontend or backend process fails, the other is automatically terminated. This prevents `ECONNREFUSED` proxy errors during development where the UI might load before the server is ready.
+    This command starts the unified Node.js + Express + Socket.IO server with Vite dev middleware on a single port (`PORT`, default `3000`), serving both the Svelte UI and WebSocket endpoints without proxy mismatch errors.
 
 6.  **Connect and Play:**
     - **Cloud / AI Studio Public Link:** When running in AI Studio or deployed to Cloud Run, share your app's public URL (or use the built-in **"📋 Copy Game Link"** button / QR code on the Host screen). Players on any network or mobile phone can join instantly.
@@ -303,7 +304,7 @@ This application is fully compatible with Google AI Studio's built-in hosting an
 - **GPU, Page Visibility & Battery Throttling:**
   - **Background Tab Freezing (`src/App.svelte` / `src/app.css`):** Listens to `visibilitychange` (`data-app-hidden="true"`) to automatically pause 60 FPS 3D canvas grid animations and CSS keyframes when the phone is locked or browser tab is hidden.
   - **Emoji Sprite Pool:** Floating reactions are capped at 20 concurrent elements on screen to prevent DOM bloat during party reaction bursts.
-  - **Async Image Decoding:** Character avatars in `PixelAvatar.svelte` use `loading="lazy"` and `decoding="async"` with explicit dimensions to prevent main-thread UI layout jank.
+  - **Async Image Decoding & Screen Wake Lock:** Character avatars in `PixelAvatar.svelte` use `loading="eager"` and `decoding="async"` with explicit dimensions (`64x64`) to prevent layout jank, while `App.svelte` acquires `navigator.wakeLock` during active Host Display and Player Game views so devices stay awake during matches.
 - **Persistent AI Connection Pooling (`geminiService.js`):** Persistent HTTP Keep-Alive sockets eliminate TCP/TLS handshake latency (~100–250ms saved per prompt) across background round pre-fetches.
 - **Automated Memory Lifecycle & Garbage Collection (`game/manager.js`):** Periodic 30-minute background sweep automatically prunes abandoned rooms older than 2 hours with no active socket connections, releasing memory and timers.
 - **High-Performance Word Bank Engine (`wordBankEngine.js`):** Sub-millisecond in-process generation (<2ms) with resilient Node.js `Worker` thread fallback.
@@ -339,7 +340,7 @@ This application is fully compatible with Google AI Studio's built-in hosting an
 - **Targeted Performance Enhancements (Active in TV Mode):**
   - **Static Background & Zero-Blur Pass:** Freezes the 3D synthwave grid and disables GPU `backdrop-filter` blurs/multi-layer shadows.
   - **Reaction Concurrency Cap & Confetti Throttle:** Caps floating Host TV reactions to **6 concurrent animated badges** (`2.6s` linear pass) and reduces confetti particle counts cleanly for smooth Smart TV frame rates.
-  - **Paint & Layout Containment:** Uses CSS `contain: layout paint;` and `100vh`/`100dvh` safe fallbacks on host dashboard containers.
+  - **Flattened Smart TV CSS & Fallbacks (`src/app.css`):** Uses flat CSS descendant rules (no native CSS nesting) for `body[data-tv-mode="true"]`, `overflow-x: hidden` fallback before `clip`, and `rgba(...)` fallbacks before `color-mix()` so older Smart TV browsers (Chromium 76–108 on Tizen/webOS) render cleanly.
 
 ### Background App-Switching & Silent Reconnect
 - **25s "Away" Grace Window (`PLAYER_AWAY_GRACE_MS`):** Brief mobile backgrounding/app-switching marks disconnected players as `AWAY` (preserving `LOCKED IN` if their phase answers are complete) for 25 seconds before showing `OFFLINE`.
@@ -362,7 +363,7 @@ The word bank engine uses a **4-Tier Slot-Balanced Algorithm** that guarantees e
   - **Victory Bonus:** `+200 pts` (R1) → `+400 pts` (R2) → `+800 pts` (R3) awarded to the sole winner, or split via `Math.floor(winBonus / topCompetitors.length)` on a tie.
   - **Clean Sweep Bonus:** `+150 pts` (R1) → `+300 pts` (R2) → `+600 pts` (R3) awarded when `totalVotes >= 2` and a single winner receives 100% of cast votes.
   - **Flat Word Royalties:** When another player uses non-stopword words you wrote in a valid answer (`>= 3` vocabulary words when receiving `0` votes, or any voted / auto-won answer), you receive a flat royalty (`+50` in R1, `+75` in R2, `+100` in R3) per answer. Common stopwords and connectors (`I`, `a`, `the`, `is`, `and`, etc.) are excluded from authorship credit.
-  - **Rainbow Variety Bonus:** `+100 pts` (R1) → `+200 pts` (R2) → `+400 pts` (R3) awarded to competitors whose valid answer unites non-stopword words from **3 or more distinct authors** (**2 or more distinct other players** in 3-player games).
+  - **Rainbow Variety Bonus:** `+100 pts` (R1) → `+200 pts` (R2) → `+400 pts` (R3) awarded to competitors whose voted or auto-won answer (`>= 1` vote) unites non-stopword words from **3 or more distinct authors** (**2 or more distinct other players** in 3-player games).
 - **Auto-Win:** If only one competitor submits an answer in time, they receive **100% of `battlePool + winBonus`** (with `0` Clean Sweep bonus) plus applicable word royalties and Rainbow bonus. Timed-out placeholder answers are rejected during voting and ignored in point calculations.
 - **Ties:** If top competitors tie on votes, the victory bonus is split via `Math.floor(winBonus / topCompetitors.length)`.
 

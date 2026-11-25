@@ -256,10 +256,31 @@ export function generateBattlePairings(playerIds, roundNumber = 1, pairHistory =
 
     // Rotate player order based on round so group assignment (quads vs trios) rotates fairly across rounds
     const roundOffset = ((roundNumber - 1) * Math.max(1, Math.floor(N / 3))) % N;
-    const orderedPlayerIds = [];
+    const rotatedPlayerIds = [];
     for (let i = 0; i < N; i++) {
-        orderedPlayerIds.push(playerIds[(i + roundOffset) % N]);
+        rotatedPlayerIds.push(playerIds[(i + roundOffset) % N]);
     }
+
+    // Players who played more trios in prior rounds have fewer cumulative pair edges in effectiveHistory.
+    // Pre-sort orderedPlayerIds by prior pair edges ascending (preserving roundOffset order on ties)
+    // so ascending index iteration inside solve() preserves symmetry breaking without backtracking spikes.
+    const edgeCountFor = (pid) => {
+        let total = 0;
+        for (let j = 0; j < N; j++) {
+            const other = rotatedPlayerIds[j];
+            if (other === pid) continue;
+            total += (effectiveHistory[getPairKey(pid, other)] || 0);
+        }
+        return total;
+    };
+    const orderedPlayerIds = (numTrios > 0)
+        ? rotatedPlayerIds
+            .map((pid, idx) => ({ pid, idx, edges: edgeCountFor(pid) }))
+            .sort((a, b) => a.edges - b.edges || a.idx - b.idx)
+            .map(x => x.pid)
+        : rotatedPlayerIds;
+
+    const priorPairEdges = orderedPlayerIds.map(pid => edgeCountFor(pid));
 
     // Solve exact partition where every player appears 2x, has distinct opponents, and minimizes repeat pairings
     function solve(groupIndex, slotIndex, appearances, opponents, groups) {
@@ -280,19 +301,36 @@ export function generateBattlePairings(playerIds, roundNumber = 1, pairHistory =
             ? currentGroup[slotIndex - 1] + 1 
             : (groupIndex > 0 && targetSizes[groupIndex] === targetSizes[groupIndex - 1] ? groups[groupIndex - 1][0] : 0);
 
+        const candidates = [];
         for (let p = minP; p < N; p++) {
             if (appearances[p] >= 2) continue;
             if (currentGroup.includes(p)) continue;
 
             let conflict = false;
+            let historyCost = 0;
             for (const member of currentGroup) {
                 if (opponents[p].has(member)) {
                     conflict = true;
                     break;
                 }
+                historyCost += (effectiveHistory[getPairKey(orderedPlayerIds[p], orderedPlayerIds[member])] || 0);
             }
             if (conflict) continue;
+            candidates.push({ p, cost: historyCost, edges: priorPairEdges[p] });
+        }
 
+        // Preserve ascending index order on slotIndex === 0 so minP symmetry breaking stays O(1),
+        // while sorting partner picks (slotIndex > 0) by repeat-pair cost.
+        if (slotIndex > 0) {
+            candidates.sort((a, b) => {
+                if (numTrios > 0 && currentTarget === 4 && a.edges !== b.edges) {
+                    return a.edges - b.edges;
+                }
+                return a.cost - b.cost || a.p - b.p;
+            });
+        }
+
+        for (const { p } of candidates) {
             currentGroup.push(p);
             appearances[p]++;
             for (const member of currentGroup) {
@@ -468,12 +506,16 @@ export function recordPlayerUsedBundles(game, playerId, bundleIds) {
     game.playerUsedBundles[playerId] = [...existing];
 }
 
-export function resolveBattleSubmission(game, battle, playerId, submissionPayload) {
+export function resolveBattleSubmission(game, battle, playerId, submissionPayload, { allowPartialMultiLine = false } = {}) {
     if (!battle || !playerId || submissionPayload === undefined || submissionPayload === null) return null;
 
     const tileMap = buildBattleTileLookup(battle, playerId);
     const hasWordBank = (battle.wordBanks?.[playerId]?.length || 0) > 0;
     const lang = game?.language || 'en';
+    const hasVocabTile = (tiles) => Array.isArray(tiles) && tiles.some(
+        t => t && t.source !== 'punctuation' && /[\p{L}\p{N}]/u.test(String(t.text || ''))
+    );
+    const hasVocabText = (str) => typeof str === 'string' && /[\p{L}\p{N}]/u.test(str);
     const extractUsedBundles = (tiles) => tiles
         .filter(t => t.bundleId && !isStopwordOrConnector(t.text, lang))
         .map(t => t.bundleId);
@@ -503,6 +545,7 @@ export function resolveBattleSubmission(game, battle, playerId, submissionPayloa
                 if (!tileMap.has(tid)) return null;
             }
             const tiles = rawTileIds.map(tid => tileMap.get(tid));
+            if (!hasVocabTile(tiles)) return null;
             const answer = helpers.formatAnswerText(tiles.map(t => t.text).join(' '));
             const usedBundles = extractUsedBundles(tiles);
             return { answer, tileIds: [...rawTileIds], usedBundles };
@@ -516,6 +559,13 @@ export function resolveBattleSubmission(game, battle, playerId, submissionPayloa
             }
             const titleTiles = titleIds.map(tid => tileMap.get(tid));
             const taglineTiles = taglineIds.map(tid => tileMap.get(tid));
+            const titleHasVocab = hasVocabTile(titleTiles);
+            const taglineHasVocab = hasVocabTile(taglineTiles);
+            if (allowPartialMultiLine) {
+                if (!titleHasVocab && !taglineHasVocab) return null;
+            } else if (!titleHasVocab || !taglineHasVocab) {
+                return null;
+            }
             const answer = {
                 title: helpers.formatAnswerText(titleTiles.map(t => t.text).join(' ')),
                 tagline: helpers.formatAnswerText(taglineTiles.map(t => t.text).join(' '))
@@ -556,6 +606,7 @@ export function resolveBattleSubmission(game, battle, playerId, submissionPayloa
                 if (!matched) return null;
                 matchedTiles.push(matched);
             }
+            if (!hasVocabTile(matchedTiles)) return null;
             return {
                 answer: helpers.formatAnswerText(matchedTiles.map(t => t.text).join(' ')),
                 tileIds: matchedTiles.map(t => t.id),
@@ -577,6 +628,13 @@ export function resolveBattleSubmission(game, battle, playerId, submissionPayloa
                 if (!m) return null;
                 matchedTagline.push(m);
             }
+            const titleHasVocab = hasVocabTile(matchedTitle);
+            const taglineHasVocab = hasVocabTile(matchedTagline);
+            if (allowPartialMultiLine) {
+                if (!titleHasVocab && !taglineHasVocab) return null;
+            } else if (!titleHasVocab || !taglineHasVocab) {
+                return null;
+            }
             return {
                 answer: {
                     title: helpers.formatAnswerText(matchedTitle.map(t => t.text).join(' ')),
@@ -592,12 +650,16 @@ export function resolveBattleSubmission(game, battle, playerId, submissionPayloa
         return null;
     }
 
-    // Bare unit test fixture without wordBanks: accept non-empty string or { title, tagline }
-    if (typeof rawAns === 'string' && rawAns.trim()) {
+    // Bare unit test fixture without wordBanks: accept non-empty string or { title, tagline } with vocabulary chars
+    if (typeof rawAns === 'string' && hasVocabText(rawAns)) {
         return { answer: rawAns, tileIds: null, usedBundles: [] };
     }
-    if (rawAns && typeof rawAns === 'object' && ((rawAns.title && String(rawAns.title).trim()) || (rawAns.tagline && String(rawAns.tagline).trim()))) {
-        return { answer: { title: rawAns.title || '', tagline: rawAns.tagline || '' }, tileIds: null, usedBundles: [] };
+    if (rawAns && typeof rawAns === 'object') {
+        const titleValid = hasVocabText(rawAns.title);
+        const taglineValid = hasVocabText(rawAns.tagline);
+        if (allowPartialMultiLine ? (titleValid || taglineValid) : (titleValid && taglineValid)) {
+            return { answer: { title: rawAns.title || '', tagline: rawAns.tagline || '' }, tileIds: null, usedBundles: [] };
+        }
     }
     return null;
 }
@@ -713,7 +775,7 @@ export function finalizeMissingBattleAnswers(game) {
             if (!battle.answers[cId]) {
                 const isFinal = !!battle.genre;
                 const partial = game.partialAnswers?.[`b-${battle.id}-${cId}`];
-                const resolved = partial ? resolveBattleSubmission(game, battle, cId, partial) : null;
+                const resolved = partial ? resolveBattleSubmission(game, battle, cId, partial, { allowPartialMultiLine: true }) : null;
                 if (resolved) {
                     battle.answers[cId] = resolved.answer;
                     if (resolved.tileIds) {
@@ -771,9 +833,13 @@ export function startVotingPhase(io, game) {
             return ans && ans !== TIMEOUT_ANSWER_PLACEHOLDER && (!ans.title || ans.title !== TIMEOUT_ANSWER_PLACEHOLDER);
         });
 
-        if (answeredCompetitors.length <= 1) {
-            console.log(`[Game ${game.id}] Auto-event for battle ${currentBattle.id} (${answeredCompetitors.length}/${currentBattle.competitors.length} answered). Skipping vote.`);
-            processVoteAndStartReveal(io, game, true);
+        const eligibleVoters = (game.players || []).filter(
+            p => p.socketId !== null && !(currentBattle.competitors || []).includes(p.id)
+        );
+
+        if (answeredCompetitors.length <= 1 || eligibleVoters.length === 0) {
+            console.log(`[Game ${game.id}] Auto-event for battle ${currentBattle.id} (${answeredCompetitors.length}/${currentBattle.competitors.length} answered, ${eligibleVoters.length} eligible voters). Skipping vote.`);
+            processVoteAndStartReveal(io, game, answeredCompetitors.length === 1);
             return;
         }
     }
@@ -998,9 +1064,9 @@ export function calculateBattlePoints(game, battle) {
             }
         });
 
-        // Rainbow Bonus if >= 3 distinct authors (or >= 2 in 3-player games) were harmonized
+        // Rainbow Bonus requires at least 1 vote (or auto-win) AND >= 3 distinct authors (or >= 2 in 3-player games)
         const rainbowThreshold = (game.players?.length === 3) ? 2 : 3;
-        if (distinctAuthors.size >= rainbowThreshold) {
+        if (competitorVotes > 0 && distinctAuthors.size >= rainbowThreshold) {
             return rainbowBonus;
         }
         return 0;

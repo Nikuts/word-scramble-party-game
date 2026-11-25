@@ -1,5 +1,5 @@
 <script>
-    import { t, language, showBattleHistory } from '../../../stores.js';
+    import { t, language, showBattleHistory, showToast } from '../../../stores.js';
     import { formatVotesLabel } from '../../../ui_text.js';
     import PixelAvatar from '../../shared/PixelAvatar.svelte';
     import ArcadeIcon from '../../shared/ArcadeIcon.svelte';
@@ -93,7 +93,7 @@
             setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
         } catch (e) {
             console.error("Failed to save image:", e);
-            alert($t.saveError || "Sorry, could not save the image.");
+            showToast($t.saveError || "Sorry, could not save the image.", { variant: 'danger' });
         } finally {
             savingImageId = null;
         }

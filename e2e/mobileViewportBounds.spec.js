@@ -60,6 +60,26 @@ test.describe('Mobile Viewport Bounds & Usability Audit', () => {
                         expect(btnCount).toBeGreaterThanOrEqual(1);
                     }
 
+                    // 4. Guard PlayerResultsView action buttons stay above reaction footer without overlapping
+                    if (screen.id === 'player_results') {
+                        const historyBtn = page.locator('button:has-text("VIEW BATTLE HISTORY"), button:has-text("ІСТОРІЯ БИТВ")').first();
+                        const playAgainBtn = page.locator('button:has-text("PLAY AGAIN"), button:has-text("ГРАТИ ЗНОВУ")').first();
+                        const footer = page.locator('footer').first();
+
+                        await expect(historyBtn).toBeVisible();
+                        await expect(footer).toBeVisible();
+
+                        const historyBox = await historyBtn.boundingBox();
+                        const footerBox = await footer.boundingBox();
+                        expect(historyBox.y + historyBox.height, `Battle History button overlapped footer on ${vp.name}`).toBeLessThanOrEqual(footerBox.y + 2);
+                        expect(footerBox.y + footerBox.height, `Reaction footer clipped below viewport on ${vp.name}`).toBeLessThanOrEqual(vp.height + 2);
+
+                        if (await playAgainBtn.isVisible()) {
+                            const playAgainBox = await playAgainBtn.boundingBox();
+                            expect(playAgainBox.y + playAgainBox.height, `Play Again button overlapped footer on ${vp.name}`).toBeLessThanOrEqual(footerBox.y + 2);
+                        }
+                    }
+
                     // Capture screenshot on 390x844 and 375x667 for visual inspection
                     if (vp.width === 390) {
                         const filename = `mobile_${screen.id}.png`;
@@ -74,4 +94,60 @@ test.describe('Mobile Viewport Bounds & Usability Audit', () => {
             }
         });
     }
+
+    test('Mobile text inputs enforce >= 16px font size to prevent iOS Safari focus zoom', async ({ page }) => {
+        for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
+            await page.setViewportSize(vp);
+
+            await page.goto('/?debug=player_avatar&viewport=mobile&hideToolbar=1');
+            const nameInput = page.locator('#profile-name-input');
+            await expect(nameInput).toBeVisible();
+            const nameFontPx = await nameInput.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+            expect(nameFontPx, `Profile name input must be >= 16px on ${vp.width}px`).toBeGreaterThanOrEqual(16);
+
+            await page.goto('/?debug=player_lobby&pIndex=0&viewport=mobile&hideToolbar=1');
+            const themeInput = page.locator('input[maxlength="100"]');
+            await expect(themeInput).toBeVisible();
+            const themeFontPx = await themeInput.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+            expect(themeFontPx, `Custom theme input must be >= 16px on ${vp.width}px`).toBeGreaterThanOrEqual(16);
+
+            if (vp.width === 390) {
+                await page.screenshot({ path: path.join(ARTIFACT_DIR, 'qa_mobile_lobby_16px_390.png'), fullPage: false });
+            }
+        }
+    });
+
+    test('Battle History save error renders top-layer Arcade Toast instead of native alert()', async ({ page }) => {
+        let nativeAlertFired = false;
+        page.on('dialog', async (d) => {
+            nativeAlertFired = true;
+            await d.dismiss();
+        });
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto('/?debug=player_history&players=6&lang=en&viewport=mobile&hideToolbar=1');
+        await page.waitForSelector('.save-btn-container button');
+
+        // Force canvas PNG encoding failure so saveAsImage exercises showToast()
+        await page.evaluate(() => {
+            HTMLCanvasElement.prototype.toBlob = function (cb) {
+                cb(null);
+            };
+        });
+
+        await page.locator('.save-btn-container button').first().click();
+
+        const toast = page.locator('[data-testid="arcade-toast"]');
+        await expect(toast).toBeVisible({ timeout: 5000 });
+        const toastBox = await toast.boundingBox();
+        expect(toastBox.x).toBeGreaterThanOrEqual(0);
+        expect(toastBox.x + toastBox.width).toBeLessThanOrEqual(392);
+        expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(844);
+
+        await page.screenshot({ path: path.join(ARTIFACT_DIR, 'qa_mobile_toast_390.png'), fullPage: false });
+
+        await toast.locator('[data-testid="arcade-toast-dismiss"]').click();
+        await expect(toast).not.toBeVisible();
+        expect(nativeAlertFired).toBe(false);
+    });
 });

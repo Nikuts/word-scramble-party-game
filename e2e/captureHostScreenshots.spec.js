@@ -1,8 +1,13 @@
 // e2e/captureHostScreenshots.spec.js
 import { test } from '@playwright/test';
 import path from 'path';
+import os from 'os';
+import fs from 'fs';
 
-const ARTIFACT_DIR = 'C:/Users/nikku/.gemini/antigravity/brain/0ba4d08c-fc46-46a2-8c3d-d610f6006523';
+const ARTIFACT_DIR = process.env.PLAYWRIGHT_SCREENSHOT_DIR || path.join(os.tmpdir(), 'word-scramble-screenshots');
+if (!fs.existsSync(ARTIFACT_DIR)) {
+    fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+}
 
 const CAPTURES = [
     { screen: 'host_lobby', vp: { width: 1920, height: 1080 }, filename: 'host_lobby_tv.png', players: 6, lang: 'en' },

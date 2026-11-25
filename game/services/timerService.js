@@ -23,7 +23,8 @@ import {
     FINAL_BATTLE_SECONDS_PER_ANSWER,
     SLOWPOKE_SECONDS_PER_BATTLE_ANSWER,
     SLOWPOKE_FINAL_BATTLE_SECONDS_PER_ANSWER,
-    QUESTIONS_PER_ROUND
+    QUESTIONS_PER_ROUND,
+    getBattleRevealDurationSeconds
 } from '../../src/lib/config.js';
 
 export function getTimerValue(game, normalKey, slowpokeKey) {
@@ -85,7 +86,11 @@ export const PHASES = {
         boostable: false,
     },
     battle_result_reveal: {
-        duration: (game) => getTimerValue(game, SINGLE_BATTLE_REVEAL_SECONDS, SLOWPOKE_SINGLE_BATTLE_REVEAL_SECONDS),
+        duration: (game) => {
+            const currentBattle = game.battleSchedule?.[game.currentVotingBattleIndex];
+            const competitorCount = currentBattle?.competitors?.length || 2;
+            return getBattleRevealDurationSeconds(competitorCount, Boolean(game.slowpokeMode), false);
+        },
         onExpire: (io, game) => battleService.advanceToNextBattleOrRound(io, game),
         boostable: false,
     }
@@ -124,11 +129,15 @@ export function startPhaseTimer(io, game, phase, duration, nextStateFn, { preser
     game.pausedRemainingMs = null;
     game.isPaused = false;
 
+    // Store both timer IDs on a unique token so stale intervals can never cancel a newer timer or serverTimeout.
+    const timerToken = { serverTimeout: null, broadcastInterval: null };
+    game.phaseTimerId = timerToken;
+
     // The server-side logic timer. This must be a setTimeout.
-    const serverTimeout = setTimeout(() => {
+    timerToken.serverTimeout = setTimeout(() => {
         try {
             const currentGame = manager.getGame(game.id);
-            if (!currentGame || currentGame.phase !== phase || currentGame.isPaused) {
+            if (!currentGame || currentGame.phase !== phase || currentGame.isPaused || currentGame.phaseTimerId !== timerToken) {
                 return;
             }
             clearPhaseTimer(currentGame); // Clears the broadcast interval
@@ -142,19 +151,22 @@ export function startPhaseTimer(io, game, phase, duration, nextStateFn, { preser
     }, duration * 1000);
 
     // The client-side broadcast timer.
-    const broadcastInterval = setInterval(() => {
+    timerToken.broadcastInterval = setInterval(() => {
         const currentGame = manager.getGame(game.id);
-        // If the game ends, the phase changes, or time runs out, stop the interval.
-        if (!currentGame || currentGame.phase !== phase || Date.now() >= currentGame.phaseEndTime) {
-            clearInterval(broadcastInterval);
-            if (currentGame) clearPhaseTimer(currentGame);
+        // Never call clearPhaseTimer here: if broadcastInterval fires 1ms before serverTimeout,
+        // clearing phaseTimerId would cancel serverTimeout and freeze the game.
+        if (
+            !currentGame ||
+            currentGame.phase !== phase ||
+            currentGame.isPaused ||
+            currentGame.phaseTimerId !== timerToken ||
+            Date.now() >= currentGame.phaseEndTime
+        ) {
+            clearInterval(timerToken.broadcastInterval);
             return;
         }
         helpers.broadcastTimerTick(io, game.id);
     }, 1000);
-
-    // Store both timer IDs on the game object for cleanup.
-    game.phaseTimerId = { serverTimeout, broadcastInterval };
 
     // If all players disconnected during an async transition before the timer started, pause immediately.
     if (game.players && game.players.length > 0 && game.players.every(p => p.socketId === null)) {

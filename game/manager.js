@@ -8,6 +8,8 @@ let games = {}; // Stores all active games { gameId: gameData }
 let gcInterval = null;
 
 let eventLoopMonitor = null;
+let lastMonitorResetAt = Date.now();
+const MONITOR_RESET_INTERVAL_MS = 10_000;
 if (typeof monitorEventLoopDelay === 'function') {
     try {
         eventLoopMonitor = monitorEventLoopDelay({ resolution: 20 });
@@ -48,9 +50,13 @@ export const getServerHealthMetrics = () => {
     }
 
     if (eventLoopMonitor) {
-        // Convert nanoseconds to milliseconds
+        // Convert nanoseconds to milliseconds without wiping metrics on rapid consecutive checks
         eventLoopLagMs = Math.round((eventLoopMonitor.mean || 0) / 1e6);
-        if (eventLoopMonitor.reset) eventLoopMonitor.reset();
+        const now = Date.now();
+        if (now - lastMonitorResetAt >= MONITOR_RESET_INTERVAL_MS && eventLoopMonitor.reset) {
+            eventLoopMonitor.reset();
+            lastMonitorResetAt = now;
+        }
     }
 
     // Use environment variable override if explicitly defined, otherwise use dynamic auto-detection
